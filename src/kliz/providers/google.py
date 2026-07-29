@@ -66,3 +66,15 @@ class GoogleProvider(BaseProvider):
             status_code = int(exc.resp.status)
             retryable = status_code in {408, 429} or status_code >= 500
             raise ProviderError(
+                f"Google rejected the notification with HTTP {status_code}",
+                provider=self.name,
+                retryable=retryable,
+                status_code=status_code,
+            ) from exc
+        except (TransportError, httplib2.HttpLib2Error, OSError) as exc:
+            raise ProviderError(
+                "Google could not be reached",
+                provider=self.name,
+                retryable=True,
+            ) from exc
+        return True
