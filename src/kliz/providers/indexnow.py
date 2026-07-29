@@ -83,3 +83,20 @@ class IndexNowProvider(BaseProvider):
 
         if response.status_code in {200, 202}:
             return True
+
+        retryable = response.status_code == 429 or response.status_code >= 500
+        raise ProviderError(
+            f"IndexNow rejected the notification with HTTP {response.status_code}",
+            provider=self.name,
+            retryable=retryable,
+            status_code=response.status_code,
+        )
+
+    def _validate_urls(
+        self, urls: Sequence[str]
+    ) -> tuple[list[str], list[SplitResult]]:
+        if isinstance(urls, (str, bytes)) or not urls:
+            raise ValueError("urls must be a non-empty sequence")
+        if len(urls) > self.max_urls_per_request:
+            raise ValueError("IndexNow accepts at most 10,000 URLs per request")
+
