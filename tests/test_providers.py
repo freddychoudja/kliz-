@@ -134,3 +134,20 @@ def test_indexnow_provider_rejects_invalid_keys(api_key: str) -> None:
     with pytest.raises(ValueError, match="api_key"):
         IndexNowProvider(api_key=api_key)
 
+
+def test_indexnow_provider_rejects_invalid_timeout() -> None:
+    with pytest.raises(ValueError, match="timeout"):
+        IndexNowProvider(api_key="abcdefgh", timeout=0)
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["", "ftp://example.com/page", "https:///missing-host", "https://u:p@x.com"],
+)
+def test_indexnow_provider_rejects_invalid_urls(url: str) -> None:
+    provider = IndexNowProvider(api_key="abcdefgh")
+
+    with pytest.raises(ValueError):
+        provider.notify(url)
+
+
