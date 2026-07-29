@@ -168,3 +168,20 @@ def test_indexnow_provider_validates_batch_size(urls: list[str]) -> None:
 
 def test_indexnow_provider_rejects_string_as_url_sequence() -> None:
     provider = IndexNowProvider(api_key="abcdefgh")
+
+    with pytest.raises(ValueError, match="sequence"):
+        provider.notify_many("https://example.com")  # type: ignore[arg-type]
+
+
+def test_indexnow_provider_validates_key_location_host() -> None:
+    provider = IndexNowProvider(
+        api_key="abcdefgh",
+        key_location="https://keys.example/key.txt",
+    )
+
+    with pytest.raises(ValueError, match="same host"):
+        provider.notify("https://example.com/article")
+
+
+def test_indexnow_provider_validates_key_location_path() -> None:
+    provider = IndexNowProvider(
