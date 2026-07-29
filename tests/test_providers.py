@@ -304,3 +304,19 @@ def test_google_provider_wraps_transport_errors(
         ({"service_account_file": "account.json", "num_retries": -1}, "num_retries"),
     ],
 )
+def test_google_provider_validates_configuration(
+    google_client_mocks: dict[str, Mock],
+    kwargs: dict[str, object],
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        GoogleProvider(**kwargs)  # type: ignore[arg-type]
+
+
+def test_google_provider_rejects_invalid_url(
+    google_client_mocks: dict[str, Mock],
+) -> None:
+    provider = GoogleProvider("/secrets/google-service-account.json")
+
+    with pytest.raises(ValueError):
+        provider.notify("not-a-url")
