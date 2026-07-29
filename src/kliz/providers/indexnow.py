@@ -100,3 +100,20 @@ class IndexNowProvider(BaseProvider):
         if len(urls) > self.max_urls_per_request:
             raise ValueError("IndexNow accepts at most 10,000 URLs per request")
 
+        normalized_urls = [url.strip() for url in urls]
+        parsed_urls = [parse_http_url(url) for url in normalized_urls]
+        hosts = {parsed.hostname.lower() for parsed in parsed_urls if parsed.hostname}
+        if len(hosts) != 1:
+            raise ValueError("all IndexNow URLs must belong to the same host")
+        return normalized_urls, parsed_urls
+
+    def _validate_key_location(self, submitted_url: SplitResult) -> None:
+        if self.key_location is None:
+            return
+
+        key_url = parse_http_url(self.key_location)
+        if key_url.hostname is None or submitted_url.hostname is None:
+            raise ValueError("key_location and url must include a hostname")
+        if key_url.hostname.lower() != submitted_url.hostname.lower():
+            raise ValueError("key_location must use the same host as the submitted URL")
+
