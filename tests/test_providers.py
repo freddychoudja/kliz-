@@ -219,3 +219,20 @@ def test_google_provider_builds_authenticated_client(
     google_client_mocks["authorized_http_factory"].assert_called_once_with(
         credentials,
         http=raw_http,
+    )
+    google_client_mocks["build"].assert_called_once_with(
+        "indexing",
+        "v3",
+        http=authorized_http,
+        cache_discovery=False,
+    )
+    assert provider.num_retries == 3
+
+
+def test_google_provider_publishes_url_updated(
+    google_client_mocks: dict[str, Mock],
+) -> None:
+    service = google_client_mocks["build"].return_value
+    publish_request = service.urlNotifications.return_value.publish.return_value
+    provider = GoogleProvider("/secrets/google-service-account.json")
+
