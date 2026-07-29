@@ -15,3 +15,10 @@ class BaseProvider(ABC):
     @abstractmethod
     def notify(self, url: str) -> bool:
         """Notify the provider that *url* was updated.
+
+        Implementations return ``True`` after a successful notification and
+        raise :class:`kliz.exceptions.ProviderError` when the remote service
+        rejects the request or cannot be reached.
+        """
+
+        raise NotImplementedError
