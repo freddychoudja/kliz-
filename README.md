@@ -100,3 +100,20 @@ class CustomProvider(BaseProvider):
 La clé doit être publiée conformément aux règles d'IndexNow. Si
 `key_location` est fourni, il est transmis dans le champ `keyLocation`.
 
+```python
+from kliz import IndexNowProvider
+
+provider = IndexNowProvider(
+    api_key="votre-cle-valide",
+    key_location="https://example.com/votre-cle-valide.txt",  # optionnel
+    timeout=10.0,
+)
+provider.notify("https://example.com/page")
+```
+
+Pour soumettre plusieurs URL du même hôte dans un seul appel :
+
+```python
+provider.notify_many(
+    [
+        "https://example.com/page-1",
