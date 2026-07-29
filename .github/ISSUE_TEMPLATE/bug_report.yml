@@ -1,0 +1,17 @@
+name: Rapport de bug
+description: Signaler un comportement incorrect ou inattendu
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de ne jamais publier de clé API ou de fichier de compte de service.
+  - type: input
+    id: version
+    attributes:
+      label: Version de kliz
+      placeholder: "0.1.0"
+    validations:
+      required: true
