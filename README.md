@@ -253,3 +253,20 @@ l'application qui l'utilise :
 
 - injectez les clés par un gestionnaire de secrets ;
 - appliquez un backoff avec jitter aux résultats `retryable=True` ;
+- placez les échecs définitifs dans une dead-letter queue ;
+- mesurez latence, taux de succès, codes HTTP et quotas par provider ;
+- ne partagez pas une même instance `GoogleProvider` entre plusieurs threads ;
+- conservez un sitemap à jour : une notification ne garantit jamais
+  l'indexation.
+
+## Publication
+
+Les tags `vX.Y.Z` déclenchent le workflow de release. Le tag doit correspondre
+exactement à la version de `pyproject.toml`. La publication utilise le Trusted
+Publishing PyPI et ne nécessite aucun token PyPI permanent dans GitHub.
+
+Avant la première release, configurez sur PyPI un publisher avec le dépôt
+`freddychoudja/kliz-`, le workflow `release.yml` et l'environnement `pypi`.
+
+## Contribuer
+
