@@ -134,3 +134,20 @@ du compte de service.
 > **Restriction importante :** l'API Google Indexing est officiellement
 > réservée aux pages contenant un `JobPosting` ou un `BroadcastEvent` intégré
 > dans un `VideoObject`. N'utilisez pas ce provider comme API d'indexation
+> générique pour les autres contenus ; utilisez notamment un sitemap pour leur
+> couverture.
+
+```python
+from kliz import GoogleProvider
+
+provider = GoogleProvider(
+    "/run/secrets/google-service-account.json",
+    timeout=60.0,
+    num_retries=2,
+)
+provider.notify("https://example.com/jobs/backend-python")
+```
+
+L'API Google Indexing est soumise aux règles d'éligibilité et aux quotas de
+Google. Une notification ne garantit pas l'indexation de l'URL.
+
