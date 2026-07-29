@@ -15,3 +15,9 @@ __all__ = [
     "KlizError",
     "NotificationResult",
     "ProviderError",
+]
+
+try:
+    __version__ = version("kliz")
+except PackageNotFoundError:  # pragma: no cover - source tree without installation
+    __version__ = "0.0.0"
