@@ -66,3 +66,20 @@ class IndexNowProvider(BaseProvider):
         try:
             response = requests.post(
                 self.endpoint,
+                json=payload,
+                timeout=self.timeout,
+            )
+        except (requests.Timeout, requests.ConnectionError) as exc:
+            raise ProviderError(
+                "IndexNow could not be reached",
+                provider=self.name,
+                retryable=True,
+            ) from exc
+        except requests.RequestException as exc:
+            raise ProviderError(
+                "IndexNow request failed",
+                provider=self.name,
+            ) from exc
+
+        if response.status_code in {200, 202}:
+            return True
