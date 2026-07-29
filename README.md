@@ -151,3 +151,20 @@ provider.notify("https://example.com/jobs/backend-python")
 L'API Google Indexing est soumise aux règles d'éligibilité et aux quotas de
 Google. Une notification ne garantit pas l'indexation de l'URL.
 
+## Recettes / Intégration Asynchrone
+
+`kliz` reste volontairement synchrone. Pour une exécution asynchrone, placez
+l'appel dans un worker, une tâche ou un job appartenant à votre application.
+Ainsi, les dépendances d'infrastructure ne contaminent pas le package.
+
+### Tâche Celery (Python/Django)
+
+Dans un projet Django utilisant déjà Celery, la tâche peut lire sa
+configuration depuis les settings et laisser Celery gérer les retries :
+
+```python
+# myapp/tasks.py — ce code appartient à l'application, pas à kliz
+from dataclasses import asdict
+
+from celery import shared_task
+from django.conf import settings
