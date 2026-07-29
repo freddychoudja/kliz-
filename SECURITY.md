@@ -15,3 +15,4 @@ https://github.com/freddychoudja/kliz-/security/advisories/new
 
 Incluez si possible la version affectée, un scénario de reproduction, l'impact
 estimé et une proposition de correction. N'incluez jamais de véritables clés
+API ou identifiants Google dans le rapport.
