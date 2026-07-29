@@ -32,3 +32,20 @@ def return_false(url: str) -> bool:
 
 def raise_retryable(url: str) -> bool:
     raise ProviderError(
+        "temporary failure",
+        provider="StubProvider",
+        retryable=True,
+        status_code=429,
+    )
+
+
+def raise_unknown(url: str) -> bool:
+    raise RuntimeError("unexpected failure")
+
+
+def test_notify_all_returns_boolean_statuses() -> None:
+    indexer = Kliz([StubProvider(return_true), NamedProvider(return_false)])
+
+    assert indexer.notify_all("https://example.com") == {
+        "StubProvider": True,
+        "custom": False,
