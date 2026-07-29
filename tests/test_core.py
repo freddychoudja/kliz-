@@ -83,3 +83,16 @@ def test_duplicate_provider_names_do_not_overwrite_results() -> None:
         "StubProvider": True,
         "StubProvider#2": False,
     }
+
+
+def test_provider_iterables_are_copied_to_an_immutable_tuple() -> None:
+    provider = StubProvider(return_true)
+    indexer = Kliz(provider for provider in [provider])
+
+    assert indexer.providers == (provider,)
+
+
+@pytest.mark.parametrize("providers", ["invalid", [object()]])
+def test_invalid_provider_collections_are_rejected(providers: object) -> None:
+    with pytest.raises(TypeError):
+        Kliz(providers)  # type: ignore[arg-type]
