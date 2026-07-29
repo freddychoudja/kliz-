@@ -15,3 +15,20 @@ encapsuler dans le système de tâches de son choix.
 
 ## Installation
 
+```bash
+pip install kliz
+```
+
+Pour contribuer et exécuter les tests :
+
+```bash
+python -m pip install -e ".[dev]"
+pytest --cov=kliz
+```
+
+## Démarrage rapide
+
+```python
+from kliz import GoogleProvider, IndexNowProvider, Kliz
+
+indexer = Kliz(
