@@ -287,3 +287,20 @@ def test_google_provider_wraps_transport_errors(
     service = google_client_mocks["build"].return_value
     service.urlNotifications.return_value.publish.return_value.execute.side_effect = (
         exception
+    )
+    provider = GoogleProvider("/secrets/google-service-account.json")
+
+    with pytest.raises(ProviderError) as captured:
+        provider.notify("https://example.com/job")
+
+    assert captured.value.retryable is True
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"service_account_file": ""}, "service_account_file"),
+        ({"service_account_file": "account.json", "timeout": 0}, "timeout"),
+        ({"service_account_file": "account.json", "num_retries": -1}, "num_retries"),
+    ],
+)
