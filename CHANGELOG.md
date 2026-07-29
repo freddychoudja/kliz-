@@ -17,3 +17,4 @@ Le projet suit le versionnage sémantique.
 - Validation des URL, clés IndexNow, timeouts et chemins de clés.
 - Tests unitaires mockés, contrôle de couverture, lint et typage strict.
 - CI multi-version Python et publication PyPI via Trusted Publishing.
+

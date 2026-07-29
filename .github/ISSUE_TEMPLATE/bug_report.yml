@@ -54,3 +54,4 @@ body:
       label: Traceback ou logs nettoyés
       description: Supprimez tous les secrets et identifiants avant de publier.
       render: shell
+
