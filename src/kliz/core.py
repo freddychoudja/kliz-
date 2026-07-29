@@ -49,3 +49,20 @@ class Kliz:
                     error=str(exc),
                     status_code=exc.status_code,
                 )
+            except Exception as exc:
+                results[result_name] = NotificationResult(
+                    provider=provider.name,
+                    success=False,
+                    error=str(exc) or exc.__class__.__name__,
+                )
+        return results
+
+    def _result_names(self) -> list[str]:
+        counts: Counter[str] = Counter()
+        names: list[str] = []
+        for provider in self.providers:
+            counts[provider.name] += 1
+            occurrence = counts[provider.name]
+            suffix = "" if occurrence == 1 else f"#{occurrence}"
+            names.append(f"{provider.name}{suffix}")
+        return names
