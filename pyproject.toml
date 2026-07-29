@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kliz"
+version = "0.1.0"
+description = "Bot d'indexation SEO agnostique pour notifier les moteurs de recherche."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+authors = [
+    { name = "Freddy Choudja" },
+]
+keywords = ["seo", "indexing", "indexnow", "google"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
