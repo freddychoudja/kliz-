@@ -270,3 +270,20 @@ def test_google_provider_classifies_api_errors(
     assert captured.value.status_code == status_code
     assert captured.value.retryable is retryable
     assert captured.value.provider == "GoogleProvider"
+
+
+@pytest.mark.parametrize(
+    "exception",
+    [
+        TransportError("transport"),
+        httplib2.ServerNotFoundError("offline"),
+        OSError("socket"),
+    ],
+)
+def test_google_provider_wraps_transport_errors(
+    google_client_mocks: dict[str, Mock],
+    exception: Exception,
+) -> None:
+    service = google_client_mocks["build"].return_value
+    service.urlNotifications.return_value.publish.return_value.execute.side_effect = (
+        exception
