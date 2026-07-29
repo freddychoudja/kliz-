@@ -66,3 +66,16 @@ jobs:
     name: Publish release to PyPI
     needs: build
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/kliz/
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: python-package-distributions
+          path: dist/
+      - name: Publish distributions with Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@release/v1
