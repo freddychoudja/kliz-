@@ -32,3 +32,20 @@ def google_client_mocks() -> Iterator[dict[str, Mock]]:
         yield {
             "credentials_factory": credentials_factory,
             "http_factory": http_factory,
+            "authorized_http_factory": authorized_http_factory,
+            "build": build,
+        }
+
+
+@pytest.mark.parametrize("status_code", [200, 202])
+@patch("kliz.providers.indexnow.requests.post")
+def test_indexnow_provider_accepts_success_statuses(
+    mock_post: Mock, status_code: int
+) -> None:
+    mock_post.return_value.status_code = status_code
+    provider = IndexNowProvider(
+        api_key="indexnow-key",
+        key_location="https://example.com/indexnow-key.txt",
+    )
+
+    assert provider.notify("https://example.com/articles/new") is True
