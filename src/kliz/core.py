@@ -32,3 +32,20 @@ class Kliz:
     def notify_all_detailed(self, url: str) -> dict[str, NotificationResult]:
         """Notify all providers without hiding error and retry information."""
 
+        results: dict[str, NotificationResult] = {}
+        for provider, result_name in zip(self.providers, self._result_names()):
+            try:
+                success = bool(provider.notify(url))
+                results[result_name] = NotificationResult(
+                    provider=provider.name,
+                    success=success,
+                    error=None if success else "provider returned False",
+                )
+            except ProviderError as exc:
+                results[result_name] = NotificationResult(
+                    provider=provider.name,
+                    success=False,
+                    retryable=exc.retryable,
+                    error=str(exc),
+                    status_code=exc.status_code,
+                )
