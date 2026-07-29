@@ -66,3 +66,20 @@ def test_notify_all_detailed_preserves_retry_information() -> None:
     )
 
 
+def test_notify_all_detailed_captures_unknown_exceptions() -> None:
+    indexer = Kliz([StubProvider(raise_unknown)])
+
+    result = indexer.notify_all_detailed("https://example.com")["StubProvider"]
+
+    assert result.success is False
+    assert result.retryable is False
+    assert result.error == "unexpected failure"
+
+
+def test_duplicate_provider_names_do_not_overwrite_results() -> None:
+    indexer = Kliz([StubProvider(return_true), StubProvider(return_false)])
+
+    assert indexer.notify_all("https://example.com") == {
+        "StubProvider": True,
+        "StubProvider#2": False,
+    }
