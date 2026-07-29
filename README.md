@@ -66,3 +66,20 @@ for name, result in results.items():
 
 Si plusieurs instances ont le même nom, leurs clés sont suffixées :
 `IndexNowProvider`, `IndexNowProvider#2`, etc.
+
+## Architecture agnostique
+
+`BaseProvider` définit une stratégie minimale : `notify(url) -> bool`. Chaque
+adaptateur traduit ce contrat vers l'API distante concernée :
+
+- `IndexNowProvider` envoie une requête HTTP à l'API IndexNow ;
+- `GoogleProvider` publie une notification `URL_UPDATED` via l'API Google
+  Indexing ;
+- `Kliz` orchestre les stratégies injectées dans son constructeur.
+
+Cette séparation permet d'ajouter un moteur sans modifier l'orchestrateur et
+laisse l'application libre de choisir son framework web, sa file d'attente et
+sa politique de retry.
+
+Un fournisseur personnalisé doit uniquement hériter de `BaseProvider` :
+
