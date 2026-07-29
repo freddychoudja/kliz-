@@ -49,3 +49,20 @@ class GoogleProvider(BaseProvider):
             cache_discovery=False,
         )
         self.num_retries = num_retries
+
+    def notify(self, url: str) -> bool:
+        """Publish a ``URL_UPDATED`` notification to Google."""
+
+        parse_http_url(url)
+        normalized_url = url.strip()
+
+        try:
+            (
+                self._service.urlNotifications()
+                .publish(body={"url": normalized_url, "type": "URL_UPDATED"})
+                .execute(num_retries=self.num_retries)
+            )
+        except HttpError as exc:
+            status_code = int(exc.resp.status)
+            retryable = status_code in {408, 429} or status_code >= 500
+            raise ProviderError(
