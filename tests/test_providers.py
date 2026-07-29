@@ -185,3 +185,20 @@ def test_indexnow_provider_validates_key_location_host() -> None:
 
 def test_indexnow_provider_validates_key_location_path() -> None:
     provider = IndexNowProvider(
+        api_key="abcdefgh",
+        key_location="https://example.com/catalog/key.txt",
+    )
+
+    with pytest.raises(ValueError, match="path covered"):
+        provider.notify("https://example.com/help/article")
+
+
+def test_indexnow_provider_rejects_invalid_key_location() -> None:
+    with pytest.raises(ValueError):
+        IndexNowProvider(api_key="abcdefgh", key_location="not-a-url")
+
+
+def test_google_provider_builds_authenticated_client(
+    google_client_mocks: dict[str, Mock],
+) -> None:
+    credentials = google_client_mocks["credentials_factory"].return_value
