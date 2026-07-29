@@ -253,3 +253,20 @@ def test_google_provider_publishes_url_updated(
 )
 def test_google_provider_classifies_api_errors(
     google_client_mocks: dict[str, Mock],
+    status_code: int,
+    retryable: bool,
+) -> None:
+    response = Mock(status=status_code, reason="failure")
+    error = HttpError(response, b'{"error": {"message": "failure"}}')
+    service = google_client_mocks["build"].return_value
+    service.urlNotifications.return_value.publish.return_value.execute.side_effect = (
+        error
+    )
+    provider = GoogleProvider("/secrets/google-service-account.json")
+
+    with pytest.raises(ProviderError) as captured:
+        provider.notify("https://example.com/job")
+
+    assert captured.value.status_code == status_code
+    assert captured.value.retryable is retryable
+    assert captured.value.provider == "GoogleProvider"
