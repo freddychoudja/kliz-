@@ -236,3 +236,20 @@ donc ni accès réseau, ni clé IndexNow, ni compte de service Google.
 
 La validation complète locale est :
 
+```bash
+ruff format --check src tests
+ruff check src tests
+mypy src
+pytest --cov=kliz
+python -m build
+twine check --strict dist/*
+pip-audit . --strict
+```
+
+## Exploitation en production
+
+Le package ne stocke aucun secret et n'impose aucun système de tâches. Dans
+l'application qui l'utilise :
+
+- injectez les clés par un gestionnaire de secrets ;
+- appliquez un backoff avec jitter aux résultats `retryable=True` ;
