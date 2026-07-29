@@ -49,3 +49,20 @@ statuses = indexer.notify_all("https://example.com/articles/nouvel-article")
 ```
 
 `notify_all` continue d'appeler les autres fournisseurs lorsqu'un fournisseur
+échoue. Son statut vaut alors `False`. Un appel direct à `provider.notify(url)`
+laisse en revanche remonter une `ProviderError` afin que l'application puisse
+appliquer sa propre politique de retry.
+
+Pour obtenir la cause, le statut HTTP et l'indication de retry :
+
+```python
+results = indexer.notify_all_detailed(
+    "https://example.com/articles/nouvel-article"
+)
+
+for name, result in results.items():
+    print(name, result.success, result.retryable, result.error)
+```
+
+Si plusieurs instances ont le même nom, leurs clés sont suffixées :
+`IndexNowProvider`, `IndexNowProvider#2`, etc.
