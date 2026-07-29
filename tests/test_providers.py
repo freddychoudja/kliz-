@@ -49,3 +49,20 @@ def test_indexnow_provider_accepts_success_statuses(
     )
 
     assert provider.notify("https://example.com/articles/new") is True
+
+    mock_post.assert_called_once_with(
+        "https://api.indexnow.org/indexnow",
+        json={
+            "host": "example.com",
+            "key": "indexnow-key",
+            "keyLocation": "https://example.com/indexnow-key.txt",
+            "urlList": ["https://example.com/articles/new"],
+        },
+        timeout=10.0,
+    )
+
+
+@patch("kliz.providers.indexnow.requests.post")
+def test_indexnow_provider_submits_multiple_urls(mock_post: Mock) -> None:
+    mock_post.return_value.status_code = 200
+    provider = IndexNowProvider(api_key="abcdefgh")
