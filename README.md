@@ -117,3 +117,20 @@ Pour soumettre plusieurs URL du même hôte dans un seul appel :
 provider.notify_many(
     [
         "https://example.com/page-1",
+        "https://example.com/page-2",
+    ]
+)
+```
+
+IndexNow accepte jusqu'à 10 000 URL par requête. `kliz` classe les erreurs
+`429` et `5xx` comme retentables.
+
+### Google
+
+Activez l'API Google Indexing pour votre projet, créez un compte de service et
+autorisez-le sur la propriété concernée. Ne versionnez jamais le fichier JSON
+du compte de service.
+
+> **Restriction importante :** l'API Google Indexing est officiellement
+> réservée aux pages contenant un `JobPosting` ou un `BroadcastEvent` intégré
+> dans un `VideoObject`. N'utilisez pas ce provider comme API d'indexation
