@@ -66,3 +66,20 @@ def test_indexnow_provider_accepts_success_statuses(
 def test_indexnow_provider_submits_multiple_urls(mock_post: Mock) -> None:
     mock_post.return_value.status_code = 200
     provider = IndexNowProvider(api_key="abcdefgh")
+    urls = [
+        "https://example.com/first",
+        "https://example.com/second",
+    ]
+
+    assert provider.notify_many(urls) is True
+    assert mock_post.call_args.kwargs["json"]["urlList"] == urls
+
+
+@pytest.mark.parametrize(
+    ("status_code", "retryable"),
+    [(400, False), (403, False), (422, False), (429, True), (500, True)],
+)
+@patch("kliz.providers.indexnow.requests.post")
+def test_indexnow_provider_classifies_http_errors(
+    mock_post: Mock,
+    status_code: int,
