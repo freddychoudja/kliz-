@@ -219,3 +219,20 @@ from kliz import IndexNowProvider, Kliz
 class ContentIndexingJob:
     def __init__(self, api_key: str) -> None:
         self.indexer = Kliz([IndexNowProvider(api_key=api_key)])
+
+    def run(self, payload: dict[str, str]) -> dict[str, bool]:
+        return self.indexer.notify_all(payload["url"])
+
+
+# Le système de jobs choisi sérialise ce payload et appelle job.run(payload).
+job = ContentIndexingJob(api_key="votre-cle")
+result = job.run({"url": "https://example.com/page-modifiee"})
+```
+
+## Tests
+
+Les tests mockent les appels `requests` et le client Google. Ils ne nécessitent
+donc ni accès réseau, ni clé IndexNow, ni compte de service Google.
+
+La validation complète locale est :
+
