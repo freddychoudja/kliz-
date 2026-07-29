@@ -83,3 +83,20 @@ sa politique de retry.
 
 Un fournisseur personnalisé doit uniquement hériter de `BaseProvider` :
 
+```python
+from kliz import BaseProvider
+
+
+class CustomProvider(BaseProvider):
+    def notify(self, url: str) -> bool:
+        # Appel vers l'API du moteur concerné
+        return True
+```
+
+## Configuration des fournisseurs
+
+### IndexNow
+
+La clé doit être publiée conformément aux règles d'IndexNow. Si
+`key_location` est fourni, il est transmis dans le champ `keyLocation`.
+
