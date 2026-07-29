@@ -117,3 +117,20 @@ def test_indexnow_provider_wraps_transient_network_errors(
 
 @patch("kliz.providers.indexnow.requests.post")
 def test_indexnow_provider_wraps_other_request_errors(mock_post: Mock) -> None:
+    mock_post.side_effect = requests.RequestException("invalid request")
+    provider = IndexNowProvider(api_key="abcdefgh")
+
+    with pytest.raises(ProviderError) as captured:
+        provider.notify("https://example.com/article")
+
+    assert captured.value.retryable is False
+
+
+@pytest.mark.parametrize(
+    "api_key",
+    ["", "short", "contains_underscore", "a" * 129],
+)
+def test_indexnow_provider_rejects_invalid_keys(api_key: str) -> None:
+    with pytest.raises(ValueError, match="api_key"):
+        IndexNowProvider(api_key=api_key)
+
