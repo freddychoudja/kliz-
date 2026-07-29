@@ -151,3 +151,20 @@ def test_indexnow_provider_rejects_invalid_urls(url: str) -> None:
         provider.notify(url)
 
 
+def test_indexnow_provider_requires_same_host_for_batches() -> None:
+    provider = IndexNowProvider(api_key="abcdefgh")
+
+    with pytest.raises(ValueError, match="same host"):
+        provider.notify_many(["https://one.example/a", "https://two.example/b"])
+
+
+@pytest.mark.parametrize("urls", [[], ["https://example.com"] * 10_001])
+def test_indexnow_provider_validates_batch_size(urls: list[str]) -> None:
+    provider = IndexNowProvider(api_key="abcdefgh")
+
+    with pytest.raises(ValueError):
+        provider.notify_many(urls)
+
+
+def test_indexnow_provider_rejects_string_as_url_sequence() -> None:
+    provider = IndexNowProvider(api_key="abcdefgh")
