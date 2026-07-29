@@ -32,3 +32,20 @@ jobs:
           pip-audit . --strict
 
   build:
+    name: Build release distributions
+    needs: validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: pip
+      - name: Check tag matches package version
+        run: |
+          PACKAGE_VERSION="$(python -c \
+            "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")"
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
