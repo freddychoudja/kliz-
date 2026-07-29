@@ -202,3 +202,20 @@ def test_google_provider_builds_authenticated_client(
     google_client_mocks: dict[str, Mock],
 ) -> None:
     credentials = google_client_mocks["credentials_factory"].return_value
+    raw_http = google_client_mocks["http_factory"].return_value
+    authorized_http = google_client_mocks["authorized_http_factory"].return_value
+
+    provider = GoogleProvider(
+        "/secrets/google-service-account.json",
+        timeout=15,
+        num_retries=3,
+    )
+
+    google_client_mocks["credentials_factory"].assert_called_once_with(
+        "/secrets/google-service-account.json",
+        scopes=["https://www.googleapis.com/auth/indexing"],
+    )
+    google_client_mocks["http_factory"].assert_called_once_with(timeout=15)
+    google_client_mocks["authorized_http_factory"].assert_called_once_with(
+        credentials,
+        http=raw_http,
