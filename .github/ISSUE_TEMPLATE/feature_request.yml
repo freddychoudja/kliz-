@@ -15,3 +15,15 @@ body:
     id: proposal
     attributes:
       label: Solution proposée
+      description: Décrivez l'API ou le comportement souhaité.
+    validations:
+      required: true
+  - type: checkboxes
+    id: architecture
+    attributes:
+      label: Compatibilité architecturale
+      options:
+        - label: La proposition conserve un cœur indépendant des frameworks.
+          required: true
+        - label: Un nouveau moteur peut être implémenté comme un provider.
+          required: false
