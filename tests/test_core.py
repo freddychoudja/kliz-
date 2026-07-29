@@ -49,3 +49,20 @@ def test_notify_all_returns_boolean_statuses() -> None:
     assert indexer.notify_all("https://example.com") == {
         "StubProvider": True,
         "custom": False,
+    }
+
+
+def test_notify_all_detailed_preserves_retry_information() -> None:
+    indexer = Kliz([StubProvider(raise_retryable)])
+
+    result = indexer.notify_all_detailed("https://example.com")["StubProvider"]
+
+    assert result == NotificationResult(
+        provider="StubProvider",
+        success=False,
+        retryable=True,
+        error="temporary failure",
+        status_code=429,
+    )
+
+
