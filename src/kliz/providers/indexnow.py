@@ -32,3 +32,20 @@ class IndexNowProvider(BaseProvider):
             raise ValueError(
                 "api_key must contain 8 to 128 letters, numbers, or dashes"
             )
+        if timeout <= 0:
+            raise ValueError("timeout must be greater than zero")
+        if key_location is not None:
+            parse_http_url(key_location)
+
+        self.api_key = api_key
+        self.key_location = key_location
+        self.timeout = timeout
+
+    def notify(self, url: str) -> bool:
+        """Submit one updated URL to IndexNow."""
+
+        return self.notify_many([url])
+
+    def notify_many(self, urls: Sequence[str]) -> bool:
+        """Submit up to 10,000 URLs belonging to the same host."""
+
