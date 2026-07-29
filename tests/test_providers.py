@@ -236,3 +236,20 @@ def test_google_provider_publishes_url_updated(
     publish_request = service.urlNotifications.return_value.publish.return_value
     provider = GoogleProvider("/secrets/google-service-account.json")
 
+    assert provider.notify(" https://example.com/articles/updated ") is True
+
+    service.urlNotifications.return_value.publish.assert_called_once_with(
+        body={
+            "url": "https://example.com/articles/updated",
+            "type": "URL_UPDATED",
+        }
+    )
+    publish_request.execute.assert_called_once_with(num_retries=2)
+
+
+@pytest.mark.parametrize(
+    ("status_code", "retryable"),
+    [(400, False), (403, False), (429, True), (500, True)],
+)
+def test_google_provider_classifies_api_errors(
+    google_client_mocks: dict[str, Mock],
