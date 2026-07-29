@@ -32,3 +32,20 @@ body:
         - Kliz / orchestration
         - Provider personnalisé
         - Autre
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Décrivez le résultat obtenu et le résultat attendu.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction minimale
+      render: python
+    validations:
+      required: true
+  - type: textarea
