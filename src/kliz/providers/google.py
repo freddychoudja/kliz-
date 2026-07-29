@@ -32,3 +32,20 @@ class GoogleProvider(BaseProvider):
         if timeout <= 0:
             raise ValueError("timeout must be greater than zero")
         if num_retries < 0:
+            raise ValueError("num_retries must not be negative")
+
+        credentials = service_account.Credentials.from_service_account_file(  # type: ignore[no-untyped-call]
+            str(service_account_file),
+            scopes=[self.scope],
+        )
+        authorized_http = google_auth_httplib2.AuthorizedHttp(
+            credentials,
+            http=httplib2.Http(timeout=timeout),
+        )
+        self._service: Any = build(
+            "indexing",
+            "v3",
+            http=authorized_http,
+            cache_discovery=False,
+        )
+        self.num_retries = num_retries
