@@ -15,3 +15,7 @@ def parse_http_url(url: str) -> SplitResult:
         raise ValueError("url must use the http or https scheme")
     if not parsed_url.hostname:
         raise ValueError("url must include a hostname")
+    if parsed_url.username is not None or parsed_url.password is not None:
+        raise ValueError("url must not contain credentials")
+
+    return parsed_url
