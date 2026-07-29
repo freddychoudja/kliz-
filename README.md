@@ -168,3 +168,20 @@ from dataclasses import asdict
 
 from celery import shared_task
 from django.conf import settings
+
+from kliz import IndexNowProvider, Kliz
+
+
+@shared_task(bind=True, max_retries=5)
+def notify_search_engines(self, url: str) -> dict[str, dict[str, object]]:
+    indexer = Kliz(
+        [
+            IndexNowProvider(
+                api_key=settings.INDEXNOW_API_KEY,
+                key_location=settings.INDEXNOW_KEY_LOCATION,
+            ),
+        ]
+    )
+    results = indexer.notify_all_detailed(url)
+    retryable = [result for result in results.values() if result.retryable]
+
