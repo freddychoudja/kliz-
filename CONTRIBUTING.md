@@ -49,3 +49,20 @@ Un nouveau provider doit :
 4. laisser remonter les erreurs de l'API distante ;
 5. être couvert par des tests utilisant des mocks.
 
+## Préparer une release
+
+1. Mettez à jour la version dans `pyproject.toml`.
+2. Déplacez les changements de `Unreleased` vers cette version dans
+   `CHANGELOG.md`.
+3. Vérifiez localement tests, qualité, audit et distributions.
+4. Fusionnez sur `main` après validation de la CI.
+5. Créez et poussez un tag `vX.Y.Z` correspondant exactement à la version.
+
+Le workflow `release.yml` construit les distributions puis les publie avec le
+Trusted Publishing de PyPI. Aucun token PyPI permanent ne doit être ajouté aux
+secrets GitHub.
+
+## Signaler une vulnérabilité
+
+N'ouvrez pas d'issue publique pour une vulnérabilité. Utilisez le canal privé
+décrit dans [SECURITY.md](SECURITY.md).
