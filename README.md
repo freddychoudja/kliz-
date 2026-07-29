@@ -202,3 +202,20 @@ from myapp.tasks import notify_search_engines
 notify_search_engines.delay("https://example.com/articles/nouveau")
 ```
 
+Pour isoler les retries et quotas de chaque moteur, utilisez idéalement une
+tâche par provider. Le provider Google ne doit être ajouté que pour les pages
+officiellement éligibles.
+
+### Job générique
+
+Le même principe fonctionne avec un scheduler, un worker maison, RQ, Dramatiq,
+une fonction serverless ou un cron. Le job ne connaît que l'API publique de
+`kliz` :
+
+```python
+from kliz import IndexNowProvider, Kliz
+
+
+class ContentIndexingJob:
+    def __init__(self, api_key: str) -> None:
+        self.indexer = Kliz([IndexNowProvider(api_key=api_key)])
