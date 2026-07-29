@@ -15,3 +15,20 @@ body:
       placeholder: "0.1.0"
     validations:
       required: true
+  - type: input
+    id: python
+    attributes:
+      label: Version de Python
+      placeholder: "3.12"
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Provider concerné
+      options:
+        - IndexNowProvider
+        - GoogleProvider
+        - Kliz / orchestration
+        - Provider personnalisé
+        - Autre
