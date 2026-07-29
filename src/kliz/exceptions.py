@@ -15,3 +15,10 @@ class ProviderError(KlizError):
         message: str,
         *,
         provider: str,
+        retryable: bool = False,
+        status_code: Optional[int] = None,
+    ) -> None:
+        super().__init__(message)
+        self.provider = provider
+        self.retryable = retryable
+        self.status_code = status_code
