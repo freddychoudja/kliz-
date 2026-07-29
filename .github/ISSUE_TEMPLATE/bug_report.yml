@@ -49,3 +49,8 @@ body:
     validations:
       required: true
   - type: textarea
+    id: traceback
+    attributes:
+      label: Traceback ou logs nettoyés
+      description: Supprimez tous les secrets et identifiants avant de publier.
+      render: shell
