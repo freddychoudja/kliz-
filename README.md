@@ -32,3 +32,20 @@ pytest --cov=kliz
 from kliz import GoogleProvider, IndexNowProvider, Kliz
 
 indexer = Kliz(
+    [
+        IndexNowProvider(
+            api_key="votre-cle-indexnow",
+            key_location="https://example.com/votre-cle-indexnow.txt",
+        ),
+        GoogleProvider("/run/secrets/google-service-account.json"),
+    ]
+)
+
+statuses = indexer.notify_all("https://example.com/articles/nouvel-article")
+# {
+#     "IndexNowProvider": True,
+#     "GoogleProvider": True,
+# }
+```
+
+`notify_all` continue d'appeler les autres fournisseurs lorsqu'un fournisseur
