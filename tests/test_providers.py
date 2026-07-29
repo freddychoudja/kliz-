@@ -83,3 +83,20 @@ def test_indexnow_provider_submits_multiple_urls(mock_post: Mock) -> None:
 def test_indexnow_provider_classifies_http_errors(
     mock_post: Mock,
     status_code: int,
+    retryable: bool,
+) -> None:
+    mock_post.return_value.status_code = status_code
+    provider = IndexNowProvider(api_key="abcdefgh")
+
+    with pytest.raises(ProviderError) as captured:
+        provider.notify("https://example.com/article")
+
+    assert captured.value.status_code == status_code
+    assert captured.value.retryable is retryable
+    assert captured.value.provider == "IndexNowProvider"
+
+
+@pytest.mark.parametrize(
+    "exception",
+    [requests.Timeout("timeout"), requests.ConnectionError("offline")],
+)
