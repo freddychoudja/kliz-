@@ -185,3 +185,20 @@ def notify_search_engines(self, url: str) -> dict[str, dict[str, object]]:
     results = indexer.notify_all_detailed(url)
     retryable = [result for result in results.values() if result.retryable]
 
+    if retryable:
+        raise self.retry(
+            exc=RuntimeError("temporary indexing provider failure"),
+            countdown=min(60 * (2**self.request.retries), 3600),
+        )
+
+    return {name: asdict(result) for name, result in results.items()}
+```
+
+Depuis une vue, un signal ou un service Django :
+
+```python
+from myapp.tasks import notify_search_engines
+
+notify_search_engines.delay("https://example.com/articles/nouveau")
+```
+
