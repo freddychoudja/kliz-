@@ -270,3 +270,14 @@ Avant la première release, configurez sur PyPI un publisher avec le dépôt
 
 ## Contribuer
 
+Les contributions sont les bienvenues. Consultez
+[CONTRIBUTING.md](CONTRIBUTING.md) avant d'ouvrir une issue ou une pull
+request.
+
+Le code source et le suivi du projet sont disponibles sur
+[GitHub](https://github.com/freddychoudja/kliz-).
+
+## Licence
+
+`kliz` est distribué sous la [licence MIT](LICENSE). Copyright © 2026 Freddy
+Choudja.
