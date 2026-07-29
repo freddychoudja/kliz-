@@ -83,3 +83,19 @@ line-length = 88
 target-version = "py39"
 
 [tool.ruff.lint]
+select = ["B", "E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+packages = ["kliz"]
+
+[[tool.mypy.overrides]]
+module = [
+    "google.auth.*",
+    "google.oauth2.*",
+    "google_auth_httplib2",
+    "googleapiclient.*",
+    "httplib2",
+]
+ignore_missing_imports = true
