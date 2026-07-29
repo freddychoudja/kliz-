@@ -32,3 +32,20 @@ dependencies = [
     "google-auth-httplib2>=0.1.0",
     "google-api-python-client>=2.0.0",
     "httplib2>=0.19.0,<1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/freddychoudja/kliz-"
+Repository = "https://github.com/freddychoudja/kliz-.git"
+Issues = "https://github.com/freddychoudja/kliz-/issues"
+Documentation = "https://github.com/freddychoudja/kliz-#readme"
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0,<10.0",
+    "pytest-cov>=5.0,<8.0",
+]
+dev = [
+    "build>=1.2,<2.0",
+    "mypy>=1.11,<2.0",
+    "pip-audit>=2.7,<3.0",
