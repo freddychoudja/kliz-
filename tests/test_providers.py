@@ -100,3 +100,20 @@ def test_indexnow_provider_classifies_http_errors(
     "exception",
     [requests.Timeout("timeout"), requests.ConnectionError("offline")],
 )
+@patch("kliz.providers.indexnow.requests.post")
+def test_indexnow_provider_wraps_transient_network_errors(
+    mock_post: Mock,
+    exception: requests.RequestException,
+) -> None:
+    mock_post.side_effect = exception
+    provider = IndexNowProvider(api_key="abcdefgh")
+
+    with pytest.raises(ProviderError) as captured:
+        provider.notify("https://example.com/article")
+
+    assert captured.value.retryable is True
+    assert captured.value.status_code is None
+
+
+@patch("kliz.providers.indexnow.requests.post")
+def test_indexnow_provider_wraps_other_request_errors(mock_post: Mock) -> None:
