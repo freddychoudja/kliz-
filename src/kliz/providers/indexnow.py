@@ -49,3 +49,20 @@ class IndexNowProvider(BaseProvider):
     def notify_many(self, urls: Sequence[str]) -> bool:
         """Submit up to 10,000 URLs belonging to the same host."""
 
+        normalized_urls, parsed_urls = self._validate_urls(urls)
+        host = parsed_urls[0].hostname
+        if host is None:  # Defensive: parse_http_url already enforces this.
+            raise ValueError("url must include a hostname")
+
+        self._validate_key_location(parsed_urls[0])
+        payload: dict[str, PayloadValue] = {
+            "host": host,
+            "key": self.api_key,
+            "urlList": normalized_urls,
+        }
+        if self.key_location:
+            payload["keyLocation"] = self.key_location
+
+        try:
+            response = requests.post(
+                self.endpoint,
