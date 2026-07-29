@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
+  <title id="title">Kliz mark</title>
+  <desc id="desc">A compact indexing mark with connected routes.</desc>
+  <rect width="96" height="96" rx="18" fill="#101820"/>
+  <path d="M24 68V28h10v16l18-16h14L45 47l23 21H54L34 50v18H24Z" fill="#F7F3E8"/>
+  <circle cx="70" cy="26" r="7" fill="#2FBF71"/>
+  <circle cx="72" cy="68" r="7" fill="#FFB703"/>
+  <path d="M66 32c-6 5-9 11-9 18s3 12 10 14" fill="none" stroke="#F7F3E8" stroke-width="4" stroke-linecap="round"/>
+</svg>

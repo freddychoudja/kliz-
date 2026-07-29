@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kliz Documentation</title>
+    <meta
+      name="description"
+      content="Documentation statique de Kliz, bot d'indexation SEO agnostique pour Python."
+    />
+    <link rel="icon" href="assets/kliz-mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link button secondary" href="#contenu">Aller au contenu</a>
+    <div class="shell">
+      <aside class="sidebar" aria-label="Navigation de la documentation">
+        <div class="brand">
+          <img src="assets/kliz-mark.svg" alt="" />
+          <div>
+            <strong>kliz</strong>
+            <span>Documentation v0.1.0</span>
+          </div>
+        </div>
+        <nav class="nav">
+          <a class="is-active" href="#intro">Intro</a>
+          <a href="#installation">Installation</a>
+          <a href="#quickstart">Démarrage</a>
+          <a href="#providers">Providers</a>
+          <a href="#async">Async</a>
+          <a href="#production">Production</a>
+        </nav>
+        <p class="sidebar-footer">
+          Package Python synchrone pour notifier les moteurs de recherche.
+        </p>
+      </aside>
+
+      <main id="contenu" class="content">
+        <section id="intro" class="hero">
+          <p class="eyebrow">SEO indexing bot</p>
+          <h1>kliz</h1>
+          <p class="lead">
+            Une API Python agnostique pour notifier IndexNow et Google Indexing
+            quand une URL est créée, mise à jour ou prête à être redécouverte.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#quickstart">Voir l'exemple</a>
+            <a class="button secondary" href="#providers">Comparer les providers</a>
+            <a class="button secondary" href="../README.md">README</a>
+          </div>
+        </section>
+
+        <section id="installation" class="section">
+          <h2>Installation</h2>
+          <p>
+            Kliz reste volontairement léger côté intégration : pas de Django, pas
+            de Celery, pas de Redis imposé par le package.
+          </p>
+          <div class="code-block">
+            <div class="code-head">
+              <span>Terminal</span>
+              <button class="copy" type="button" data-copy>Copier</button>
+            </div>
+            <pre><code>pip install kliz</code></pre>
+          </div>
+          <div class="quick-grid" aria-label="Points clefs">
+            <article class="tile">
+              <h3>Synchrone</h3>
+              <p>Tu appelles l'API depuis ton service, worker ou cron existant.</p>
+            </article>
+            <article class="tile">
+              <h3>Agnostique</h3>
+              <p>Le package ne force aucun framework web ni file d'attente.</p>
+            </article>
+            <article class="tile">
+              <h3>Typed</h3>
+              <p>Le package expose `py.typed` et passe en typage strict.</p>
+            </article>
+          </div>
+        </section>
+
+        <section id="quickstart" class="section">
+          <h2>Démarrage rapide</h2>
+          <p>
+            Injecte les providers dans l'orchestrateur, puis notifie une URL.
+            Les erreurs d'un provider n'arrêtent pas les autres providers.
+          </p>
+          <div class="code-block">
+            <div class="code-head">
+              <span>Python</span>
+              <button class="copy" type="button" data-copy>Copier</button>
+            </div>
+            <pre><code>from kliz import GoogleProvider, IndexNowProvider, Kliz
+
+indexer = Kliz(
+    [
+        IndexNowProvider(
+            api_key="votre-cle-indexnow",
+            key_location="https://example.com/votre-cle-indexnow.txt",
+        ),
+        GoogleProvider("/run/secrets/google-service-account.json"),
+    ]
+)
+
+statuses = indexer.notify_all("https://example.com/articles/nouvel-article")</code></pre>
+          </div>
+          <div class="code-block">
+            <div class="code-head">
+              <span>Résultats détaillés</span>
+              <button class="copy" type="button" data-copy>Copier</button>
+            </div>
+            <pre><code>results = indexer.notify_all_detailed(
+    "https://example.com/articles/nouvel-article"
+)
+
+for name, result in results.items():
+    print(name, result.success, result.retryable, result.error)</code></pre>
+          </div>
+        </section>
+
+        <section id="providers" class="section">
+          <h2>Providers</h2>
+          <p>
+            Chaque provider respecte le même contrat : `notify(url) -> bool`.
+            L'orchestrateur reste stable quand un moteur est ajouté.
+          </p>
+          <div class="provider-grid">
+            <article class="tile">
+              <h3>IndexNow</h3>
+              <p>
+                Envoie une ou plusieurs URL du même hôte. Les réponses `429` et
+                `5xx` sont classées comme retentables.
+              </p>
+              <div class="code-block">
+                <div class="code-head">
+                  <span>Python</span>
+                  <button class="copy" type="button" data-copy>Copier</button>
+                </div>
+                <pre><code>provider = IndexNowProvider(
+    api_key="votre-cle-valide",
+    key_location="https://example.com/votre-cle-valide.txt",
+)
+
+provider.notify_many([
+    "https://example.com/page-1",
+    "https://example.com/page-2",
+])</code></pre>
+              </div>
+            </article>
+            <article class="tile">
+              <h3>Google Indexing</h3>
+              <p>
+                Publie une notification `URL_UPDATED` pour les pages
+                officiellement éligibles selon Google.
+              </p>
+              <div class="code-block">
+                <div class="code-head">
+                  <span>Python</span>
+                  <button class="copy" type="button" data-copy>Copier</button>
+                </div>
+                <pre><code>provider = GoogleProvider(
+    "/run/secrets/google-service-account.json",
+    timeout=60.0,
+    num_retries=2,
+)
+
+provider.notify("https://example.com/jobs/backend-python")</code></pre>
+              </div>
+            </article>
+          </div>
+          <div class="callout">
+            Google Indexing est réservé aux pages contenant un `JobPosting` ou
+            un `BroadcastEvent` intégré dans un `VideoObject`. Pour les autres
+            contenus, garde un sitemap propre.
+          </div>
+        </section>
+
+        <section id="async" class="section">
+          <h2>Intégration asynchrone</h2>
+          <p>
+            Kliz ne transporte pas de système de jobs. Place simplement l'appel
+            dans le worker déjà utilisé par ton application.
+          </p>
+          <div class="code-block">
+            <div class="code-head">
+              <span>Celery</span>
+              <button class="copy" type="button" data-copy>Copier</button>
+            </div>
+            <pre><code>from dataclasses import asdict
+
+from celery import shared_task
+from django.conf import settings
+from kliz import IndexNowProvider, Kliz
+
+
+@shared_task(bind=True, max_retries=5)
+def notify_search_engines(self, url: str):
+    indexer = Kliz([
+        IndexNowProvider(
+            api_key=settings.INDEXNOW_API_KEY,
+            key_location=settings.INDEXNOW_KEY_LOCATION,
+        )
+    ])
+    results = indexer.notify_all_detailed(url)
+    retryable = [result for result in results.values() if result.retryable]
+
+    if retryable:
+        raise self.retry(countdown=60)
+
+    return {name: asdict(result) for name, result in results.items()}</code></pre>
+          </div>
+        </section>
+
+        <section id="production" class="section">
+          <h2>Production</h2>
+          <p>
+            Une notification accélère la découverte, mais ne garantit jamais
+            l'indexation. Le monitoring et les retries restent côté application.
+          </p>
+          <ol class="steps">
+            <li>Injecter les secrets depuis un gestionnaire prévu pour ça.</li>
+            <li>Appliquer un backoff avec jitter aux erreurs retentables.</li>
+            <li>Suivre les statuts HTTP, quotas, latences et taux de succès.</li>
+            <li>Garder un sitemap à jour pour la couverture générale.</li>
+          </ol>
+          <div class="meta-grid">
+            <article class="tile">
+              <h3>Validation locale</h3>
+              <p>`pytest`, `ruff`, `mypy`, `build`, `twine` et `pip-audit`.</p>
+            </article>
+            <article class="tile">
+              <h3>Licence</h3>
+              <p>MIT, avec contribution et politique de sécurité documentées.</p>
+            </article>
+          </div>
+        </section>
+
+        <footer class="footer">
+          Kliz v0.1.0 · Documentation statique prête pour GitHub Pages.
+        </footer>
+      </main>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>

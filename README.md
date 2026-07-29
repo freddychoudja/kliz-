@@ -19,6 +19,10 @@ encapsuler dans le système de tâches de son choix.
 pip install kliz
 ```
 
+Une documentation web statique est disponible dans
+[`docs/index.html`](docs/index.html). Elle peut aussi être publiée via GitHub
+Pages avec le workflow fourni.
+
 Pour contribuer et exécuter les tests :
 
 ```bash
