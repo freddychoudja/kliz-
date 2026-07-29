@@ -83,3 +83,14 @@ jobs:
       - name: Validate package metadata and README
         run: python -m twine check --strict dist/*
       - name: Install and import the built wheel
+        run: |
+          python -m venv wheel-venv
+          wheel-venv/bin/python -m pip install dist/*.whl
+          cd /tmp
+          "$GITHUB_WORKSPACE/wheel-venv/bin/python" -c \
+            "import kliz; print(kliz.__version__)"
+      - uses: actions/upload-artifact@v5
+        with:
+          name: python-package-distributions
+          path: dist/
+          if-no-files-found: error
