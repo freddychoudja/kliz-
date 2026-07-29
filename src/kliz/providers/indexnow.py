@@ -117,3 +117,12 @@ class IndexNowProvider(BaseProvider):
         if key_url.hostname.lower() != submitted_url.hostname.lower():
             raise ValueError("key_location must use the same host as the submitted URL")
 
+        key_directory = str(PurePosixPath(key_url.path).parent)
+        if key_directory == ".":
+            key_directory = "/"
+        normalized_directory = key_directory.rstrip("/") + "/"
+        submitted_path = submitted_url.path or "/"
+        if normalized_directory != "/" and not submitted_path.startswith(
+            normalized_directory
+        ):
+            raise ValueError("url must be within the path covered by key_location")
