@@ -1,0 +1,57 @@
+name: Rapport de bug
+description: Signaler un comportement incorrect ou inattendu
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de ne jamais publier de clé API ou de fichier de compte de service.
+  - type: input
+    id: version
+    attributes:
+      label: Version de kliz
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Version de Python
+      placeholder: "3.12"
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Provider concerné
+      options:
+        - IndexNowProvider
+        - GoogleProvider
+        - Kliz / orchestration
+        - Provider personnalisé
+        - Autre
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Décrivez le résultat obtenu et le résultat attendu.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction minimale
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Traceback ou logs nettoyés
+      description: Supprimez tous les secrets et identifiants avant de publier.
+      render: shell
+

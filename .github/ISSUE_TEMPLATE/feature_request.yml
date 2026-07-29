@@ -1,0 +1,30 @@
+name: Proposition d'amélioration
+description: Proposer un provider ou une évolution de l'API
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problème à résoudre
+      description: Expliquez le besoin concret et les limites actuelles.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Solution proposée
+      description: Décrivez l'API ou le comportement souhaité.
+    validations:
+      required: true
+  - type: checkboxes
+    id: architecture
+    attributes:
+      label: Compatibilité architecturale
+      options:
+        - label: La proposition conserve un cœur indépendant des frameworks.
+          required: true
+        - label: Un nouveau moteur peut être implémenté comme un provider.
+          required: false
+

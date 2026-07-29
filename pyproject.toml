@@ -1,0 +1,101 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kliz"
+version = "0.1.0"
+description = "Bot d'indexation SEO agnostique pour notifier les moteurs de recherche."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+authors = [
+    { name = "Freddy Choudja" },
+]
+keywords = ["seo", "indexing", "indexnow", "google"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Internet :: WWW/HTTP",
+]
+dependencies = [
+    "requests>=2.28.0",
+    "google-auth>=2.0.0",
+    "google-auth-httplib2>=0.1.0",
+    "google-api-python-client>=2.0.0",
+    "httplib2>=0.19.0,<1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/freddychoudja/kliz-"
+Repository = "https://github.com/freddychoudja/kliz-.git"
+Issues = "https://github.com/freddychoudja/kliz-/issues"
+Documentation = "https://github.com/freddychoudja/kliz-#readme"
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0,<10.0",
+    "pytest-cov>=5.0,<8.0",
+]
+dev = [
+    "build>=1.2,<2.0",
+    "mypy>=1.11,<2.0",
+    "pip-audit>=2.7,<3.0",
+    "pytest>=8.0,<10.0",
+    "pytest-cov>=5.0,<8.0",
+    "ruff>=0.9,<1.0",
+    "twine>=5.1,<7.0",
+    "types-requests>=2.28.0",
+]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.package-data]
+kliz = ["py.typed"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["kliz"]
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
+skip_covered = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+packages = ["kliz"]
+
+[[tool.mypy.overrides]]
+module = [
+    "google.auth.*",
+    "google.oauth2.*",
+    "google_auth_httplib2",
+    "googleapiclient.*",
+    "httplib2",
+]
+ignore_missing_imports = true
