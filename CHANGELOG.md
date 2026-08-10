@@ -5,6 +5,20 @@ Le projet suit le versionnage sémantique.
 
 ## [Unreleased]
 
+### Ajouté
+
+- Session HTTP `requests` réutilisable dans `IndexNowProvider`, avec injection
+  d'une session externe et méthode `close()` pour libérer les connexions.
+- Construction paresseuse du client Google Indexing : le fichier de compte de
+  service n'est lu qu'au premier `notify` ; les erreurs de configuration sont
+  non retentables et ne cassent plus le démarrage de l'application.
+
+### Modifié
+
+- Validation stricte des URL de notification : les fragments (`#`) sont
+  toujours rejetés et les chaînes de requête (`?`) sont rejetées via le mode
+  `require_clean` de `parse_http_url`.
+
 ## [0.1.0] - 2026-07-29
 
 ### Ajouté
@@ -17,4 +31,7 @@ Le projet suit le versionnage sémantique.
 - Validation des URL, clés IndexNow, timeouts et chemins de clés.
 - Tests unitaires mockés, contrôle de couverture, lint et typage strict.
 - CI multi-version Python et publication PyPI via Trusted Publishing.
+
+Une traduction anglaise de ce changelog est disponible dans
+[`CHANGELOG.en.md`](CHANGELOG.en.md).
 

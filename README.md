@@ -23,6 +23,9 @@ Une documentation web statique est disponible dans
 [`docs/index.html`](docs/index.html). Elle peut aussi être publiée via GitHub
 Pages avec le workflow fourni.
 
+Une traduction anglaise est disponible dans
+[`README.en.md`](README.en.md).
+
 Pour contribuer et exécuter les tests :
 
 ```bash
@@ -97,6 +100,21 @@ class CustomProvider(BaseProvider):
         return True
 ```
 
+## Validation des URL
+
+Toutes les URL soumises à un provider sont contrôlées avant tout envoi :
+
+- le schéma doit être `http` ou `https` et l'hôte doit être présent ;
+- les identifiants (`https://user:pass@...`) sont interdits ;
+- les fragments (`#...`) sont toujours rejetés : ils ne sont jamais transmis au
+  serveur et ne peuvent donc désigner un contenu distinct ;
+- les chaînes de requête (`?...`) sont rejetées pour les notifications : seule
+  une URL canonique propre est soumise aux moteurs.
+
+La fonction partagée `parse_http_url(url, require_clean=True)` applique ces
+règles. `require_clean` vaut `False` par défaut afin de ne pas casser les
+usages existants ; seules les notifications exigent une URL propre.
+
 ## Configuration des fournisseurs
 
 ### IndexNow
@@ -114,6 +132,23 @@ provider = IndexNowProvider(
 )
 provider.notify("https://example.com/page")
 ```
+
+Le provider réutilise une connexion HTTP persistante (`requests.Session`) entre
+les notifications, afin de ne pas reconstruire une connexion et une poignée de
+main TLS à chaque appel. Vous pouvez injecter votre propre session (tests,
+configuration réseau partagée, proxies) :
+
+```python
+import requests
+
+provider = IndexNowProvider(
+    api_key="votre-cle-valide",
+    session=requests.Session(),
+)
+```
+
+La session interne garde les connexions ouvertes ; appelez `provider.close()` à
+l'arrêt de votre application pour les libérer proprement.
 
 Pour soumettre plusieurs URL du même hôte dans un seul appel :
 
@@ -154,6 +189,13 @@ provider.notify("https://example.com/jobs/backend-python")
 
 L'API Google Indexing est soumise aux règles d'éligibilité et aux quotas de
 Google. Une notification ne garantit pas l'indexation de l'URL.
+
+Le client Indexing est construit de manière paresseuse : le fichier de compte
+de service n'est lu qu'au premier appel de `notify`, puis réutilisé pour les
+appels suivants. La création du provider ne déclenche donc aucune lecture de
+fichier. Les erreurs de configuration (fichier absent, JSON invalide)
+remontent au moment de la notification, sont marquées comme non retentables, et
+le provider se rétablit dès que le fichier est corrigé.
 
 ## Recettes / Intégration Asynchrone
 
