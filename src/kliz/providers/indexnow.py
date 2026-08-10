@@ -27,6 +27,8 @@ class IndexNowProvider(BaseProvider):
         api_key: str,
         key_location: Optional[str] = None,
         timeout: float = 10.0,
+        *,
+        session: Optional[requests.Session] = None,
     ) -> None:
         if not isinstance(api_key, str) or not self._key_pattern.fullmatch(api_key):
             raise ValueError(
@@ -35,11 +37,17 @@ class IndexNowProvider(BaseProvider):
         if timeout <= 0:
             raise ValueError("timeout must be greater than zero")
         if key_location is not None:
-            parse_http_url(key_location)
+            parse_http_url(key_location, require_clean=True)
 
         self.api_key = api_key
         self.key_location = key_location
         self.timeout = timeout
+        self._session = session if session is not None else requests.Session()
+
+    def close(self) -> None:
+        """Release the pooled connections held by this provider."""
+
+        self._session.close()
 
     def notify(self, url: str) -> bool:
         """Submit one updated URL to IndexNow."""
@@ -64,7 +72,7 @@ class IndexNowProvider(BaseProvider):
             payload["keyLocation"] = self.key_location
 
         try:
-            response = requests.post(
+            response = self._session.post(
                 self.endpoint,
                 json=payload,
                 timeout=self.timeout,
@@ -101,7 +109,9 @@ class IndexNowProvider(BaseProvider):
             raise ValueError("IndexNow accepts at most 10,000 URLs per request")
 
         normalized_urls = [url.strip() for url in urls]
-        parsed_urls = [parse_http_url(url) for url in normalized_urls]
+        parsed_urls = [
+            parse_http_url(url, require_clean=True) for url in normalized_urls
+        ]
         hosts = {parsed.hostname.lower() for parsed in parsed_urls if parsed.hostname}
         if len(hosts) != 1:
             raise ValueError("all IndexNow URLs must belong to the same host")
@@ -111,7 +121,7 @@ class IndexNowProvider(BaseProvider):
         if self.key_location is None:
             return
 
-        key_url = parse_http_url(self.key_location)
+        key_url = parse_http_url(self.key_location, require_clean=True)
         if key_url.hostname is None or submitted_url.hostname is None:
             raise ValueError("key_location and url must include a hostname")
         if key_url.hostname.lower() != submitted_url.hostname.lower():

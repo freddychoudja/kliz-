@@ -37,20 +37,23 @@ def google_client_mocks() -> Iterator[dict[str, Mock]]:
         }
 
 
+def make_mock_session() -> Mock:
+    return Mock(spec=requests.Session)
+
+
 @pytest.mark.parametrize("status_code", [200, 202])
-@patch("kliz.providers.indexnow.requests.post")
-def test_indexnow_provider_accepts_success_statuses(
-    mock_post: Mock, status_code: int
-) -> None:
-    mock_post.return_value.status_code = status_code
+def test_indexnow_provider_accepts_success_statuses(status_code: int) -> None:
+    session = make_mock_session()
+    session.post.return_value.status_code = status_code
     provider = IndexNowProvider(
         api_key="indexnow-key",
         key_location="https://example.com/indexnow-key.txt",
+        session=session,
     )
 
     assert provider.notify("https://example.com/articles/new") is True
 
-    mock_post.assert_called_once_with(
+    session.post.assert_called_once_with(
         "https://api.indexnow.org/indexnow",
         json={
             "host": "example.com",
@@ -62,31 +65,30 @@ def test_indexnow_provider_accepts_success_statuses(
     )
 
 
-@patch("kliz.providers.indexnow.requests.post")
-def test_indexnow_provider_submits_multiple_urls(mock_post: Mock) -> None:
-    mock_post.return_value.status_code = 200
-    provider = IndexNowProvider(api_key="abcdefgh")
+def test_indexnow_provider_submits_multiple_urls() -> None:
+    session = make_mock_session()
+    session.post.return_value.status_code = 200
+    provider = IndexNowProvider(api_key="abcdefgh", session=session)
     urls = [
         "https://example.com/first",
         "https://example.com/second",
     ]
 
     assert provider.notify_many(urls) is True
-    assert mock_post.call_args.kwargs["json"]["urlList"] == urls
+    assert session.post.call_args.kwargs["json"]["urlList"] == urls
 
 
 @pytest.mark.parametrize(
     ("status_code", "retryable"),
     [(400, False), (403, False), (422, False), (429, True), (500, True)],
 )
-@patch("kliz.providers.indexnow.requests.post")
 def test_indexnow_provider_classifies_http_errors(
-    mock_post: Mock,
     status_code: int,
     retryable: bool,
 ) -> None:
-    mock_post.return_value.status_code = status_code
-    provider = IndexNowProvider(api_key="abcdefgh")
+    session = make_mock_session()
+    session.post.return_value.status_code = status_code
+    provider = IndexNowProvider(api_key="abcdefgh", session=session)
 
     with pytest.raises(ProviderError) as captured:
         provider.notify("https://example.com/article")
@@ -100,13 +102,12 @@ def test_indexnow_provider_classifies_http_errors(
     "exception",
     [requests.Timeout("timeout"), requests.ConnectionError("offline")],
 )
-@patch("kliz.providers.indexnow.requests.post")
 def test_indexnow_provider_wraps_transient_network_errors(
-    mock_post: Mock,
     exception: requests.RequestException,
 ) -> None:
-    mock_post.side_effect = exception
-    provider = IndexNowProvider(api_key="abcdefgh")
+    session = make_mock_session()
+    session.post.side_effect = exception
+    provider = IndexNowProvider(api_key="abcdefgh", session=session)
 
     with pytest.raises(ProviderError) as captured:
         provider.notify("https://example.com/article")
@@ -115,15 +116,31 @@ def test_indexnow_provider_wraps_transient_network_errors(
     assert captured.value.status_code is None
 
 
-@patch("kliz.providers.indexnow.requests.post")
-def test_indexnow_provider_wraps_other_request_errors(mock_post: Mock) -> None:
-    mock_post.side_effect = requests.RequestException("invalid request")
-    provider = IndexNowProvider(api_key="abcdefgh")
+def test_indexnow_provider_wraps_other_request_errors() -> None:
+    session = make_mock_session()
+    session.post.side_effect = requests.RequestException("invalid request")
+    provider = IndexNowProvider(api_key="abcdefgh", session=session)
 
     with pytest.raises(ProviderError) as captured:
         provider.notify("https://example.com/article")
 
     assert captured.value.retryable is False
+
+
+def test_indexnow_provider_creates_session_by_default() -> None:
+    with patch("kliz.providers.indexnow.requests.Session") as session_factory:
+        IndexNowProvider(api_key="abcdefgh")
+
+    session_factory.assert_called_once_with()
+
+
+def test_indexnow_provider_close_releases_session() -> None:
+    session = make_mock_session()
+    provider = IndexNowProvider(api_key="abcdefgh", session=session)
+
+    provider.close()
+
+    session.close.assert_called_once_with()
 
 
 @pytest.mark.parametrize(
@@ -149,6 +166,41 @@ def test_indexnow_provider_rejects_invalid_urls(url: str) -> None:
 
     with pytest.raises(ValueError):
         provider.notify(url)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://example.com/article?utm_source=newsletter",
+        "https://example.com/article#section",
+    ],
+)
+def test_indexnow_provider_requires_clean_urls(url: str) -> None:
+    provider = IndexNowProvider(api_key="abcdefgh")
+
+    with pytest.raises(ValueError, match="query|fragment"):
+        provider.notify(url)
+
+
+def test_indexnow_provider_requires_clean_urls_in_batches() -> None:
+    provider = IndexNowProvider(api_key="abcdefgh")
+
+    with pytest.raises(ValueError, match="query"):
+        provider.notify_many(
+            ["https://example.com/clean", "https://example.com/article?x=1"]
+        )
+
+
+@pytest.mark.parametrize(
+    "key_location",
+    [
+        "https://example.com/indexnow-key.txt?token=abc",
+        "https://example.com/indexnow-key.txt#section",
+    ],
+)
+def test_indexnow_provider_rejects_dirty_key_locations(key_location: str) -> None:
+    with pytest.raises(ValueError):
+        IndexNowProvider(api_key="abcdefgh", key_location=key_location)
 
 
 def test_indexnow_provider_requires_same_host_for_batches() -> None:
@@ -198,7 +250,7 @@ def test_indexnow_provider_rejects_invalid_key_location() -> None:
         IndexNowProvider(api_key="abcdefgh", key_location="not-a-url")
 
 
-def test_google_provider_builds_authenticated_client(
+def test_google_provider_builds_client_lazily_on_first_notify(
     google_client_mocks: dict[str, Mock],
 ) -> None:
     credentials = google_client_mocks["credentials_factory"].return_value
@@ -210,6 +262,12 @@ def test_google_provider_builds_authenticated_client(
         timeout=15,
         num_retries=3,
     )
+
+    google_client_mocks["credentials_factory"].assert_not_called()
+    google_client_mocks["build"].assert_not_called()
+
+    assert provider.notify("https://example.com/jobs/backend-python") is True
+    assert provider.notify("https://example.com/jobs/frontend-python") is True
 
     google_client_mocks["credentials_factory"].assert_called_once_with(
         "/secrets/google-service-account.json",
@@ -227,6 +285,24 @@ def test_google_provider_builds_authenticated_client(
         cache_discovery=False,
     )
     assert provider.num_retries == 3
+
+
+def test_google_provider_wraps_configuration_errors(
+    google_client_mocks: dict[str, Mock],
+) -> None:
+    google_client_mocks["credentials_factory"].side_effect = FileNotFoundError(
+        "no such file"
+    )
+    provider = GoogleProvider("/secrets/missing.json")
+
+    with pytest.raises(ProviderError) as captured:
+        provider.notify("https://example.com/job")
+
+    assert captured.value.retryable is False
+    assert captured.value.provider == "GoogleProvider"
+
+    google_client_mocks["credentials_factory"].side_effect = None
+    assert provider.notify("https://example.com/job") is True
 
 
 def test_google_provider_publishes_url_updated(
@@ -320,3 +396,20 @@ def test_google_provider_rejects_invalid_url(
 
     with pytest.raises(ValueError):
         provider.notify("not-a-url")
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://example.com/job?id=123",
+        "https://example.com/job#apply",
+    ],
+)
+def test_google_provider_requires_clean_urls(
+    google_client_mocks: dict[str, Mock],
+    url: str,
+) -> None:
+    provider = GoogleProvider("/secrets/google-service-account.json")
+
+    with pytest.raises(ValueError, match="query|fragment"):
+        provider.notify(url)
