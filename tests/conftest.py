@@ -1,8 +1,8 @@
 """Shared test fixtures and helpers for the kliz test suite."""
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from contextlib import ExitStack
-from typing import Callable
+from typing import Callable, Optional
 from unittest.mock import Mock, patch
 
 import pytest
@@ -22,6 +22,26 @@ class StubProvider(BaseProvider):
 
     def notify(self, url: str) -> bool:
         return self.callback(url)
+
+
+class BatchStubProvider(BaseProvider):
+    def __init__(
+        self,
+        callback: Optional[Callable[[Sequence[str]], bool]] = None,
+        *,
+        max_urls_per_request: Optional[int] = None,
+    ) -> None:
+        self.callback = callback or (lambda urls: True)
+        self.max_urls_per_request = max_urls_per_request
+        self.batches: list[list[str]] = []
+
+    def notify(self, url: str) -> bool:
+        return self.notify_many([url])
+
+    def notify_many(self, urls: Sequence[str]) -> bool:
+        urls_list = list(urls)
+        self.batches.append(urls_list)
+        return self.callback(urls_list)
 
 
 class NamedProvider(StubProvider):

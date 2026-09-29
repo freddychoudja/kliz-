@@ -1,6 +1,6 @@
 # TODO — Feuille de route `kliz`
 
-> **Statut global :** 🟢 4/7 phases réalisées · la suite mène à la v0.2.0.
+> **Statut global :** 🟢 5/7 phases réalisées · la suite mène à la v0.2.0.
 
 ---
 
@@ -21,7 +21,7 @@
 | 2 | Réutilisation des connexions | Une session HTTP persistante au lieu d'un tunnel par appel | ✅ |
 | 3 | Client Google paresseux | Ne pas lire le compte de service à la création | ✅ |
 | 4 | Politique de retry | Backoff exponentiel + jitter, opt-in | ✅ |
-| 5 | Orchestration par lots ⭐ | `Kliz.notify_many` : découpage intelligent par provider | ⬜ |
+| 5 | Orchestration par lots ⭐ | `Kliz.notify_many` : découpage intelligent par provider | ✅ |
 | 6 | Échafaudage de providers | Helper `_http.py` + base batch réutilisable | ⬜ |
 | 7 | Finition & livraison | Version `0.2.0`, docs, vérifications complètes | ⬜ |
 
@@ -113,7 +113,7 @@
 
 ---
 
-## **Phase 5 — Orchestration par lots** ⭐ ⬜
+## **Phase 5 — Orchestration par lots** ⭐ ✅
 
 > **Expliqué simplement :** le chef (`Kliz`) ne sait aujourd’hui dire qu’« une seule URL » à
 > chaque travailleur. Or IndexNow peut encaisser 10 000 adresses en **un seul voyage**, tandis
@@ -127,11 +127,11 @@
 
 ### Travail demandé
 
-- [ ] Ajouter `Kliz.notify_many(urls)` et `notify_many_detailed(urls)`
-- [ ] Appeler `notify_many` sur les providers qui le supportent, **repli en boucle de `notify`**
+- [x] Ajouter `Kliz.notify_many(urls)` et `notify_many_detailed(urls)`
+- [x] Appeler `notify_many` sur les providers qui le supportent, **repli en boucle de `notify`**
       pour les autres
-- [ ] Clés de résultats conservées **par provider**
-- [ ] Respecter `max_urls_per_request` propre à chaque provider
+- [x] Clés de résultats conservées **par provider**
+- [x] Respecter `max_urls_per_request` propre à chaque provider
 
 ---
 

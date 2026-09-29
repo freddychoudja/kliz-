@@ -16,6 +16,11 @@ The project follows semantic versioning.
   injectable `clock` and `sleep`. Retry is disabled by default.
 - CLI entry point `kliz`: subcommands `notify` (single URL or `--batch`),
   `providers`, with credentials via arguments or `KLIZ_*` env vars.
+- Batch notifications in `Kliz`: `notify_many` and `notify_many_detailed` with
+  automatic chunking by `max_urls_per_request` and fallback loop for providers
+  without native batch support.
+- `BaseProvider.close()` hook and context manager support (`__enter__`/`__exit__`)
+  on `Kliz`.
 
 ### Changed
 

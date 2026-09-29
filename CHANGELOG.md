@@ -17,6 +17,11 @@ Le projet suit le versionnage sémantique.
 - Point d'entrée CLI `kliz` : sous-commandes `notify` (URL unique ou `--batch`),
   `providers`, avec crédits via arguments ou variables d'environnement
   `KLIZ_*`.
+- Notifications par lots dans `Kliz` : `notify_many` et `notify_many_detailed`
+  avec découpage automatique selon `max_urls_per_request` et boucle de repli
+  pour les providers sans support natif de lots.
+- Hook de nettoyage `BaseProvider.close()` et support de gestionnaire de
+  contexte (`__enter__` / `__exit__`) sur `Kliz`.
 
 ### Modifié
 

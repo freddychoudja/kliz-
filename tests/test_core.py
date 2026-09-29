@@ -2,6 +2,7 @@
 
 import pytest
 from conftest import (
+    BatchStubProvider,
     CountingProvider,
     FlakyProvider,
     NamedProvider,
@@ -224,3 +225,105 @@ def test_base_provider_close_is_a_noop() -> None:
     provider = StubProvider(return_true)
     # Should not raise — BaseProvider.close() is a no-op by default.
     provider.close()
+
+
+def test_notify_many_returns_boolean_statuses() -> None:
+    batch_provider = BatchStubProvider(lambda urls: True)
+    single_provider = StubProvider(return_true)
+    indexer = Kliz([batch_provider, single_provider])
+
+    statuses = indexer.notify_many(["https://example.com/1", "https://example.com/2"])
+
+    assert statuses == {
+        "BatchStubProvider": True,
+        "StubProvider": True,
+    }
+
+
+def test_notify_many_delegates_to_batch_provider() -> None:
+    provider = BatchStubProvider()
+    indexer = Kliz([provider])
+    urls = ["https://example.com/1", "https://example.com/2"]
+
+    indexer.notify_many(urls)
+
+    assert provider.batches == [urls]
+
+
+def test_notify_many_detailed_falls_back_to_notify_loop() -> None:
+    provider = CountingProvider(return_true)
+    indexer = Kliz([provider])
+    urls = ["https://example.com/1", "https://example.com/2", "https://example.com/3"]
+
+    results = indexer.notify_many_detailed(urls)
+
+    assert provider.calls == 3
+    assert len(results["CountingProvider"]) == 3
+    assert all(r.success for r in results["CountingProvider"])
+
+
+def test_notify_many_respects_max_urls_per_request() -> None:
+    provider = BatchStubProvider(max_urls_per_request=2)
+    indexer = Kliz([provider])
+    urls = [
+        "https://example.com/1",
+        "https://example.com/2",
+        "https://example.com/3",
+        "https://example.com/4",
+        "https://example.com/5",
+    ]
+
+    results = indexer.notify_many_detailed(urls)
+
+    assert provider.batches == [
+        ["https://example.com/1", "https://example.com/2"],
+        ["https://example.com/3", "https://example.com/4"],
+        ["https://example.com/5"],
+    ]
+    assert len(results["BatchStubProvider"]) == 3
+    assert all(r.success for r in results["BatchStubProvider"])
+
+
+@pytest.mark.parametrize(
+    "invalid_urls",
+    ["https://example.com", b"https://example.com", [], None, 123],
+)
+def test_notify_many_validates_urls_sequence(invalid_urls: object) -> None:
+    indexer = Kliz([StubProvider(return_true)])
+
+    with pytest.raises((TypeError, ValueError)):
+        indexer.notify_many(invalid_urls)  # type: ignore[arg-type]
+
+
+def test_notify_many_retries_transient_failure() -> None:
+    sleeper = RecordingSleep()
+    calls = 0
+
+    def flaky_batch(urls: object) -> bool:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise_retryable("https://example.com")
+        return True
+
+    provider = BatchStubProvider(flaky_batch)
+    indexer = Kliz([provider], max_attempts=3, sleep=sleeper, clock=lambda: 0.0)
+
+    results = indexer.notify_many_detailed(["https://example.com/1"])
+
+    assert calls == 2
+    assert len(sleeper.delays) == 1
+    assert results["BatchStubProvider"][0].success is True
+
+
+def test_notify_many_continues_across_providers() -> None:
+    failing = StubProvider(return_false)
+    succeeding = BatchStubProvider()
+    indexer = Kliz([failing, succeeding])
+
+    statuses = indexer.notify_many(["https://example.com/1"])
+
+    assert statuses == {
+        "StubProvider": False,
+        "BatchStubProvider": True,
+    }
