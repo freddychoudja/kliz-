@@ -188,6 +188,13 @@ provider.notify("https://example.com/jobs/backend-python")</code></pre>
             un `BroadcastEvent` intégré dans un `VideoObject`. Pour les autres
             contenus, garde un sitemap propre.
           </div>
+          <div class="callout">
+            `BatchProvider` (exporté publiquement) est la base commune de tous
+            les moteurs par lots : elle gère le découpage selon
+            `max_urls_per_request` et le repli en boucle `notify`. Pour ajouter
+            un moteur, implémentez `_notify_many(urls)` ; les helpers HTTP
+            partagés (`_http.py`) sont fournis.
+          </div>
         </section>
 
         <section id="async" class="section">
