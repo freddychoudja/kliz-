@@ -5,28 +5,27 @@ The project follows semantic versioning.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-29
+
 ### Added
 
-- Reusable `requests` HTTP session in `IndexNowProvider`, with injection of an
-  external session and a `close()` method to release connections.
-- Lazy construction of the Google Indexing client: the service-account file is
-  only read on the first `notify`; configuration errors are non-retryable and
-  no longer break application startup.
-- `Kliz`: opt-in `max_attempts` parameter with exponential backoff and jitter;
-  injectable `clock` and `sleep`. Retry is disabled by default.
-- CLI entry point `kliz`: subcommands `notify` (single URL or `--batch`),
-  `providers`, with credentials via arguments or `KLIZ_*` env vars.
-- Batch notifications in `Kliz`: `notify_many` and `notify_many_detailed` with
-  automatic chunking by `max_urls_per_request` and fallback loop for providers
-  without native batch support.
-- `BaseProvider.close()` hook and context manager support (`__enter__`/`__exit__`)
-  on `Kliz`.
+- Opt-in retry on `Kliz` (`max_attempts`) with exponential backoff and jitter;
+  injectable `sleep` and `clock`; off by default.
+- Batch orchestration: `Kliz.notify_many` / `notify_many_detailed`, chunking by
+  `max_urls_per_request` with a per-URL `notify` fallback.
+- `BatchProvider` base and shared HTTP helpers (`_http.py`) to make new batch
+  engines easier to add.
+- Reusable `requests` HTTP session in `IndexNowProvider`, with external session
+  injection and `close()`.
+- Lazy construction of the Google Indexing client.
+- CLI entry point `kliz` (`notify`, `providers`) configured via arguments or
+  `KLIZ_*` environment variables.
+- `BaseProvider.close()` hook and context-manager support on `Kliz`.
 
 ### Changed
 
-- Strict validation of notification URLs: fragments (`#`) are always rejected
-  and query strings (`?`) are rejected via the `require_clean` mode of
-  `parse_http_url`.
+- Strict validation of notification URLs (`require_clean`: reject `?` and `#`).
+- `IndexNowProvider` now builds on `BatchProvider` and the shared HTTP helpers.
 
 ## [0.1.0] - 2026-07-29
 

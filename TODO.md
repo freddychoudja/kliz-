@@ -1,6 +1,6 @@
 # TODO — Feuille de route `kliz`
 
-> **Statut global :** 🟢 5/7 phases réalisées · la suite mène à la v0.2.0.
+> **Statut global :** 🟢 7/7 phases réalisées · livré en **v0.2.0**.
 
 ---
 
@@ -18,12 +18,12 @@
 | # | Phase | Objectif | Statut |
 | :-: | :---- | :------- | :----: |
 | 1 | Validation plus stricte des URL | Rejeter les URL « sales » avant tout envoi | ✅ |
-| 2 | Réutilisation des connexions | Une session HTTP persistante au lieu d'un tunnel par appel | ✅ |
+| 2 | Réutilisation des connexions | Une session HTTP persistante au lieu d’un tunnel par appel | ✅ |
 | 3 | Client Google paresseux | Ne pas lire le compte de service à la création | ✅ |
 | 4 | Politique de retry | Backoff exponentiel + jitter, opt-in | ✅ |
 | 5 | Orchestration par lots ⭐ | `Kliz.notify_many` : découpage intelligent par provider | ✅ |
-| 6 | Échafaudage de providers | Helper `_http.py` + base batch réutilisable | ⬜ |
-| 7 | Finition & livraison | Version `0.2.0`, docs, vérifications complètes | ⬜ |
+| 6 | Échafaudage de providers | Helper `_http.py` + base batch réutilisable | ✅ |
+| 7 | Finition & livraison | Version `0.2.0`, docs, vérifications complètes | ✅ |
 
 ---
 
@@ -135,7 +135,7 @@
 
 ---
 
-## **Phase 6 — Échafaudage de providers** ⬜
+## **Phase 6 — Échafaudage de providers** ✅
 
 > **Expliqué simplement :** construire un adaptateur pour un nouveau moteur équivaut aujourd’hui
 > à charpenter toute la maison à partir de zéro. Nous allons prédécouper le bois : une base
@@ -147,13 +147,13 @@
 
 ### Travail demandé
 
-- [ ] Ajouter un helper `_http.py` : création de `Session` partagée + wrapper de requête
-- [ ] Faire profiter `IndexNowProvider` et la base de ce helper
-- [ ] Tester qu’un mini-provider fabriqué obtient le comportement par lots **gratuitement**
+- [x] Ajouter un helper `_http.py` : création de `Session` partagée + wrapper de requête
+- [x] Faire profiter `IndexNowProvider` et la base de ce helper
+- [x] Tester qu’un mini-provider fabriqué obtient le comportement par lots **gratuitement**
 
 ---
 
-## **Phase 7 — Finition & livraison (v0.2.0)** ⬜
+## **Phase 7 — Finition & livraison (v0.2.0)** ✅
 
 > **Expliqué simplement :** mettre le produit fini dans une boîte avec son étiquette : passer la
 > version de `0.1.0` à `0.2.0`, mettre à jour le `CHANGELOG.md`, rafraîchir le `README` et la
@@ -164,13 +164,13 @@
 
 ### Travail demandé
 
-- [ ] Version `0.1.0` → **`0.2.0`** dans `pyproject.toml`
-- [ ] Mettre à jour le `CHANGELOG.md` (FR/EN)
-- [ ] Rafraîchir le `README` et la documentation (FR/EN) avec les nouvelles capacités
-- [ ] Vérification nationale complète : `pytest --cov=95`, `ruff`, `mypy`, `build`, `twine`
-- [ ] Tout doit passer sans exception
+- [x] Version `0.1.0` → **`0.2.0`** dans `pyproject.toml`
+- [x] Mettre à jour le `CHANGELOG.md` (FR/EN)
+- [x] Rafraîchir le `README` et la documentation (FR/EN) avec les nouvelles capacités
+- [x] Vérification nationale complète : `pytest --cov=95`, `ruff`, `mypy`, `build`, `twine`
+- [x] Tout doit passer sans exception
 
 ---
 
 *Document généré à partir des phases discutées ensemble et du travail déjà réalisé sur la
-branche `main`. À mettre à jour au fil des prochaines phases.*
+branche `main`. Les phases 1–7 sont livrées dans `0.2.0`.*

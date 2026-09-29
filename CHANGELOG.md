@@ -5,29 +5,28 @@ Le projet suit le versionnage sémantique.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-29
+
 ### Ajouté
 
+- Retry opt-in sur `Kliz` (`max_attempts`) avec backoff exponentiel et jitter ;
+  `sleep` et `clock` injectables ; désactivé par défaut.
+- Orchestration par lots : `Kliz.notify_many` / `notify_many_detailed`, avec
+  découpage selon `max_urls_per_request` et repli en boucle `notify`.
+- Base `BatchProvider` et helpers HTTP partagés (`_http.py`) pour faciliter
+  l'ajout de nouveaux moteurs à lots.
 - Session HTTP `requests` réutilisable dans `IndexNowProvider`, avec injection
-  d'une session externe et méthode `close()` pour libérer les connexions.
-- Construction paresseuse du client Google Indexing : le fichier de compte de
-  service n'est lu qu'au premier `notify` ; les erreurs de configuration sont
-  non retentables et ne cassent plus le démarrage de l'application.
-- `Kliz` : paramètre `max_attempts` opt-in avec backoff exponentiel et jitter ;
-  horloge et `sleep` injectables. Le retry est désactivé par défaut.
-- Point d'entrée CLI `kliz` : sous-commandes `notify` (URL unique ou `--batch`),
-  `providers`, avec crédits via arguments ou variables d'environnement
-  `KLIZ_*`.
-- Notifications par lots dans `Kliz` : `notify_many` et `notify_many_detailed`
-  avec découpage automatique selon `max_urls_per_request` et boucle de repli
-  pour les providers sans support natif de lots.
-- Hook de nettoyage `BaseProvider.close()` et support de gestionnaire de
-  contexte (`__enter__` / `__exit__`) sur `Kliz`.
+  d'une session externe et méthode `close()`.
+- Construction paresseuse du client Google Indexing.
+- Point d'entrée CLI `kliz` (`notify`, `providers`) avec configuration via
+  arguments ou variables d'environnement `KLIZ_*`.
+- Hook `BaseProvider.close()` et gestionnaire de contexte sur `Kliz`.
 
 ### Modifié
 
-- Validation stricte des URL de notification : les fragments (`#`) sont
-  toujours rejetés et les chaînes de requête (`?`) sont rejetées via le mode
-  `require_clean` de `parse_http_url`.
+- Validation stricte des URL de notification (`require_clean` : rejet de `?` et
+  `#`).
+- `IndexNowProvider` s'appuie sur `BatchProvider` et les helpers HTTP partagés.
 
 ## [0.1.0] - 2026-07-29
 
@@ -44,4 +43,3 @@ Le projet suit le versionnage sémantique.
 
 Une traduction anglaise de ce changelog est disponible dans
 [`CHANGELOG.en.md`](CHANGELOG.en.md).
-

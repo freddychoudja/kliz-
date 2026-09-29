@@ -7,7 +7,12 @@ from kliz._validation import parse_http_url
 
 
 def test_public_version_is_loaded_from_distribution_metadata() -> None:
-    assert kliz.__version__ == "0.1.0"
+    assert kliz.__version__ == "0.2.0"
+
+
+def test_public_api_exports_batch_provider() -> None:
+    assert "BatchProvider" in kliz.__all__
+    assert kliz.BatchProvider is not None
 
 
 @pytest.mark.parametrize(

@@ -101,7 +101,7 @@ def test_indexnow_provider_wraps_other_request_errors() -> None:
 
 
 def test_indexnow_provider_creates_session_by_default() -> None:
-    with patch("kliz.providers.indexnow.requests.Session") as session_factory:
+    with patch("kliz._http.requests.Session") as session_factory:
         IndexNowProvider(api_key="abcdefgh")
 
     session_factory.assert_called_once_with()
@@ -181,6 +181,17 @@ def test_indexnow_provider_requires_same_host_for_batches() -> None:
 
     with pytest.raises(ValueError, match="same host"):
         provider.notify_many(["https://one.example/a", "https://two.example/b"])
+
+
+def test_indexnow_provider_error_messages_use_provider_name() -> None:
+    session = make_mock_session()
+    session.post.return_value.status_code = 500
+    provider = IndexNowProvider(api_key="abcdefgh", session=session)
+
+    with pytest.raises(ProviderError, match="IndexNowProvider") as captured:
+        provider.notify("https://example.com/article")
+
+    assert captured.value.retryable is True
 
 
 @pytest.mark.parametrize("urls", [[], ["https://example.com"] * 10_001])

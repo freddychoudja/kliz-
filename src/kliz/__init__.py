@@ -4,11 +4,17 @@ from importlib.metadata import PackageNotFoundError, version
 
 from kliz.core import Kliz
 from kliz.exceptions import KlizError, ProviderError
-from kliz.providers import BaseProvider, GoogleProvider, IndexNowProvider
+from kliz.providers import (
+    BaseProvider,
+    BatchProvider,
+    GoogleProvider,
+    IndexNowProvider,
+)
 from kliz.results import NotificationResult
 
 __all__ = [
     "BaseProvider",
+    "BatchProvider",
     "GoogleProvider",
     "IndexNowProvider",
     "Kliz",

@@ -1,21 +1,20 @@
 """IndexNow provider implementation."""
 
 import re
-from collections.abc import Sequence
 from pathlib import PurePosixPath
 from typing import Optional, Union
 from urllib.parse import SplitResult
 
 import requests
 
+from kliz._http import post_json, raise_for_indexing_status
 from kliz._validation import parse_http_url
-from kliz.exceptions import ProviderError
-from kliz.providers.base import BaseProvider
+from kliz.providers.batch import BatchProvider
 
 PayloadValue = Union[str, list[str]]
 
 
-class IndexNowProvider(BaseProvider):
+class IndexNowProvider(BatchProvider):
     """Notify search engines that support the IndexNow protocol."""
 
     endpoint = "https://api.indexnow.org/indexnow"
@@ -34,30 +33,18 @@ class IndexNowProvider(BaseProvider):
             raise ValueError(
                 "api_key must contain 8 to 128 letters, numbers, or dashes"
             )
-        if timeout <= 0:
-            raise ValueError("timeout must be greater than zero")
         if key_location is not None:
             parse_http_url(key_location, require_clean=True)
 
+        super().__init__(timeout=timeout, session=session)
         self.api_key = api_key
         self.key_location = key_location
-        self.timeout = timeout
-        self._session = session if session is not None else requests.Session()
 
-    def close(self) -> None:
-        """Release the pooled connections held by this provider."""
-
-        self._session.close()
-
-    def notify(self, url: str) -> bool:
-        """Submit one updated URL to IndexNow."""
-
-        return self.notify_many([url])
-
-    def notify_many(self, urls: Sequence[str]) -> bool:
-        """Submit up to 10,000 URLs belonging to the same host."""
-
-        normalized_urls, parsed_urls = self._validate_urls(urls)
+    def _notify_many(
+        self,
+        urls: list[str],
+        parsed_urls: list[SplitResult],
+    ) -> bool:
         host = parsed_urls[0].hostname
         if host is None:  # Defensive: parse_http_url already enforces this.
             raise ValueError("url must include a hostname")
@@ -66,56 +53,19 @@ class IndexNowProvider(BaseProvider):
         payload: dict[str, PayloadValue] = {
             "host": host,
             "key": self.api_key,
-            "urlList": normalized_urls,
+            "urlList": urls,
         }
         if self.key_location:
             payload["keyLocation"] = self.key_location
 
-        try:
-            response = self._session.post(
-                self.endpoint,
-                json=payload,
-                timeout=self.timeout,
-            )
-        except (requests.Timeout, requests.ConnectionError) as exc:
-            raise ProviderError(
-                "IndexNow could not be reached",
-                provider=self.name,
-                retryable=True,
-            ) from exc
-        except requests.RequestException as exc:
-            raise ProviderError(
-                "IndexNow request failed",
-                provider=self.name,
-            ) from exc
-
-        if response.status_code in {200, 202}:
-            return True
-
-        retryable = response.status_code == 429 or response.status_code >= 500
-        raise ProviderError(
-            f"IndexNow rejected the notification with HTTP {response.status_code}",
+        response = post_json(
+            self._session,
+            self.endpoint,
+            payload=payload,
+            timeout=self.timeout,
             provider=self.name,
-            retryable=retryable,
-            status_code=response.status_code,
         )
-
-    def _validate_urls(
-        self, urls: Sequence[str]
-    ) -> tuple[list[str], list[SplitResult]]:
-        if isinstance(urls, (str, bytes)) or not urls:
-            raise ValueError("urls must be a non-empty sequence")
-        if len(urls) > self.max_urls_per_request:
-            raise ValueError("IndexNow accepts at most 10,000 URLs per request")
-
-        normalized_urls = [url.strip() for url in urls]
-        parsed_urls = [
-            parse_http_url(url, require_clean=True) for url in normalized_urls
-        ]
-        hosts = {parsed.hostname.lower() for parsed in parsed_urls if parsed.hostname}
-        if len(hosts) != 1:
-            raise ValueError("all IndexNow URLs must belong to the same host")
-        return normalized_urls, parsed_urls
+        return raise_for_indexing_status(response, provider=self.name)
 
     def _validate_key_location(self, submitted_url: SplitResult) -> None:
         if self.key_location is None:

@@ -55,6 +55,29 @@ statuses = indexer.notify_all("https://example.com/articles/nouvel-article")
 # }
 ```
 
+Pour soumettre plusieurs URL d'un coup, `notify_many` découpe selon
+`max_urls_per_request` (lots IndexNow) et retombe sur une boucle `notify` pour
+les autres providers :
+
+```python
+statuses = indexer.notify_many(
+    [
+        "https://example.com/articles/a",
+        "https://example.com/articles/b",
+    ]
+)
+```
+
+Le retry intégré est **désactivé par défaut** (`max_attempts=1`). Pour l'activer
+avec backoff exponentiel et jitter :
+
+```python
+indexer = Kliz(
+    [IndexNowProvider(api_key="votre-cle-indexnow")],
+    max_attempts=3,
+)
+```
+
 `notify_all` continue d'appeler les autres fournisseurs lorsqu'un fournisseur
 échoue. Son statut vaut alors `False`. Un appel direct à `provider.notify(url)`
 laisse en revanche remonter une `ProviderError` afin que l'application puisse
@@ -97,6 +120,26 @@ from kliz import BaseProvider
 class CustomProvider(BaseProvider):
     def notify(self, url: str) -> bool:
         # Appel vers l'API du moteur concerné
+        return True
+```
+
+Pour un moteur qui accepte des lots d'URL sur le même hôte, héritez de
+`BatchProvider` : `notify` et la validation (hôte commun, taille max, URL
+propres) sont fournis ; il reste à implémenter `_notify_many`.
+
+```python
+from urllib.parse import SplitResult
+
+from kliz import BatchProvider
+
+
+class CustomBatchProvider(BatchProvider):
+    max_urls_per_request = 100
+
+    def _notify_many(
+        self, urls: list[str], parsed_urls: list[SplitResult]
+    ) -> bool:
+        # Appel HTTP groupé vers le moteur
         return True
 ```
 
@@ -298,7 +341,8 @@ Le package ne stocke aucun secret et n'impose aucun système de tâches. Dans
 l'application qui l'utilise :
 
 - injectez les clés par un gestionnaire de secrets ;
-- appliquez un backoff avec jitter aux résultats `retryable=True` ;
+- activez le retry opt-in de `Kliz` (`max_attempts`) ou appliquez un backoff
+  applicatif aux résultats `retryable=True` ;
 - placez les échecs définitifs dans une dead-letter queue ;
 - mesurez latence, taux de succès, codes HTTP et quotas par provider ;
 - ne partagez pas une même instance `GoogleProvider` entre plusieurs threads ;

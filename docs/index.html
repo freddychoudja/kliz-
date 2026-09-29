@@ -19,7 +19,7 @@
           <img src="assets/kliz-mark.svg" alt="" />
           <div>
             <strong>kliz</strong>
-            <span>Documentation v0.1.0</span>
+            <span>Documentation v0.2.0</span>
           </div>
         </div>
         <nav class="nav">
@@ -103,6 +103,21 @@ indexer = Kliz(
 )
 
 statuses = indexer.notify_all("https://example.com/articles/nouvel-article")</code></pre>
+          </div>
+          <div class="code-block">
+            <div class="code-head">
+              <span>Lots + retry opt-in</span>
+              <button class="copy" type="button" data-copy>Copier</button>
+            </div>
+            <pre><code>indexer = Kliz(
+    [IndexNowProvider(api_key="votre-cle-indexnow")],
+    max_attempts=3,
+)
+
+statuses = indexer.notify_many([
+    "https://example.com/articles/a",
+    "https://example.com/articles/b",
+])</code></pre>
           </div>
           <div class="code-block">
             <div class="code-head">

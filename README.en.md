@@ -54,6 +54,29 @@ statuses = indexer.notify_all("https://example.com/articles/new-article")
 # }
 ```
 
+To submit several URLs at once, `notify_many` chunks by each provider's
+`max_urls_per_request` (IndexNow batches) and falls back to a `notify` loop for
+the others:
+
+```python
+statuses = indexer.notify_many(
+    [
+        "https://example.com/articles/a",
+        "https://example.com/articles/b",
+    ]
+)
+```
+
+Built-in retry is **off by default** (`max_attempts=1`). Enable it with
+exponential backoff and jitter:
+
+```python
+indexer = Kliz(
+    [IndexNowProvider(api_key="your-indexnow-key")],
+    max_attempts=3,
+)
+```
+
 `notify_all` keeps calling the other providers when one fails. That provider's
 status is then `False`. A direct call to `provider.notify(url)` lets a
 `ProviderError` bubble up instead, so the application can apply its own retry
@@ -96,6 +119,26 @@ from kliz import BaseProvider
 class CustomProvider(BaseProvider):
     def notify(self, url: str) -> bool:
         # Call to the relevant engine API
+        return True
+```
+
+For an engine that accepts URL batches on the same host, inherit from
+`BatchProvider`: `notify` and validation (shared host, max size, clean URLs)
+are provided; implement `_notify_many`.
+
+```python
+from urllib.parse import SplitResult
+
+from kliz import BatchProvider
+
+
+class CustomBatchProvider(BatchProvider):
+    max_urls_per_request = 100
+
+    def _notify_many(
+        self, urls: list[str], parsed_urls: list[SplitResult]
+    ) -> bool:
+        # Grouped HTTP call to the engine
         return True
 ```
 
@@ -292,7 +335,8 @@ The package stores no secrets and imposes no task system. In the application
 that uses it:
 
 - inject keys through a secrets manager;
-- apply a backoff with jitter to `retryable=True` results;
+- enable Kliz opt-in retry (`max_attempts`) or apply an application-level
+  backoff to `retryable=True` results;
 - place permanent failures in a dead-letter queue;
 - measure latency, success rate, HTTP codes and quotas per provider;
 - never share a single `GoogleProvider` instance between several threads;

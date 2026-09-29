@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kliz"
-version = "0.1.0"
+version = "0.2.0"
 description = "Bot d'indexation SEO agnostique pour notifier les moteurs de recherche."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -89,7 +89,7 @@ target-version = "py39"
 select = ["B", "E", "F", "I", "UP"]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 strict = true
 packages = ["kliz"]
 
