@@ -1,0 +1,48 @@
+{
+  "scenes": [
+    {
+      "id": "01-hook",
+      "file": "scenes/01-hook.html",
+      "narration": "narration/01-hook.txt",
+      "duration": 3,
+      "transition": "fade"
+    },
+    {
+      "id": "02-problem",
+      "file": "scenes/02-problem.html",
+      "narration": "narration/02-problem.txt",
+      "duration": 5,
+      "transition": "fade"
+    },
+    {
+      "id": "03-demo-single",
+      "file": "scenes/03-demo-single.html",
+      "narration": "narration/03-demo-single.txt",
+      "duration": 6,
+      "transition": "fade"
+    },
+    {
+      "id": "04-demo-batch",
+      "file": "scenes/04-demo-batch.html",
+      "narration": "narration/04-demo-batch.txt",
+      "duration": 7,
+      "transition": "fade"
+    },
+    {
+      "id": "05-providers",
+      "file": "scenes/05-providers.html",
+      "narration": "narration/05-providers.txt",
+      "duration": 6,
+      "transition": "fade"
+    },
+    {
+      "id": "06-cta",
+      "file": "scenes/06-cta.html",
+      "narration": "narration/06-cta.txt",
+      "duration": 4,
+      "transition": "fade"
+    }
+  ],
+  "total_duration": 31,
+  "resolution": "1920x1080"
+}

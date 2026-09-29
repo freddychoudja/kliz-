@@ -12,6 +12,10 @@ The project follows semantic versioning.
 - Lazy construction of the Google Indexing client: the service-account file is
   only read on the first `notify`; configuration errors are non-retryable and
   no longer break application startup.
+- `Kliz`: opt-in `max_attempts` parameter with exponential backoff and jitter;
+  injectable `clock` and `sleep`. Retry is disabled by default.
+- CLI entry point `kliz`: subcommands `notify` (single URL or `--batch`),
+  `providers`, with credentials via arguments or `KLIZ_*` env vars.
 
 ### Changed
 

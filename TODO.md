@@ -1,6 +1,6 @@
 # TODO — Feuille de route `kliz`
 
-> **Statut global :** 🟢 3/7 phases réalisées · la suite mène à la v0.2.0.
+> **Statut global :** 🟢 4/7 phases réalisées · la suite mène à la v0.2.0.
 
 ---
 
@@ -18,9 +18,9 @@
 | # | Phase | Objectif | Statut |
 | :-: | :---- | :------- | :----: |
 | 1 | Validation plus stricte des URL | Rejeter les URL « sales » avant tout envoi | ✅ |
-| 2 | Réutilisation des connexions | Une session HTTP persistante au lieu d’un tunnel par appel | ✅ |
+| 2 | Réutilisation des connexions | Une session HTTP persistante au lieu d'un tunnel par appel | ✅ |
 | 3 | Client Google paresseux | Ne pas lire le compte de service à la création | ✅ |
-| 4 | Politique de retry | Backoff exponentiel + jitter, opt-in | ⬜ |
+| 4 | Politique de retry | Backoff exponentiel + jitter, opt-in | ✅ |
 | 5 | Orchestration par lots ⭐ | `Kliz.notify_many` : découpage intelligent par provider | ⬜ |
 | 6 | Échafaudage de providers | Helper `_http.py` + base batch réutilisable | ⬜ |
 | 7 | Finition & livraison | Version `0.2.0`, docs, vérifications complètes | ⬜ |
@@ -94,7 +94,7 @@
 
 ---
 
-## **Phase 4 — Politique de retry** ⬜
+## **Phase 4 — Politique de retry** ✅
 
 > **Expliqué simplement :** quand une porte est verrouillée mais récupérable (erreurs `429`,
 > `5xx`), un facteur malin attend puis réessaie, avec un enthousiasme décroissant : 1 s, puis
@@ -105,11 +105,11 @@
 
 ### Travail demandé
 
-- [ ] Ajouter un paramètre optionnel de retry / `max_attempts` à `Kliz` (ou à l’appel de
+- [x] Ajouter un paramètre optionnel de retry / `max_attempts` à `Kliz` (ou à l’appel de
       notification)
-- [ ] Backoff exponentiel + jitter
-- [ ] **Désactivé par défaut** — la bibliothèque reste simple, le retry est opt-in
-- [ ] Horloge et `sleep` **injectables** pour la testabilité (aucune vraie attente dans les tests)
+- [x] Backoff exponentiel + jitter
+- [x] **Désactivé par défaut** — la bibliothèque reste simple, le retry est opt-in
+- [x] Horloge et `sleep` **injectables** pour la testabilité (aucune vraie attente dans les tests)
 
 ---
 

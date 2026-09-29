@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0e17; width: 1920px; height: 1080px; display: flex;
+  align-items: center; justify-content: center; font-family: 'SF Mono', 'Fira Code', monospace; }
+.container { text-align: center; }
+.logo { font-size: 100px; font-weight: 900; color: #00d4aa; margin-bottom: 24px; }
+.install { font-size: 28px; color: #e5e7eb; margin-bottom: 40px; }
+.install .cmd { background: #111827; padding: 16px 32px; border-radius: 10px;
+  border: 1px solid #1f2937; display: inline-block; }
+.install .prompt { color: #00d4aa; }
+.install .code { color: #e5e7eb; }
+.links { display: flex; gap: 32px; justify-content: center; margin-top: 32px; }
+.link { color: #6b7280; font-size: 18px; text-decoration: none; padding: 12px 24px;
+  border: 1px solid #1f2937; border-radius: 8px; transition: all 0.3s; }
+.link:hover { color: #00d4aa; border-color: #00d4aa; }
+</style></head><body>
+<div class="container">
+  <div class="logo">kliz</div>
+  <div class="install">
+    <span class="cmd"><span class="prompt">$ </span><span class="code">pip install kliz</span></span>
+  </div>
+  <div class="links">
+    <a class="link" href="#">github.com/yourname/kliz</a>
+    <a class="link" href="#">Documentation</a>
+  </div>
+</div>
+</body></html>

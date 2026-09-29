@@ -1,0 +1,1 @@
+Notifying search engines one URL at a time is slow and error-prone.

@@ -1,0 +1,1 @@
+Batch mode. Drop a file of URLs. Every engine notified. Done.

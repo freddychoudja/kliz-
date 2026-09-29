@@ -12,6 +12,11 @@ Le projet suit le versionnage sémantique.
 - Construction paresseuse du client Google Indexing : le fichier de compte de
   service n'est lu qu'au premier `notify` ; les erreurs de configuration sont
   non retentables et ne cassent plus le démarrage de l'application.
+- `Kliz` : paramètre `max_attempts` opt-in avec backoff exponentiel et jitter ;
+  horloge et `sleep` injectables. Le retry est désactivé par défaut.
+- Point d'entrée CLI `kliz` : sous-commandes `notify` (URL unique ou `--batch`),
+  `providers`, avec crédits via arguments ou variables d'environnement
+  `KLIZ_*`.
 
 ### Modifié
 

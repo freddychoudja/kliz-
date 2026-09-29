@@ -22,3 +22,11 @@ class BaseProvider(ABC):
         """
 
         raise NotImplementedError
+
+    def close(self) -> None:  # noqa: B027
+        """Release resources held by this provider.
+
+        The default implementation is a no-op.  Subclasses that hold
+        persistent connections (HTTP sessions, gRPC channels, etc.)
+        should override this method.
+        """

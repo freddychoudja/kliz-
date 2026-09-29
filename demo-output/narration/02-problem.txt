@@ -1,0 +1,1 @@
+Manually calling each search engine API for every URL. Tedious. Error-prone.

@@ -40,6 +40,9 @@ Repository = "https://github.com/freddychoudja/kliz-.git"
 Issues = "https://github.com/freddychoudja/kliz-/issues"
 Documentation = "https://github.com/freddychoudja/kliz-#readme"
 
+[project.scripts]
+kliz = "kliz.cli:main"
+
 [project.optional-dependencies]
 test = [
     "pytest>=8.0,<10.0",

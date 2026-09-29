@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0e17; width: 1920px; height: 1080px; display: flex;
+  align-items: center; justify-content: center; font-family: 'SF Mono', 'Fira Code', monospace; }
+.terminal { background: #111827; border-radius: 16px; padding: 32px 40px;
+  width: 1100px; box-shadow: 0 25px 80px rgba(0,0,0,0.5);
+  border: 1px solid #1f2937; }
+.titlebar { display: flex; gap: 8px; margin-bottom: 24px; }
+.dot { width: 14px; height: 14px; border-radius: 50%; }
+.dot.r { background: #ef4444; } .dot.y { background: #eab308; } .dot.g { background: #22c55e; }
+.prompt { color: #00d4aa; font-size: 20px; margin-bottom: 6px; }
+.cmd { color: #e5e7eb; font-size: 22px; }
+.output { color: #6b7280; font-size: 18px; margin-top: 16px; line-height: 1.8; }
+.output .ok { color: #22c55e; } .output .provider { color: #3b82f6; }
+.cursor { display: inline-block; width: 10px; height: 22px; background: #00d4aa;
+  animation: blink 1s step-end infinite; vertical-align: text-bottom; }
+@keyframes blink { 50% { opacity: 0; } }
+</style></head><body>
+<div class="terminal">
+  <div class="titlebar">
+    <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+  </div>
+  <div class="prompt">~/my-site $</div>
+  <div class="cmd">kliz notify https://example.com/new-page<span class="cursor"></span></div>
+  <div class="output">
+    <span class="ok">✅</span> https://example.com/new-page → <span class="provider">IndexNow</span>, <span class="provider">Google</span>: OK
+  </div>
+</div>
+</body></html>
