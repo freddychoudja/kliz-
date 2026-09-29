@@ -14,9 +14,7 @@ class TinyBatchProvider(BatchProvider):
         super().__init__(timeout=1.0)
         self.batches: list[list[str]] = []
 
-    def _notify_many(
-        self, urls: list[str], parsed_urls: list[SplitResult]
-    ) -> bool:
+    def _notify_many(self, urls: list[str], parsed_urls: list[SplitResult]) -> bool:
         del parsed_urls
         self.batches.append(list(urls))
         return True
@@ -27,9 +25,7 @@ def test_batch_provider_gives_notify_many_for_free() -> None:
 
     assert provider.notify("https://example.com/only") is True
     assert provider.batches == [["https://example.com/only"]]
-    assert provider.notify_many(
-        ["https://example.com/one", "https://example.com/two"]
-    )
+    assert provider.notify_many(["https://example.com/one", "https://example.com/two"])
     assert provider.batches[-1] == [
         "https://example.com/one",
         "https://example.com/two",
