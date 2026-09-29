@@ -112,6 +112,16 @@ a {
   right: 22px;
 }
 
+.sidebar-footer a {
+  color: #f7f3e8;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.footer a {
+  color: var(--ink);
+}
+
 .content {
   min-width: 0;
 }

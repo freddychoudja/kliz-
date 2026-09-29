@@ -21,9 +21,9 @@ A French version of this document is available in
 pip install kliz
 ```
 
-A static web documentation is available at
-[`docs/index.html`](docs/index.html). It can also be published through GitHub
-Pages with the provided workflow.
+Web documentation is available at
+[freddychoudja.github.io/kliz-](https://freddychoudja.github.io/kliz-/).
+The HTML sources live in [`docs/`](docs/) and are published via GitHub Pages.
 
 To contribute and run the tests:
 
