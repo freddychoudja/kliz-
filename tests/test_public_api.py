@@ -1,5 +1,8 @@
 """Tests for package metadata and shared validation."""
 
+import re
+from pathlib import Path
+
 import pytest
 
 import kliz
@@ -7,7 +10,11 @@ from kliz._validation import parse_http_url
 
 
 def test_public_version_is_loaded_from_distribution_metadata() -> None:
-    assert kliz.__version__ == "0.2.0"
+    pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    match = re.search(r'^version = "([^"]+)"', pyproject.read_text(), re.MULTILINE)
+
+    assert match is not None
+    assert kliz.__version__ == match.group(1)
 
 
 def test_public_api_exports_batch_provider() -> None:

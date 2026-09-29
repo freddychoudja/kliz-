@@ -318,6 +318,25 @@ job = ContentIndexingJob(api_key="votre-cle")
 result = job.run({"url": "https://example.com/page-modifiee"})
 ```
 
+## Interface en ligne de commande
+
+L'installation fournit aussi une commande `kliz` :
+
+```bash
+export KLIZ_INDEXNOW_API_KEY="votre-cle"
+export KLIZ_INDEXNOW_KEY_LOCATION="https://example.com/votre-cle.txt"
+
+kliz notify https://example.com/page  # une URL
+kliz notify --batch urls.txt          # une URL par ligne, `#` pour un commentaire
+kliz providers                        # liste des providers configurés
+kliz --version
+```
+
+Les crédits se passent aussi en options (`--indexnow-api-key`,
+`--indexnow-key-location`, `--google-service-account-file`). Le processus
+termine avec le code `0` si tout a réussi, `1` en cas d'échec de notification
+et `2` en cas de configuration invalide.
+
 ## Tests
 
 Les tests mockent les appels `requests` et le client Google. Ils ne nécessitent
