@@ -47,12 +47,12 @@ test = [
 ]
 dev = [
     "build>=1.2,<2.0",
-    "mypy>=1.11,<2.0",
+    "mypy>=1.11,<3.0",
     "pip-audit>=2.7,<3.0",
     "pytest>=8.0,<10.0",
     "pytest-cov>=5.0,<8.0",
     "ruff>=0.9,<1.0",
-    "twine>=5.1,<7.0",
+    "twine>=5.1,<8.0",
     "types-requests>=2.28.0",
 ]
 
