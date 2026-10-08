@@ -551,6 +551,7 @@ def _gsc_args(**overrides: object) -> argparse.Namespace:
         ({}, "https://example.com/sitemap.xml"),
         ({"sitemap": "https://example.com/s.xml"}, "https://example.com/s.xml"),
         ({"sitemap": "local-sitemap.xml"}, "https://example.com/sitemap.xml"),
+        ({"gsc_sitemap": ""}, "https://example.com/sitemap.xml"),
         (
             {
                 "sitemap": "https://example.com/s.xml",

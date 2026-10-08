@@ -275,6 +275,41 @@ jamais envoyées. Une nouvelle soumission demande à Google de relire le sitemap
 sans garantir l'indexation. Un HTTP 403 signifie que le compte de service n'est
 pas utilisateur de la propriété.
 
+### GitHub Action
+
+Le dépôt est aussi une GitHub Action : après chaque déploiement en production,
+elle notifie les moteurs IndexNow et soumet à nouveau le sitemap à Google
+Search Console.
+
+```yaml
+# .github/workflows/indexing.yml dans le dépôt de votre site
+name: Search engine indexing
+on:
+  deployment_status:   # envoyé par Vercel, Netlify, Cloudflare Pages... après un déploiement
+
+jobs:
+  index:
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment_status.environment == 'Production'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: freddychoudja/kliz-@main   # épinglez un tag de version ou un SHA
+        with:
+          sitemap: https://example.com/sitemap.xml
+          indexnow-api-key: ${{ secrets.INDEXNOW_KEY }}
+          indexnow-key-location: https://example.com/${{ secrets.INDEXNOW_KEY }}.txt
+          gsc-site: https://example.com/
+          gsc-service-account-json: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
+```
+
+Entrées : `sitemap` (URL ou fichier du dépôt) ou `urls` (une par ligne),
+`since`, `indexnow-api-key`, `indexnow-key-location`, `verify-key` (`true` par
+défaut : vérifie le fichier clé avant de notifier), `gsc-site`, `gsc-sitemap`,
+`gsc-service-account-json` (le contenu JSON, depuis un secret ; écrit dans un
+fichier temporaire privé supprimé à la fin), `dry-run`. Les providers sans
+identifiants sont ignorés. Runners Linux et macOS pris en charge.
+
 ## Recettes / Intégration Asynchrone
 
 `kliz` reste volontairement synchrone. Pour une exécution asynchrone, placez

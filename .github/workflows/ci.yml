@@ -95,3 +95,24 @@ jobs:
           path: dist/
           if-no-files-found: error
 
+  action:
+    name: GitHub Action (dry run)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Dry run from a sitemap
+        uses: ./
+        with:
+          sitemap: tests/fixtures/sitemap.xml
+          since: "2026-09-01"
+          dry-run: true
+      - name: Dry run from a URL list
+        uses: ./
+        with:
+          urls: |
+            https://example.com/a
+            https://example.com/b
+          dry-run: true

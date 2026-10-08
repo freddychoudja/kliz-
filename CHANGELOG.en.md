@@ -22,6 +22,8 @@ The project follows semantic versioning.
 - `GoogleSearchConsoleProvider`: resubmits a sitemap through the Search Console
   API, the supported way to signal changes to Google for any page. CLI options
   `--gsc-site`, `--gsc-sitemap`, `--gsc-service-account-file` (`KLIZ_GSC_*`).
+- GitHub Action (`action.yml`): notifies after each deployment from a sitemap
+  or a URL list, verifies the IndexNow key first; exercised in CI by a dry run.
 - `kliz notify --dry-run` lists the URLs without sending anything.
 
 ### Fixed

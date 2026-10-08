@@ -369,9 +369,11 @@
 
 ### Travail demandé
 
-- [ ] Dépôt `kliz-action` (ou `action.yml` à la racine) : entrées `sitemap`, `urls`, `since`
+- [x] `action.yml` à la racine : entrées `sitemap`, `urls`, `since`, clés, `dry-run`,
+      vérification de clé ; job CI d’exécution à blanc
 - [ ] Mode « diff » : ne notifier que les pages modifiées par le commit
-- [ ] Publication sur le GitHub Marketplace
+- [ ] Publication sur le GitHub Marketplace (exige un dépôt **sans workflows** :
+      dupliquer `action.yml` dans un dépôt dédié `kliz-action`)
 - [ ] Image Docker officielle (`ghcr.io/…/kliz`) pour GitLab CI, cron, Kubernetes
 
 ---

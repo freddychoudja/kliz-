@@ -24,6 +24,9 @@ Le projet suit le versionnage sémantique.
   Console, la méthode prise en charge pour signaler des changements à Google
   pour toute page. Options CLI `--gsc-site`, `--gsc-sitemap`,
   `--gsc-service-account-file` (`KLIZ_GSC_*`).
+- GitHub Action (`action.yml`) : notifie après chaque déploiement depuis un
+  sitemap ou une liste d'URL, vérifie d'abord la clé IndexNow ; testée en CI
+  par une exécution à blanc.
 - `kliz notify --dry-run` liste les URL sans rien envoyer.
 
 ### Corrigé
