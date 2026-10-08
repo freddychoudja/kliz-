@@ -5,6 +5,12 @@ The project follows semantic versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- Redesigned README: centered header with logo and badges, engine coverage table,
+  `pipx` installation (fixes `externally-managed-environment` on recent Linux
+  distributions), Action inputs and CLI options as tables, collapsible recipes.
+
 ## [0.3.0] - 2026-10-08
 
 ### Breaking changes

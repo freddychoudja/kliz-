@@ -25,9 +25,15 @@ encapsuler dans le système de tâches de son choix.
 ## Installation
 
 ```bash
-pip install kliz            # IndexNow, sitemaps, CLI (~4 Mo, 7 paquets)
+pipx install kliz           # usage en ligne de commande (recommandé)
+pip install kliz            # dans un environnement virtuel ou un projet (~4 Mo, 7 paquets)
 pip install 'kliz[google]'  # + providers Google Search Console et Indexing API
 ```
+
+> **Astuce :** sous Arch, Debian 12+, Ubuntu 23.04+ ou le Python de Homebrew, un simple
+> `pip install` hors environnement virtuel échoue avec `externally-managed-environment`.
+> Utilisez `pipx`, qui installe la commande `kliz` dans son propre environnement isolé
+> (`pipx install 'kliz[google]'` pour le support Google).
 
 Une documentation web est disponible sur
 [freddychoudja.github.io/kliz-](https://freddychoudja.github.io/kliz-/).

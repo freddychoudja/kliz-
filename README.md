@@ -1,315 +1,112 @@
-# kliz
+<p align="center">
+  <a href="https://github.com/freddychoudja/kliz-">
+    <img src="https://raw.githubusercontent.com/freddychoudja/kliz-/main/docs/assets/kliz-mark.svg" alt="kliz" width="96" height="96">
+  </a>
+</p>
 
-[![CI](https://github.com/freddychoudja/kliz-/actions/workflows/ci.yml/badge.svg)](https://github.com/freddychoudja/kliz-/actions/workflows/ci.yml)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/kliz)](https://pypi.org/project/kliz/)
-[![GitHub issues](https://img.shields.io/github/issues/freddychoudja/kliz-)](https://github.com/freddychoudja/kliz-/issues)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/freddychoudja/kliz-/blob/main/LICENSE)
+<h1 align="center">kliz</h1>
 
-**Tell search engines about your new and updated pages, the moment you publish.**
+<p align="center">
+  <strong>Tell search engines about your new and updated pages, the moment you publish.</strong>
+</p>
 
-`kliz` notifies Bing, Yandex, Naver, Seznam and Yep through
-[IndexNow](https://www.indexnow.org/), and Google through Search Console, from
-a URL, a list or a whole sitemap. Use it as a Python library, a CLI or a GitHub
-Action that runs after every deployment.
+<p align="center">
+  <a href="https://pypi.org/project/kliz/"><img src="https://img.shields.io/pypi/v/kliz?color=2FBF71&label=PyPI" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/kliz/"><img src="https://img.shields.io/pypi/pyversions/kliz?color=101820" alt="Python versions"></a>
+  <a href="https://github.com/freddychoudja/kliz-/actions/workflows/ci.yml"><img src="https://github.com/freddychoudja/kliz-/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/freddychoudja/kliz-/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-FFB703" alt="MIT license"></a>
+</p>
+
+<p align="center">
+  <a href="#install">Install</a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#github-action">GitHub Action</a> ·
+  <a href="#command-line">CLI</a> ·
+  <a href="#python-api">Python API</a> ·
+  <a href="https://freddychoudja.github.io/kliz-/">Docs</a> ·
+  <a href="https://github.com/freddychoudja/kliz-/blob/main/README.fr.md">Français</a>
+</p>
+
+---
+
+`kliz` notifies search engines as soon as a page is created or updated, from a single URL,
+a list or a whole sitemap. It works as a **command-line tool**, a **GitHub Action** that runs
+after every deployment, or a **Python library** with no framework attached.
+
+- **One ping, many engines.** IndexNow reaches Bing, Yandex, Naver, Seznam and Yep at once;
+  Search Console covers Google.
+- **Sitemap-native.** Point it at `sitemap.xml` (indexes and `.gz` included) and optionally
+  only send pages changed since a date.
+- **Safe by default.** URLs are validated and normalized, one bad URL never sinks a batch,
+  keys never reach the logs, XML is parsed defensively.
+- **Reliable.** Opt-in retries honor `Retry-After`, with capped backoff and a time budget.
+- **Light.** `pip install kliz` pulls 7 small packages; Google support is an optional extra.
+
+## Search engine coverage
+
+| Engine | How kliz reaches it | Provider |
+| :--- | :--- | :--- |
+| **Bing** (also powers Yahoo, DuckDuckGo, Ecosia, Copilot) | [IndexNow](https://www.indexnow.org/) | `IndexNowProvider` |
+| **Yandex**, **Naver**, **Seznam**, **Yep** | IndexNow (shared with Bing) | `IndexNowProvider` |
+| **Google**, any page | Sitemap resubmission through the Search Console API | `GoogleSearchConsoleProvider` |
+| **Google**, job postings and livestreams only | Indexing API | `GoogleProvider` |
+
+> **Note:** a notification asks an engine to crawl; it never guarantees indexing. Keep your sitemap
+> accurate and its `<lastmod>` dates honest.
+
+## Install
+
+kliz needs Python 3.10 or newer.
 
 ```bash
-pip install kliz
-kliz indexnow keygen --write public/ --site https://example.com   # once
-kliz notify --sitemap https://example.com/sitemap.xml             # on each deploy (KLIZ_* env)
+pipx install kliz              # command-line use (recommended)
+pip install kliz               # inside a virtual environment or project
+uv tool install kliz           # with uv
 ```
 
-The package depends neither on Django, nor Celery, nor Redis. It exposes a
-synchronous Python API that the calling application can run directly or wrap
-in whatever task system it chooses.
+Add Google support with the `google` extra: `pipx install 'kliz[google]'` or
+`pip install 'kliz[google]'`.
 
-🇫🇷 A French version of this document is available in
-[`README.fr.md`](https://github.com/freddychoudja/kliz-/blob/main/README.fr.md).
-
-## Installation
-
-```bash
-pip install kliz            # IndexNow, sitemaps, CLI (~4 MB, 7 packages)
-pip install 'kliz[google]'  # + Google Search Console and Indexing API providers
-```
-
-Web documentation is available at
-[freddychoudja.github.io/kliz-](https://freddychoudja.github.io/kliz-/).
-The HTML sources live in
-[`docs/`](https://github.com/freddychoudja/kliz-/tree/main/docs) and are
-published via GitHub Pages.
-
-To contribute and run the tests:
-
-```bash
-python -m pip install -e ".[dev]"
-pytest --cov=kliz
-```
+> **Tip:** on Arch, Debian 12+, Ubuntu 23.04+ or Homebrew Python, a plain `pip install` outside a
+> virtual environment fails with `externally-managed-environment`. Use `pipx`, which installs
+> the `kliz` command in its own isolated environment.
 
 ## Quick start
 
-```python
-from kliz import GoogleProvider, IndexNowProvider, Kliz
+**1. Create an IndexNow key** and publish its file with your site (here, a `public/` folder):
 
-indexer = Kliz(
-    [
-        IndexNowProvider(
-            api_key="your-indexnow-key",
-            key_location="https://example.com/your-indexnow-key.txt",
-        ),
-        GoogleProvider("/run/secrets/google-service-account.json"),
-    ]
-)
-
-statuses = indexer.notify_all("https://example.com/articles/new-article")
-# {
-#     "IndexNowProvider": True,
-#     "GoogleProvider": True,
-# }
+```bash
+KEY=$(kliz indexnow keygen --write public/ --site https://example.com)
 ```
 
-To submit several URLs at once, `notify_many` chunks by each provider's
-`max_urls_per_request` (IndexNow batches) and falls back to a `notify` loop for
-the others:
+**2. Deploy, then check what search engines will see:**
 
-```python
-statuses = indexer.notify_many(
-    [
-        "https://example.com/articles/a",
-        "https://example.com/articles/b",
-    ]
-)
+```bash
+kliz --indexnow-api-key "$KEY" indexnow verify-key --site https://example.com
+# ✅ https://example.com/<key>.txt serves the IndexNow key
 ```
 
-URLs are deduplicated and grouped by host. An invalid URL gets its own failed
-result instead of sinking the whole batch; `notify_many_detailed` returns, per
-provider, a list of `NotificationResult` whose `urls` field tells which URLs
-each result covers.
+**3. Notify every page of your sitemap:**
 
-Built-in retry is **off by default** (`max_attempts=1`). Enable it for
-temporary failures (HTTP 429, 5xx, network errors):
-
-```python
-indexer = Kliz(
-    [IndexNowProvider(api_key="your-indexnow-key")],
-    max_attempts=3,
-    max_delay=60.0,   # never wait longer than this between attempts (default)
-    deadline=120.0,   # optional total budget, in seconds
-)
+```bash
+export KLIZ_INDEXNOW_API_KEY="$KEY"
+export KLIZ_INDEXNOW_KEY_LOCATION="https://example.com/$KEY.txt"
+kliz notify --sitemap https://example.com/sitemap.xml
 ```
 
-When the server sends `Retry-After`, kliz waits exactly that long; otherwise it
-backs off exponentially (1 s, 2 s, 4 s... plus up to 25 % random jitter) up to
-`max_delay`. If the server asks to wait longer than `max_delay`, or the next
-wait would overrun `deadline`, kliz stops and returns the failure with
-`retryable=True`, `retry_after` and `attempts`, so a task queue can reschedule
-it. On the command line, use `--max-attempts` (or `KLIZ_MAX_ATTEMPTS`); the
-GitHub Action defaults to 3 attempts. `GoogleProvider` and
-`GoogleSearchConsoleProvider` also retry internally (`num_retries=2`); set
-`num_retries=0` if you rely on Kliz's retry alone.
+Then let the [GitHub Action](#github-action) do it after every deployment.
 
-`notify_all` keeps calling the other providers when one fails. That provider's
-status is then `False`. A direct call to `provider.notify(url)` lets a
-`ProviderError` bubble up instead, so the application can apply its own retry
-policy.
+## GitHub Action
 
-To get the cause, the HTTP status and the retry hint:
-
-```python
-results = indexer.notify_all_detailed(
-    "https://example.com/articles/new-article"
-)
-
-for name, result in results.items():
-    print(name, result.success, result.retryable, result.error)
-```
-
-If multiple instances share the same name, their keys are suffixed:
-`IndexNowProvider`, `IndexNowProvider#2`, etc.
-
-## Agnostic architecture
-
-`BaseProvider` defines a minimal strategy: `notify(url) -> bool`. Each adapter
-translates this contract to the relevant remote API:
-
-- `IndexNowProvider` sends an HTTP request to the IndexNow API;
-- `GoogleProvider` publishes a `URL_UPDATED` notification through the Google
-  Indexing API;
-- `Kliz` orchestrates the strategies injected in its constructor.
-
-This separation lets you add an engine without modifying the orchestrator and
-leaves the application free to choose its web framework, its queue and its
-retry policy.
-
-A custom provider only needs to inherit from `BaseProvider`:
-
-```python
-from kliz import BaseProvider
-
-
-class CustomProvider(BaseProvider):
-    def notify(self, url: str) -> bool:
-        # Call to the relevant engine API
-        return True
-```
-
-For an engine that accepts URL batches on the same host, inherit from
-`BatchProvider`: `notify` and validation (shared host, max size, clean URLs)
-are provided; implement `_notify_many`.
-
-```python
-from urllib.parse import SplitResult
-
-from kliz import BatchProvider
-
-
-class CustomBatchProvider(BatchProvider):
-    max_urls_per_request = 100
-
-    def _notify_many(
-        self, urls: list[str], parsed_urls: list[SplitResult]
-    ) -> bool:
-        # Grouped HTTP call to the engine
-        return True
-```
-
-## URL validation
-
-Every URL submitted to a provider is checked before being sent:
-
-- the scheme must be `http` or `https` and a host must be present;
-- credentials (`https://user:pass@...`) are forbidden;
-- fragments (`#...`) are always rejected: they are never transmitted to the
-  server and therefore can never designate a distinct resource;
-- query strings (`?...`) are rejected by default; pass `allow_query=True` to
-  `IndexNowProvider` or `GoogleProvider` (CLI `--allow-query`, action input
-  `allow-query`) when your canonical URLs use them, such as WordPress's
-  `/?p=123`.
-
-Accepted URLs are then normalized with `kliz.normalize_url()`: lowercase scheme
-and host, international domain names in ASCII form (`bücher.example` →
-`xn--bcher-kva.example`), default ports and trailing host dots removed, an
-empty path turned into `/`, and characters not allowed in a URL
-percent-encoded. Path case, existing escapes and parameter order are kept.
-`notify_many` deduplicates on the normalized form, so
-`HTTPS://Example.com:443/a` and `https://example.com/a` count once.
-
-## Provider configuration
-
-### IndexNow
-
-The key must be published according to the IndexNow rules. If
-`key_location` is provided, it is transmitted in the `keyLocation` field.
-
-```python
-from kliz import IndexNowProvider
-
-provider = IndexNowProvider(
-    api_key="your-valid-key",
-    key_location="https://example.com/your-valid-key.txt",  # optional
-    timeout=10.0,
-)
-provider.notify("https://example.com/page")
-```
-
-The provider reuses a persistent HTTP connection (`requests.Session`) between
-notifications, instead of rebuilding a connection and a TLS handshake for every
-call. You can inject your own session (tests, shared network configuration,
-proxies):
-
-```python
-import requests
-
-provider = IndexNowProvider(
-    api_key="your-valid-key",
-    session=requests.Session(),
-)
-```
-
-The internal session keeps connections open; call `provider.close()` when your
-application shuts down to release them cleanly.
-
-To submit several URLs of the same host in a single call:
-
-```python
-provider.notify_many(
-    [
-        "https://example.com/page-1",
-        "https://example.com/page-2",
-    ]
-)
-```
-
-IndexNow accepts up to 10,000 URLs per request. `kliz` classifies `429` and
-`5xx` errors as retryable.
-
-### Google
-
-Enable the Google Indexing API for your project, create a service account and
-authorize it on the property. Never version the service-account JSON file.
-
-> **Important restriction:** the Google Indexing API is officially reserved for
-> pages containing a `JobPosting` or a `BroadcastEvent` embedded in a
-> `VideoObject`. Do not use this provider as a generic indexing API for other
-> content; use a sitemap for their coverage.
-
-```python
-from kliz import GoogleProvider
-
-provider = GoogleProvider(
-    "/run/secrets/google-service-account.json",
-    timeout=60.0,
-    num_retries=2,
-)
-provider.notify("https://example.com/jobs/backend-python")
-```
-
-The Google Indexing API is subject to Google's eligibility rules and quotas. A
-notification never guarantees that the URL will be indexed.
-
-The Indexing client is built lazily: the service-account file is only read on
-the first `notify` call, then reused for subsequent calls. Creating the
-provider triggers no file read. Configuration errors (missing file, invalid
-JSON) surface at notification time, are marked as non-retryable, and the
-provider recovers as soon as the file is fixed.
-
-### Google Search Console (any site)
-
-Google has no general "index this URL" API. The supported way to signal changed
-pages is to resubmit their sitemap, which `GoogleSearchConsoleProvider` does
-through the Search Console API. It works for every kind of page, unlike the
-Indexing API above.
-
-1. Verify the site in [Search Console](https://search.google.com/search-console).
-2. In Google Cloud, enable the *Google Search Console API*, create a service
-   account and download its JSON key.
-3. In Search Console, *Settings → Users and permissions*, add the service
-   account's email as an **Owner** or **Full** user.
-
-```python
-from kliz import GoogleSearchConsoleProvider
-
-provider = GoogleSearchConsoleProvider(
-    "/run/secrets/search-console.json",
-    site_url="https://example.com/",  # or "sc-domain:example.com"
-    sitemap_url="https://example.com/sitemap.xml",  # default: <property>/sitemap.xml
-)
-provider.notify_many(urls)  # checks the URLs belong to the property, submits once
-```
-
-URLs outside the property are rejected individually; they are never sent.
-Resubmitting asks Google to read the sitemap again, it does not guarantee
-indexing. An HTTP 403 means the service account is not a user of the property.
-
-### GitHub Action
-
-The repository is also a GitHub Action: after each production deployment it
-notifies IndexNow engines and resubmits the sitemap to Google Search Console.
+Add this workflow to your **site's** repository. It runs after each successful production
+deployment (Vercel, Netlify, Cloudflare Pages and others send `deployment_status`), notifies
+IndexNow engines and resubmits your sitemap to Google.
 
 ```yaml
-# .github/workflows/indexing.yml in your site's repository
+# .github/workflows/indexing.yml
 name: Search engine indexing
 on:
-  deployment_status:   # sent by Vercel, Netlify, Cloudflare Pages... after a deploy
+  deployment_status:
 
 jobs:
   index:
@@ -327,27 +124,294 @@ jobs:
           gsc-service-account-json: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
 ```
 
-Inputs: `sitemap` (URL or workspace file) or `urls` (one per line), `since`,
-`indexnow-api-key`, `indexnow-key-location`, `verify-key` (default `true`:
-checks the key file before notifying), `gsc-site`, `gsc-sitemap`,
-`gsc-service-account-json` (the JSON content, from a secret; written to a
-private temporary file deleted at the end), `max-attempts` (default `3`),
-`allow-query`, `dry-run`. Providers without
-credentials are skipped. Linux and macOS runners are supported.
+| Input | Default | Description |
+| :--- | :---: | :--- |
+| `sitemap` | | Sitemap URL or workspace file to notify |
+| `urls` | | URLs to notify, one per line (when `sitemap` is empty) |
+| `since` | | Only sitemap pages whose `<lastmod>` is on or after this ISO date |
+| `indexnow-api-key` | | IndexNow key, from a secret |
+| `indexnow-key-location` | | URL of the published key file |
+| `verify-key` | `true` | Check the key file before notifying |
+| `gsc-site` | | Search Console property (`https://example.com/` or `sc-domain:example.com`) |
+| `gsc-sitemap` | `sitemap` | Sitemap URL to resubmit to Search Console |
+| `gsc-service-account-json` | | Service account JSON content, from a secret |
+| `max-attempts` | `3` | Attempts per notification for temporary failures |
+| `allow-query` | `false` | Accept URLs with a query string |
+| `dry-run` | `false` | List the URLs without notifying |
 
-## Recipes / Async integration
+Providers without credentials are skipped. The service account JSON is written to a private
+temporary file deleted at the end of the step. Linux and macOS runners are supported.
 
-`kliz` deliberately stays synchronous. For asynchronous execution, place the
-call in a worker, a task or a job owned by your application. This way
-infrastructure dependencies never pollute the package.
+## Command line
 
-### Celery task (Python/Django)
+```bash
+kliz notify https://example.com/page                      # one URL
+kliz notify --batch urls.txt                              # one URL per line, # for comments
+cat urls.txt | kliz notify -                              # from stdin (also --batch -)
+kliz notify --sitemap https://example.com/sitemap.xml     # every page of a sitemap
+kliz notify --sitemap sitemap.xml.gz --since 2026-10-01   # only recent changes
+kliz notify --sitemap sitemap.xml --dry-run               # list, send nothing
+kliz notify --sitemap sitemap.xml --json                  # machine-readable report
+kliz providers                                            # list configured providers
+kliz indexnow keygen --write public/ --site https://example.com   # create a key
+kliz indexnow verify-key --site https://example.com              # check its file
+```
 
-In a Django project already using Celery, the task can read its configuration
-from the settings and let Celery handle retries:
+| Option | Environment variable | Purpose |
+| :--- | :--- | :--- |
+| `--indexnow-api-key` | `KLIZ_INDEXNOW_API_KEY` | IndexNow key |
+| `--indexnow-key-location` | `KLIZ_INDEXNOW_KEY_LOCATION` | URL of the key file |
+| `--gsc-site` | `KLIZ_GSC_SITE` | Search Console property |
+| `--gsc-service-account-file` | `KLIZ_GSC_SERVICE_ACCOUNT_FILE` | Service account JSON file |
+| `--gsc-sitemap` | `KLIZ_GSC_SITEMAP` | Sitemap to resubmit (default: `--sitemap` URL, else `<property>/sitemap.xml`) |
+| `--google-service-account-file` | `KLIZ_GOOGLE_SERVICE_ACCOUNT_FILE` | Indexing API (job postings and livestreams only) |
+| `--max-attempts` | `KLIZ_MAX_ATTEMPTS` | Attempts for temporary failures (default `1`) |
+| `--timeout` | `KLIZ_TIMEOUT` | Network timeout in seconds |
+| `--allow-query` | `KLIZ_ALLOW_QUERY` | Accept URLs with a query string |
+| `--config` | | Settings file (see below) |
+| `-v`, `-vv` | | Log progress (`INFO`) or HTTP details (`DEBUG`) to stderr |
+
+Exit codes: `0` success (or nothing changed), `1` a notification failed, `2` invalid
+configuration.
+
+### Settings file
+
+Put recurring settings in `kliz.toml`, or under `[tool.kliz]` in `pyproject.toml`, where you
+run `kliz` (or pass `--config PATH`). Keys are the long option names.
+
+```toml
+# kliz.toml
+sitemap = "https://example.com/sitemap.xml"   # lets `kliz notify` run without arguments
+indexnow-key-location = "https://example.com/your-key.txt"
+gsc-site = "https://example.com/"
+max-attempts = 3
+timeout = 15
+```
+
+Precedence: command-line option, then `KLIZ_*` variable, then the file. Keep secrets in the
+environment or a secrets manager, not in a committed file.
+
+<details>
+<summary><strong>JSON report format</strong></summary>
+
+`--json` prints one document on stdout; the exit code is unchanged.
+
+```json
+{
+  "ok": false,
+  "dry_run": false,
+  "urls": ["https://example.com/a"],
+  "results": {
+    "IndexNowProvider": [
+      {
+        "provider": "IndexNowProvider",
+        "success": false,
+        "retryable": true,
+        "error": "IndexNowProvider rejected the notification with HTTP 429",
+        "status_code": 429,
+        "urls": ["https://example.com/a"],
+        "retry_after": 30.0,
+        "attempts": 3
+      }
+    ]
+  }
+}
+```
+
+</details>
+
+## Python API
 
 ```python
-# myapp/tasks.py — this code belongs to the application, not to kliz
+from kliz import IndexNowProvider, Kliz, read_sitemap
+
+indexer = Kliz(
+    [
+        IndexNowProvider(
+            api_key="your-indexnow-key",
+            key_location="https://example.com/your-indexnow-key.txt",
+        ),
+    ],
+    max_attempts=3,
+)
+
+with indexer:
+    indexer.notify_all("https://example.com/articles/new")      # {"IndexNowProvider": True}
+    indexer.notify_many(read_sitemap("https://example.com/sitemap.xml"))
+```
+
+| Method | Returns |
+| :--- | :--- |
+| `notify_all(url)` | `{provider: bool}` |
+| `notify_all_detailed(url)` | `{provider: NotificationResult}` |
+| `notify_many(urls)` | `{provider: bool}`, true when every batch succeeded |
+| `notify_many_detailed(urls)` | `{provider: [NotificationResult, ...]}`, one per batch or rejected URL |
+
+A `NotificationResult` carries `success`, `urls`, `error`, `status_code`, `retryable`,
+`retry_after` and `attempts`. `notify_all` keeps going when a provider fails; calling
+`provider.notify(url)` directly raises `ProviderError` instead. If two providers share a
+name, results are keyed `IndexNowProvider`, `IndexNowProvider#2`, and so on.
+
+`notify_many` deduplicates URLs, groups them by host and splits them by each provider's
+batch limit (10,000 for IndexNow). An invalid URL gets its own failed result instead of
+failing the batch.
+
+### Sitemaps
+
+`read_sitemap(source, since=None, timeout=10.0)` reads a sitemap or sitemap index from a URL
+or a file, compressed or not, and returns its page URLs (`<url><loc>`), ignoring image,
+video and hreflang entries. With `since`, pages whose `<lastmod>` is older are skipped;
+pages without `<lastmod>` are kept. XML goes through `defusedxml` with DTDs forbidden, and
+each file is capped at 50 MB, as in the sitemap protocol.
+
+### Retries
+
+Retry is off by default (`max_attempts=1`). When enabled, temporary failures (HTTP 429, 5xx,
+network errors) wait for the server's `Retry-After` if it sent one, otherwise for an
+exponential backoff (1 s, 2 s, 4 s, plus up to 25 % jitter) capped by `max_delay`.
+
+```python
+Kliz(providers, max_attempts=3, max_delay=60.0, deadline=120.0)
+```
+
+If the server asks to wait longer than `max_delay`, or the next wait would overrun
+`deadline`, kliz stops and returns the failure with `retryable=True`, `retry_after` and
+`attempts`, so a task queue can reschedule it. The Google providers also retry internally
+(`num_retries=2`); set `num_retries=0` to rely on kliz alone.
+
+### URL rules
+
+Every URL is checked before it is sent: `http` or `https` with a host, no credentials, no
+fragment (`#...`), and no query string unless the provider has `allow_query=True` (for
+canonical URLs such as WordPress's `/?p=123`).
+
+Accepted URLs are normalized with `kliz.normalize_url()`: lowercase scheme and host,
+international domains in ASCII form (`bücher.example` → `xn--bcher-kva.example`), default
+ports and trailing host dots removed, an empty path turned into `/`, and characters not
+allowed in a URL percent-encoded. Path case, existing escapes and parameter order are kept.
+
+### Logging and metrics
+
+kliz logs on the `kliz` logger and stays silent until your application configures logging:
+successes and retries at `INFO`, failures and rejected URLs at `WARNING`, HTTP requests at
+`DEBUG`. API keys are never logged; key file URLs show the key as `<key>`.
+
+```python
+from kliz import Kliz, NotificationResult, RetryEvent
+
+
+def record(result: NotificationResult) -> None:
+    metrics.increment(f"indexing.{result.provider}.{'ok' if result.success else 'failed'}")
+
+
+def on_retry(event: RetryEvent) -> None:
+    metrics.increment(f"indexing.{event.provider}.retry")
+
+
+indexer = Kliz(providers, max_attempts=3, on_result=record, on_retry=on_retry)
+```
+
+`on_result` receives every final result, including URLs rejected before sending;
+`on_retry` receives a `RetryEvent` (`provider`, `attempt`, `delay`, `error`, `urls`) before
+each wait. An exception raised by a hook is logged and ignored.
+
+## Providers
+
+### IndexNow
+
+```python
+from kliz import IndexNowProvider
+
+provider = IndexNowProvider(
+    api_key="your-key",                                  # 8–128 letters, digits or dashes
+    key_location="https://example.com/your-key.txt",     # optional, default <site>/<key>.txt
+    timeout=10.0,
+    allow_query=False,
+)
+provider.notify_many(["https://example.com/page-1", "https://example.com/page-2"])
+provider.close()
+```
+
+The key file must be served as plain text at `key_location`, and submitted URLs must sit on
+the same host, under the key file's directory. `IndexNowProvider.generate_key()` creates a
+key and `provider.verify_key(site_url)` checks the published file without following
+redirects. It reports missing files, redirects, wrong keys, and sites that answer `200` with
+an HTML page for unknown paths, a common trap with single-page apps on Vercel or Netlify. The
+provider keeps one `requests.Session` (inject your own with `session=`) and classifies `429`
+and `5xx` responses as retryable.
+
+### Google Search Console (any site)
+
+Google has no general "index this URL" API. The supported way to signal changed pages is to
+resubmit their sitemap, which `GoogleSearchConsoleProvider` does through the Search Console
+API.
+
+1. Verify your site in [Search Console](https://search.google.com/search-console).
+2. In Google Cloud, enable the *Google Search Console API*, create a service account and
+   download its JSON key.
+3. In Search Console, open *Settings → Users and permissions* and add the service account's
+   email as an **Owner** or **Full** user.
+
+```python
+from kliz import GoogleSearchConsoleProvider          # pip install 'kliz[google]'
+
+provider = GoogleSearchConsoleProvider(
+    "/run/secrets/search-console.json",
+    site_url="https://example.com/",                  # or "sc-domain:example.com"
+    sitemap_url="https://example.com/sitemap.xml",    # default: <property>/sitemap.xml
+)
+provider.notify_many(urls)   # checks the URLs belong to the property, submits once
+```
+
+URLs outside the property are rejected individually and never sent. An HTTP 403 means the
+service account is not a user of the property.
+
+### Google Indexing API (job postings and livestreams)
+
+> **Warning:** Google reserves the Indexing API for pages with a `JobPosting` or a `BroadcastEvent`
+> embedded in a `VideoObject`. For any other page, use `GoogleSearchConsoleProvider`.
+
+```python
+from kliz import GoogleProvider                       # pip install 'kliz[google]'
+
+GoogleProvider("/run/secrets/google-service-account.json").notify(
+    "https://example.com/jobs/backend-python"
+)
+```
+
+Both Google providers read the service account file lazily, on the first notification;
+configuration errors are reported as non-retryable and recover once the file is fixed. Do
+not share one instance between threads.
+
+### Your own provider
+
+Inherit from `BaseProvider` and implement `notify`, or from `BatchProvider` for engines that
+take batches of same-host URLs: validation, normalization and the shared HTTP session come
+for free.
+
+```python
+from urllib.parse import SplitResult
+
+from kliz import BatchProvider
+
+
+class MyEngineProvider(BatchProvider):
+    max_urls_per_request = 100
+
+    def _notify_many(self, urls: list[str], parsed_urls: list[SplitResult]) -> bool:
+        ...  # one HTTP call for the batch; raise ProviderError on failure
+        return True
+```
+
+## Integrations
+
+kliz is synchronous and framework-agnostic: run it directly, or wrap it in your task system.
+
+<details>
+<summary><strong>Celery task (Django)</strong></summary>
+
+```python
+# myapp/tasks.py — application code, not part of kliz
 from dataclasses import asdict
 
 from celery import shared_task
@@ -370,29 +434,23 @@ def notify_search_engines(self, url: str) -> dict[str, dict[str, object]]:
     retryable = [result for result in results.values() if result.retryable]
 
     if retryable:
+        delay = max((r.retry_after or 0) for r in retryable)
         raise self.retry(
             exc=RuntimeError("temporary indexing provider failure"),
-            countdown=min(60 * (2**self.request.retries), 3600),
+            countdown=max(delay, min(60 * (2**self.request.retries), 3600)),
         )
 
     return {name: asdict(result) for name, result in results.items()}
 ```
 
-From a view, a signal or a Django service:
-
 ```python
-from myapp.tasks import notify_search_engines
-
 notify_search_engines.delay("https://example.com/articles/new")
 ```
 
-To isolate each engine's retries and quotas, ideally use one task per
-provider. The Google provider must only be added for officially eligible pages.
+</details>
 
-### Generic job
-
-The same principle works with a scheduler, a home-made worker, RQ, Dramatiq, a
-serverless function or cron. The job only knows `kliz`'s public API:
+<details>
+<summary><strong>Any job runner (RQ, Dramatiq, cron, serverless)</strong></summary>
 
 ```python
 from kliz import IndexNowProvider, Kliz
@@ -404,185 +462,34 @@ class ContentIndexingJob:
 
     def run(self, payload: dict[str, str]) -> dict[str, bool]:
         return self.indexer.notify_all(payload["url"])
-
-
-# The chosen job system serializes this payload and calls job.run(payload).
-job = ContentIndexingJob(api_key="your-key")
-result = job.run({"url": "https://example.com/updated-page"})
 ```
 
-## Command-line interface
+</details>
 
-The installation also provides a `kliz` command:
+## Production checklist
 
-```bash
-export KLIZ_INDEXNOW_API_KEY="your-key"
-export KLIZ_INDEXNOW_KEY_LOCATION="https://example.com/your-key.txt"
-
-kliz notify https://example.com/page  # a single URL
-kliz notify --batch urls.txt          # one URL per line, `#` for comments
-kliz notify --sitemap https://example.com/sitemap.xml   # every page of a sitemap
-kliz notify --sitemap https://example.com/sitemap.xml --since 2026-10-01
-kliz notify --sitemap sitemap.xml --dry-run             # list, send nothing
-cat urls.txt | kliz notify -          # URLs from stdin (also --batch -)
-kliz notify --sitemap sitemap.xml --json                # machine-readable report
-kliz providers                        # list configured providers
-kliz --version
-```
-
-Credentials can also be passed as options (`--indexnow-api-key`,
-`--indexnow-key-location`, `--google-service-account-file`). For Search
-Console, set `--gsc-site` and `--gsc-service-account-file` (`KLIZ_GSC_SITE`,
-`KLIZ_GSC_SERVICE_ACCOUNT_FILE`); the sitemap resubmitted is `--gsc-sitemap`,
-else the `--sitemap` URL, else `<property>/sitemap.xml`. The process exits
-with code `0` when everything succeeded, `1` on notification failure and `2` on
-invalid configuration.
-
-### Settings file
-
-Instead of long options, put the settings in `kliz.toml`, or under
-`[tool.kliz]` in `pyproject.toml`, in the directory where you run `kliz`
-(or pass `--config PATH`). Keys are the long option names:
-
-```toml
-# kliz.toml
-sitemap = "https://example.com/sitemap.xml"   # used by `kliz notify` with no URL
-indexnow-key-location = "https://example.com/your-key.txt"
-gsc-site = "https://example.com/"
-max-attempts = 3
-timeout = 15
-allow-query = false
-```
-
-Command-line options win over `KLIZ_*` environment variables, which win over
-the file. Keep secrets (`indexnow-api-key`, service account files) in the
-environment or a secrets manager rather than in a committed file. `--timeout`
-(`KLIZ_TIMEOUT`) sets the network timeout for every provider and sitemap.
-
-`--json` prints one JSON document on stdout, with `ok`, `dry_run`, the `urls`
-and, per provider, every result (`success`, `urls`, `error`, `status_code`,
-`retryable`, `retry_after`, `attempts`); the exit code is unchanged.
-
-### Sitemaps
-
-`--sitemap` (or `read_sitemap()` in Python) reads a sitemap or a sitemap index,
-from a URL or a local file, compressed or not. Only page URLs (`<url><loc>`) are
-kept: image, video and hreflang entries are ignored. With `--since`, only pages
-whose `<lastmod>` is on or after the date are notified (pages without
-`<lastmod>` are kept); when nothing changed the command succeeds without sending
-anything, which suits a deployment pipeline. XML is parsed with `defusedxml`
-(DTDs forbidden) and each file is capped at 50 MB, as in the sitemap protocol.
-
-```python
-from datetime import date
-
-from kliz import IndexNowProvider, Kliz, read_sitemap
-
-urls = read_sitemap("https://example.com/sitemap.xml", since=date(2026, 10, 1))
-if urls:
-    Kliz([IndexNowProvider(api_key="your-key")]).notify_many(urls)
-```
-
-### Setting up the IndexNow key
-
-```bash
-# Generate a key and drop <key>.txt into the folder your site serves
-KEY=$(kliz indexnow keygen --write public/ --site https://example.com)
-# ...deploy the site, then check what search engines will actually see:
-kliz --indexnow-api-key "$KEY" indexnow verify-key --site https://example.com
-```
-
-`keygen` prints only the key on stdout, so it can be captured in a variable;
-the next steps go to stderr. `verify-key` fetches the key file
-(`--indexnow-key-location`, or `<site>/<key>.txt` by default) without following
-redirects and fails with an explicit message when the file is missing, redirects,
-holds another key, or when the site answers `200` with an HTML page for unknown
-paths (a common trap with single-page apps on Vercel or Netlify). The same
-checks are available from Python through `IndexNowProvider.generate_key()` and
-`provider.verify_key(site_url)`.
-
-## Tests
-
-The tests mock the `requests` calls and the Google client. They require no
-network access, no IndexNow key and no Google service account.
-
-The full local validation is:
-
-```bash
-ruff format --check src tests
-ruff check src tests
-mypy src
-pytest --cov=kliz
-python -m build
-twine check --strict dist/*
-pip-audit . --strict
-```
-
-## Logging and metrics
-
-`kliz` logs on the `kliz` logger (and its `kliz.core`, `kliz.sitemap`,
-`kliz.providers.*` children) and stays silent until your application configures
-logging: successes and retries at `INFO`, failures and rejected URLs at
-`WARNING`, HTTP requests at `DEBUG`. API keys are never logged; key file URLs
-show the key as `<key>`. On the command line, `-v` prints `INFO` and `-vv`
-`DEBUG` to stderr; the GitHub Action runs with `-v`.
-
-```python
-import logging
-
-from kliz import Kliz, NotificationResult, RetryEvent
-
-logging.basicConfig(level=logging.INFO)
-
-
-def record(result: NotificationResult) -> None:
-    metrics.increment(f"indexing.{result.provider}.{'ok' if result.success else 'failed'}")
-
-
-def on_retry(event: RetryEvent) -> None:
-    metrics.increment(f"indexing.{event.provider}.retry")
-
-
-indexer = Kliz(providers, max_attempts=3, on_result=record, on_retry=on_retry)
-```
-
-`on_result` receives every final `NotificationResult` (including URLs rejected
-before sending) and `on_retry` a `RetryEvent` (`provider`, `attempt`, `delay`,
-`error`, `urls`) before each wait. An exception raised by a hook is logged and
-ignored, so metrics can never break indexing.
-
-## Production use
-
-The package stores no secrets and imposes no task system. In the application
-that uses it:
-
-- inject keys through a secrets manager;
-- enable Kliz opt-in retry (`max_attempts`) or apply an application-level
-  backoff to `retryable=True` results;
-- place permanent failures in a dead-letter queue;
-- measure latency, success rate, HTTP codes and quotas per provider;
-- never share a single `GoogleProvider` instance between several threads;
-- keep a sitemap up to date: a notification never guarantees indexing.
-
-## Release
-
-`vX.Y.Z` tags trigger the release workflow. The tag must match the version in
-`pyproject.toml` exactly. Publishing uses PyPI Trusted Publishing and requires
-no permanent PyPI token in GitHub.
-
-Before the first release, configure a publisher on PyPI with the
-`freddychoudja/kliz-` repository, the `release.yml` workflow and the `pypi`
-environment.
+- Inject keys from a secrets manager; never commit them or the service account file.
+- Enable retries (`max_attempts`), and reschedule results with `retryable=True`.
+- Send permanent failures to a dead-letter queue.
+- Track success rate, HTTP codes and quotas per provider with `on_result`.
+- Keep your sitemap and its `<lastmod>` dates accurate.
 
 ## Contributing
 
-Contributions are welcome. See [CONTRIBUTING.md](https://github.com/freddychoudja/kliz-/blob/main/CONTRIBUTING.md) before
-opening an issue or a pull request.
+Contributions are welcome; see [CONTRIBUTING.md](https://github.com/freddychoudja/kliz-/blob/main/CONTRIBUTING.md).
+Tests mock every network call, so no key or account is needed:
 
-Source code and project tracking are available on
-[GitHub](https://github.com/freddychoudja/kliz-).
+```bash
+git clone https://github.com/freddychoudja/kliz-.git && cd kliz-
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+ruff format --check src tests && ruff check src tests && mypy src && pytest --cov=kliz
+```
+
+Releases are published to PyPI from `vX.Y.Z` tags through Trusted Publishing. Report
+vulnerabilities privately as described in
+[SECURITY.md](https://github.com/freddychoudja/kliz-/blob/main/SECURITY.md).
 
 ## License
 
-`kliz` is distributed under the [MIT license](https://github.com/freddychoudja/kliz-/blob/main/LICENSE). Copyright © 2026 Freddy
-Choudja.
+[MIT](https://github.com/freddychoudja/kliz-/blob/main/LICENSE) © 2026 Freddy Choudja
