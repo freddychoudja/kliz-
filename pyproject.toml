@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kliz"
-version = "0.2.0"
+version = "0.3.0"
 description = "Tell search engines about new and updated pages: IndexNow (Bing, Yandex, Naver, Seznam, Yep), Google Search Console, sitemaps, CLI and GitHub Action."
 readme = "README.md"
 requires-python = ">=3.10"

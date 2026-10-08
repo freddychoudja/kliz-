@@ -1,8 +1,8 @@
 # TODO — Feuille de route `kliz`
 
 > **Statut global :** 🟢 7/7 phases réalisées · livré en **v0.2.0**.
-> **Prochaine étape :** 🟡 feuille de route **v0.2.1 → v1.0** (phases 8–24) proposée plus bas —
-> à valider et réaliser **une par une**, dans l’ordre.
+> **v0.3.0 (2026-10-08) :** 🟢 phases 8–14 et 18 livrées, plus le provider Search Console (phase 16).
+> **Prochaine étape :** 🟡 phases 15–17 et 19–24, une par une.
 
 ---
 

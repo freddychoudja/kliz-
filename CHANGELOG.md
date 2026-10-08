@@ -5,6 +5,8 @@ The project follows semantic versioning.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-08
+
 ### Breaking changes
 
 - The Google client libraries moved to the `google` extra: install
