@@ -1,5 +1,5 @@
-name: Rapport de bug
-description: Signaler un comportement incorrect ou inattendu
+name: Bug report
+description: Report incorrect or unexpected behavior
 title: "[Bug] "
 labels:
   - bug
@@ -7,51 +7,54 @@ body:
   - type: markdown
     attributes:
       value: |
-        Merci de ne jamais publier de clé API ou de fichier de compte de service.
+        Never post an API key or a service account file. Issues in French are welcome too.
   - type: input
     id: version
     attributes:
-      label: Version de kliz
-      placeholder: "0.1.0"
+      label: kliz version
+      placeholder: "0.3.0"
     validations:
       required: true
   - type: input
     id: python
     attributes:
-      label: Version de Python
-      placeholder: "3.12"
+      label: Python version
+      placeholder: "3.13"
     validations:
       required: true
   - type: dropdown
     id: provider
     attributes:
-      label: Provider concerné
+      label: Affected component
       options:
         - IndexNowProvider
-        - GoogleProvider
+        - GoogleSearchConsoleProvider
+        - GoogleProvider (Indexing API)
+        - Sitemap reading
+        - CLI
+        - GitHub Action
         - Kliz / orchestration
-        - Provider personnalisé
-        - Autre
+        - Custom provider
+        - Other
     validations:
       required: true
   - type: textarea
     id: description
     attributes:
       label: Description
-      description: Décrivez le résultat obtenu et le résultat attendu.
+      description: Describe what happened and what you expected.
     validations:
       required: true
   - type: textarea
     id: reproduction
     attributes:
-      label: Reproduction minimale
+      label: Minimal reproduction
       render: python
     validations:
       required: true
   - type: textarea
     id: traceback
     attributes:
-      label: Traceback ou logs nettoyés
-      description: Supprimez tous les secrets et identifiants avant de publier.
+      label: Cleaned traceback or logs
+      description: Remove every secret and credential before posting.
       render: shell
-

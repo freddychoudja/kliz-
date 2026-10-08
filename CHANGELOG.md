@@ -1,96 +1,92 @@
 # Changelog
 
-Toutes les modifications notables de `kliz` sont documentées dans ce fichier.
-Le projet suit le versionnage sémantique.
+All notable changes to `kliz` are documented in this file.
+The project follows semantic versioning.
 
 ## [Unreleased]
 
-### Changements incompatibles
+### Breaking changes
 
-- Les bibliothèques Google passent dans l'extra `google` : installez
-  `kliz[google]` pour utiliser `GoogleProvider` ou `GoogleSearchConsoleProvider`.
-  Sans lui, ils lèvent `MissingDependencyError` (une `ImportError`) et la CLI
-  termine avec le code `2`. Un simple `pip install kliz` passe d'environ 144 Mo
-  et 24 paquets à environ 4 Mo et 7.
-- Python 3.10 ou plus récent est requis (Python 3.9 est en fin de vie depuis
-  octobre 2025).
+- The Google client libraries moved to the `google` extra: install
+  `kliz[google]` to use `GoogleProvider` or `GoogleSearchConsoleProvider`.
+  Without it, they raise `MissingDependencyError` (an `ImportError`) and the CLI
+  exits with code `2`. A plain `pip install kliz` drops from about 144 MB and
+  24 packages to about 4 MB and 7.
+- Python 3.10 or newer is required (Python 3.9 reached end of life in October
+  2025).
 
-### Ajouté
+### Added
 
-- `NotificationResult.urls` : les URL couvertes par chaque résultat.
-- `BatchProvider.validate_url()` : point d’extension de validation par URL
-  utilisé par l’orchestrateur.
-- `kliz indexnow keygen` (`--write DIR`, `--site URL`) et
-  `kliz indexnow verify-key`, appuyés sur `IndexNowProvider.generate_key()`,
-  `key_file_url()` et `verify_key()`. La vérification détecte les fichiers
-  absents, les redirections, les mauvaises clés et les pages HTML servies en
-  `200` pour les chemins inconnus.
-- Lecture de sitemaps : `read_sitemap()` et `kliz notify --sitemap` (URL ou
-  fichier, gzip, index de sitemaps, filtre `--since` sur `<lastmod>`), analyse
-  via `defusedxml`, plafond de 50 Mo et erreurs claires quand une page HTML est
-  servie à la place du sitemap. Nouvelle dépendance : `defusedxml`.
-- `GoogleSearchConsoleProvider` : soumet à nouveau un sitemap via l'API Search
-  Console, la méthode prise en charge pour signaler des changements à Google
-  pour toute page. Options CLI `--gsc-site`, `--gsc-sitemap`,
-  `--gsc-service-account-file` (`KLIZ_GSC_*`).
-- GitHub Action (`action.yml`) : notifie après chaque déploiement depuis un
-  sitemap ou une liste d'URL, vérifie d'abord la clé IndexNow ; testée en CI
-  par une exécution à blanc.
-- `kliz notify --dry-run` liste les URL sans rien envoyer.
+- `NotificationResult.urls`: the URLs each result covers.
+- `BatchProvider.validate_url()`: per-URL validation hook used by the
+  orchestrator.
+- `kliz indexnow keygen` (`--write DIR`, `--site URL`) and
+  `kliz indexnow verify-key`, backed by `IndexNowProvider.generate_key()`,
+  `key_file_url()` and `verify_key()`. Verification detects missing files,
+  redirects, wrong keys and HTML pages served with `200` for unknown paths.
+- Sitemap reading: `read_sitemap()` and `kliz notify --sitemap` (URL or file,
+  gzip, sitemap indexes, `--since` filtering on `<lastmod>`), with `defusedxml`
+  parsing, 50 MB cap and clear errors for HTML pages served instead of a sitemap.
+  New runtime dependency: `defusedxml`.
+- `GoogleSearchConsoleProvider`: resubmits a sitemap through the Search Console
+  API, the supported way to signal changes to Google for any page. CLI options
+  `--gsc-site`, `--gsc-sitemap`, `--gsc-service-account-file` (`KLIZ_GSC_*`).
+- GitHub Action (`action.yml`): notifies after each deployment from a sitemap
+  or a URL list, verifies the IndexNow key first; exercised in CI by a dry run.
+- `kliz notify --dry-run` lists the URLs without sending anything.
 
-### Modifié
+### Changed
 
-- Métadonnées du paquet et aide de la CLI en anglais ; statut Beta.
-- `GoogleProvider` et `GoogleSearchConsoleProvider` partagent une base commune.
+- Package metadata and CLI help are in English; development status is Beta.
+- `GoogleProvider` and `GoogleSearchConsoleProvider` share one client base.
 
-### Corrigé
+### Fixed
 
-- `Kliz.notify_many` regroupe les URL par hôte avant le découpage : mélanger
-  `a.com` et `www.a.com` ne fait plus échouer tout le lot.
-- Une URL invalide (chaîne de requête, schéma incorrect, hors du chemin de
-  `key_location` IndexNow) est signalée comme un échec individuel au lieu de
-  faire rejeter tout le lot.
-- IndexNow ne vérifiait que la première URL d’un lot par rapport à
-  `key_location` ; toutes les URL sont désormais vérifiées.
-- `notify_many` supprime les espaces et les doublons.
-- `kliz notify --batch` envoie de vrais lots (une requête par hôte et par
-  tranche au lieu d’une par URL) et ignore les commentaires `#` indentés.
+- `Kliz.notify_many` groups URLs by host before chunking: mixing `a.com` and
+  `www.a.com` no longer fails the whole batch.
+- An invalid URL (query string, bad scheme, outside the IndexNow
+  `key_location` path) is now reported as its own failure instead of
+  discarding the entire batch.
+- IndexNow checked only the first URL of a batch against `key_location`; every
+  URL is now checked.
+- `notify_many` strips and deduplicates URLs.
+- `kliz notify --batch` sends real batches (one request per host and chunk
+  instead of one per URL) and ignores indented `#` comments.
 
 ## [0.2.0] - 2026-09-29
 
-### Ajouté
+### Added
 
-- Retry opt-in sur `Kliz` (`max_attempts`) avec backoff exponentiel et jitter ;
-  `sleep` et `clock` injectables ; désactivé par défaut.
-- Orchestration par lots : `Kliz.notify_many` / `notify_many_detailed`, avec
-  découpage selon `max_urls_per_request` et repli en boucle `notify`.
-- Base `BatchProvider` et helpers HTTP partagés (`_http.py`) pour faciliter
-  l'ajout de nouveaux moteurs à lots.
-- Session HTTP `requests` réutilisable dans `IndexNowProvider`, avec injection
-  d'une session externe et méthode `close()`.
-- Construction paresseuse du client Google Indexing.
-- Point d'entrée CLI `kliz` (`notify`, `providers`) avec configuration via
-  arguments ou variables d'environnement `KLIZ_*`.
-- Hook `BaseProvider.close()` et gestionnaire de contexte sur `Kliz`.
+- Opt-in retry on `Kliz` (`max_attempts`) with exponential backoff and jitter;
+  injectable `sleep` and `clock`; off by default.
+- Batch orchestration: `Kliz.notify_many` / `notify_many_detailed`, chunking by
+  `max_urls_per_request` with a per-URL `notify` fallback.
+- `BatchProvider` base and shared HTTP helpers (`_http.py`) to make new batch
+  engines easier to add.
+- Reusable `requests` HTTP session in `IndexNowProvider`, with external session
+  injection and `close()`.
+- Lazy construction of the Google Indexing client.
+- CLI entry point `kliz` (`notify`, `providers`) configured via arguments or
+  `KLIZ_*` environment variables.
+- `BaseProvider.close()` hook and context-manager support on `Kliz`.
 
-### Modifié
+### Changed
 
-- Validation stricte des URL de notification (`require_clean` : rejet de `?` et
-  `#`).
-- `IndexNowProvider` s'appuie sur `BatchProvider` et les helpers HTTP partagés.
+- Strict validation of notification URLs (`require_clean`: reject `?` and `#`).
+- `IndexNowProvider` now builds on `BatchProvider` and the shared HTTP helpers.
 
 ## [0.1.0] - 2026-07-29
 
-### Ajouté
+### Added
 
-- Architecture Adapter/Strategy avec `BaseProvider`.
-- Provider IndexNow avec notification unitaire et par lots.
-- Provider Google Indexing pour les pages officiellement éligibles.
-- Orchestrateur `Kliz` avec résultats simples et détaillés.
-- Erreurs structurées indiquant si une opération peut être retentée.
-- Validation des URL, clés IndexNow, timeouts et chemins de clés.
-- Tests unitaires mockés, contrôle de couverture, lint et typage strict.
-- CI multi-version Python et publication PyPI via Trusted Publishing.
+- Adapter/strategy architecture with `BaseProvider`.
+- IndexNow provider with single and batch notification.
+- Google Indexing provider for officially eligible pages.
+- `Kliz` orchestrator with simple and detailed results.
+- Structured errors indicating whether an operation can be retried.
+- Validation of URLs, IndexNow keys, timeouts and key paths.
+- Mocked unit tests, coverage control, linting and strict typing.
+- Multi-version Python CI and PyPI publishing via Trusted Publishing.
 
-Une traduction anglaise de ce changelog est disponible dans
-[`CHANGELOG.en.md`](CHANGELOG.en.md).
+A French version of this changelog is available in
+[`CHANGELOG.fr.md`](CHANGELOG.fr.md).

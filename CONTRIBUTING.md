@@ -1,20 +1,24 @@
-# Contribuer à kliz
+# Contributing to kliz
 
-Merci de contribuer à `kliz`. Le projet cherche à conserver un cœur léger,
-agnostique et simple à intégrer.
+Thanks for contributing to `kliz`! The project aims to keep a light,
+framework-agnostic core that is easy to integrate.
 
-## Principes d'architecture
+🇫🇷 A French version of this guide is available in
+[`CONTRIBUTING.fr.md`](CONTRIBUTING.fr.md).
 
-Toute contribution doit préserver les contraintes suivantes :
+## Architecture principles
 
-- aucune dépendance à Django, Celery, Redis ou à un autre framework
-  d'application dans `src/kliz` ;
-- les moteurs de recherche sont intégrés sous forme de providers héritant de
-  `BaseProvider` ;
-- les appels réseau doivent avoir un timeout et rester mockables ;
-- aucun secret, jeton ou fichier de compte de service ne doit être versionné.
+Every contribution must preserve these constraints:
 
-## Préparer l'environnement
+- no dependency on Django, Celery, Redis or any other application framework in
+  `src/kliz`;
+- search engines are integrated as providers inheriting from `BaseProvider`;
+- heavy SDKs go in an optional extra (like `kliz[google]`) and are imported
+  lazily, raising `MissingDependencyError` when missing;
+- network calls must have a timeout and stay mockable;
+- no secret, token or service account file may ever be committed.
+
+## Setting up
 
 ```bash
 git clone https://github.com/freddychoudja/kliz-.git
@@ -28,41 +32,44 @@ mypy src
 pytest --cov=kliz
 ```
 
-## Proposer une modification
+## Proposing a change
 
-1. Ouvrez d'abord une issue pour les changements importants.
-2. Créez une branche dédiée depuis `main`.
-3. Ajoutez ou adaptez les tests.
-4. Vérifiez que `pytest` passe sans accès à de vraies API.
-5. Ouvrez une pull request décrivant le problème et la solution.
+1. Open an issue first for significant changes.
+2. Create a dedicated branch from `main`.
+3. Add or adapt the tests.
+4. Make sure `pytest` passes without access to real APIs.
+5. Open a pull request describing the problem and the solution.
 
-Les changements doivent rester ciblés. Une pull request ne doit pas contenir
-de refactoring sans rapport avec son objectif.
+Keep changes focused: a pull request must not contain refactoring unrelated to
+its goal.
 
-## Ajouter un provider
+## Adding a provider
 
-Un nouveau provider doit :
+A new provider must:
 
-1. hériter de `kliz.providers.base.BaseProvider` ;
-2. implémenter `notify(self, url: str) -> bool` ;
-3. retourner `True` après une notification réussie ;
-4. laisser remonter les erreurs de l'API distante ;
-5. être couvert par des tests utilisant des mocks.
+1. inherit from `kliz.BaseProvider`, or from `kliz.BatchProvider` when the
+   engine accepts batches of same-host URLs (implement `_notify_many`, and
+   override `validate_url` for per-URL rules);
+2. implement `notify(self, url: str) -> bool`;
+3. return `True` after a successful notification;
+4. raise `ProviderError` (with `retryable` and `status_code`) when the remote
+   API fails;
+5. be covered by tests that use mocks.
 
-## Préparer une release
+## Preparing a release
 
-1. Mettez à jour la version dans `pyproject.toml`.
-2. Déplacez les changements de `Unreleased` vers cette version dans
-   `CHANGELOG.md`.
-3. Vérifiez localement tests, qualité, audit et distributions.
-4. Fusionnez sur `main` après validation de la CI.
-5. Créez et poussez un tag `vX.Y.Z` correspondant exactement à la version.
+1. Update the version in `pyproject.toml`.
+2. Move the `Unreleased` entries to that version in `CHANGELOG.md` and its
+   translation `CHANGELOG.fr.md`.
+3. Check tests, quality, audit and distributions locally.
+4. Merge into `main` once CI passes.
+5. Create and push a `vX.Y.Z` tag matching the version exactly.
 
-Le workflow `release.yml` construit les distributions puis les publie avec le
-Trusted Publishing de PyPI. Aucun token PyPI permanent ne doit être ajouté aux
-secrets GitHub.
+The `release.yml` workflow builds the distributions and publishes them with
+PyPI Trusted Publishing. Never add a permanent PyPI token to the GitHub
+secrets.
 
-## Signaler une vulnérabilité
+## Reporting a vulnerability
 
-N'ouvrez pas d'issue publique pour une vulnérabilité. Utilisez le canal privé
-décrit dans [SECURITY.md](SECURITY.md).
+Do not open a public issue for a vulnerability. Use the private channel
+described in [SECURITY.md](SECURITY.md).

@@ -3,38 +3,47 @@
 [![CI](https://github.com/freddychoudja/kliz-/actions/workflows/ci.yml/badge.svg)](https://github.com/freddychoudja/kliz-/actions/workflows/ci.yml)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/kliz)](https://pypi.org/project/kliz/)
 [![GitHub issues](https://img.shields.io/github/issues/freddychoudja/kliz-)](https://github.com/freddychoudja/kliz-/issues)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/freddychoudja/kliz-/blob/main/LICENSE)
 
-`kliz` est un bot d'indexation SEO agnostique. Il permet à une application de
-notifier plusieurs moteurs de recherche dès qu'une URL est créée ou mise à
-jour.
+**Tell search engines about your new and updated pages, the moment you publish.**
 
-Le package ne dépend ni de Django, ni de Celery, ni de Redis. Il expose une API
-Python synchrone que l'application appelante peut exécuter directement ou
-encapsuler dans le système de tâches de son choix.
+`kliz` notifies Bing, Yandex, Naver, Seznam and Yep through
+[IndexNow](https://www.indexnow.org/), and Google through Search Console, from
+a URL, a list or a whole sitemap. Use it as a Python library, a CLI or a GitHub
+Action that runs after every deployment.
+
+```bash
+pip install kliz
+kliz indexnow keygen --write public/ --site https://example.com   # once
+kliz notify --sitemap https://example.com/sitemap.xml             # on each deploy (KLIZ_* env)
+```
+
+The package depends neither on Django, nor Celery, nor Redis. It exposes a
+synchronous Python API that the calling application can run directly or wrap
+in whatever task system it chooses.
+
+🇫🇷 A French version of this document is available in
+[`README.fr.md`](https://github.com/freddychoudja/kliz-/blob/main/README.fr.md).
 
 ## Installation
 
 ```bash
-pip install kliz            # IndexNow, sitemaps, CLI (~4 Mo, 7 paquets)
-pip install 'kliz[google]'  # + providers Google Search Console et Indexing API
+pip install kliz            # IndexNow, sitemaps, CLI (~4 MB, 7 packages)
+pip install 'kliz[google]'  # + Google Search Console and Indexing API providers
 ```
 
-Une documentation web statique est disponible dans
-[`docs/index.html`](docs/index.html). Elle peut aussi être publiée via GitHub
-Pages avec le workflow fourni.
+A static web documentation is available at
+[`docs/index.html`](https://github.com/freddychoudja/kliz-/blob/main/docs/index.html). It can also be published through GitHub
+Pages with the provided workflow.
 
-Une traduction anglaise est disponible dans
-[`README.en.md`](README.en.md).
-
-Pour contribuer et exécuter les tests :
+To contribute and run the tests:
 
 ```bash
 python -m pip install -e ".[dev]"
 pytest --cov=kliz
 ```
 
-## Démarrage rapide
+## Quick start
 
 ```python
 from kliz import GoogleProvider, IndexNowProvider, Kliz
@@ -42,23 +51,23 @@ from kliz import GoogleProvider, IndexNowProvider, Kliz
 indexer = Kliz(
     [
         IndexNowProvider(
-            api_key="votre-cle-indexnow",
-            key_location="https://example.com/votre-cle-indexnow.txt",
+            api_key="your-indexnow-key",
+            key_location="https://example.com/your-indexnow-key.txt",
         ),
         GoogleProvider("/run/secrets/google-service-account.json"),
     ]
 )
 
-statuses = indexer.notify_all("https://example.com/articles/nouvel-article")
+statuses = indexer.notify_all("https://example.com/articles/new-article")
 # {
 #     "IndexNowProvider": True,
 #     "GoogleProvider": True,
 # }
 ```
 
-Pour soumettre plusieurs URL d'un coup, `notify_many` découpe selon
-`max_urls_per_request` (lots IndexNow) et retombe sur une boucle `notify` pour
-les autres providers :
+To submit several URLs at once, `notify_many` chunks by each provider's
+`max_urls_per_request` (IndexNow batches) and falls back to a `notify` loop for
+the others:
 
 ```python
 statuses = indexer.notify_many(
@@ -69,55 +78,55 @@ statuses = indexer.notify_many(
 )
 ```
 
-Les URL sont dédoublonnées et regroupées par hôte. Une URL invalide obtient son
-propre résultat d'échec au lieu de faire échouer tout le lot ;
-`notify_many_detailed` renvoie, par provider, une liste de `NotificationResult`
-dont le champ `urls` indique les URL couvertes par chaque résultat.
+URLs are deduplicated and grouped by host. An invalid URL gets its own failed
+result instead of sinking the whole batch; `notify_many_detailed` returns, per
+provider, a list of `NotificationResult` whose `urls` field tells which URLs
+each result covers.
 
-Le retry intégré est **désactivé par défaut** (`max_attempts=1`). Pour l'activer
-avec backoff exponentiel et jitter :
+Built-in retry is **off by default** (`max_attempts=1`). Enable it with
+exponential backoff and jitter:
 
 ```python
 indexer = Kliz(
-    [IndexNowProvider(api_key="votre-cle-indexnow")],
+    [IndexNowProvider(api_key="your-indexnow-key")],
     max_attempts=3,
 )
 ```
 
-`notify_all` continue d'appeler les autres fournisseurs lorsqu'un fournisseur
-échoue. Son statut vaut alors `False`. Un appel direct à `provider.notify(url)`
-laisse en revanche remonter une `ProviderError` afin que l'application puisse
-appliquer sa propre politique de retry.
+`notify_all` keeps calling the other providers when one fails. That provider's
+status is then `False`. A direct call to `provider.notify(url)` lets a
+`ProviderError` bubble up instead, so the application can apply its own retry
+policy.
 
-Pour obtenir la cause, le statut HTTP et l'indication de retry :
+To get the cause, the HTTP status and the retry hint:
 
 ```python
 results = indexer.notify_all_detailed(
-    "https://example.com/articles/nouvel-article"
+    "https://example.com/articles/new-article"
 )
 
 for name, result in results.items():
     print(name, result.success, result.retryable, result.error)
 ```
 
-Si plusieurs instances ont le même nom, leurs clés sont suffixées :
+If multiple instances share the same name, their keys are suffixed:
 `IndexNowProvider`, `IndexNowProvider#2`, etc.
 
-## Architecture agnostique
+## Agnostic architecture
 
-`BaseProvider` définit une stratégie minimale : `notify(url) -> bool`. Chaque
-adaptateur traduit ce contrat vers l'API distante concernée :
+`BaseProvider` defines a minimal strategy: `notify(url) -> bool`. Each adapter
+translates this contract to the relevant remote API:
 
-- `IndexNowProvider` envoie une requête HTTP à l'API IndexNow ;
-- `GoogleProvider` publie une notification `URL_UPDATED` via l'API Google
-  Indexing ;
-- `Kliz` orchestre les stratégies injectées dans son constructeur.
+- `IndexNowProvider` sends an HTTP request to the IndexNow API;
+- `GoogleProvider` publishes a `URL_UPDATED` notification through the Google
+  Indexing API;
+- `Kliz` orchestrates the strategies injected in its constructor.
 
-Cette séparation permet d'ajouter un moteur sans modifier l'orchestrateur et
-laisse l'application libre de choisir son framework web, sa file d'attente et
-sa politique de retry.
+This separation lets you add an engine without modifying the orchestrator and
+leaves the application free to choose its web framework, its queue and its
+retry policy.
 
-Un fournisseur personnalisé doit uniquement hériter de `BaseProvider` :
+A custom provider only needs to inherit from `BaseProvider`:
 
 ```python
 from kliz import BaseProvider
@@ -125,13 +134,13 @@ from kliz import BaseProvider
 
 class CustomProvider(BaseProvider):
     def notify(self, url: str) -> bool:
-        # Appel vers l'API du moteur concerné
+        # Call to the relevant engine API
         return True
 ```
 
-Pour un moteur qui accepte des lots d'URL sur le même hôte, héritez de
-`BatchProvider` : `notify` et la validation (hôte commun, taille max, URL
-propres) sont fournis ; il reste à implémenter `_notify_many`.
+For an engine that accepts URL batches on the same host, inherit from
+`BatchProvider`: `notify` and validation (shared host, max size, clean URLs)
+are provided; implement `_notify_many`.
 
 ```python
 from urllib.parse import SplitResult
@@ -145,61 +154,61 @@ class CustomBatchProvider(BatchProvider):
     def _notify_many(
         self, urls: list[str], parsed_urls: list[SplitResult]
     ) -> bool:
-        # Appel HTTP groupé vers le moteur
+        # Grouped HTTP call to the engine
         return True
 ```
 
-## Validation des URL
+## URL validation
 
-Toutes les URL soumises à un provider sont contrôlées avant tout envoi :
+Every URL submitted to a provider is checked before being sent:
 
-- le schéma doit être `http` ou `https` et l'hôte doit être présent ;
-- les identifiants (`https://user:pass@...`) sont interdits ;
-- les fragments (`#...`) sont toujours rejetés : ils ne sont jamais transmis au
-  serveur et ne peuvent donc désigner un contenu distinct ;
-- les chaînes de requête (`?...`) sont rejetées pour les notifications : seule
-  une URL canonique propre est soumise aux moteurs.
+- the scheme must be `http` or `https` and a host must be present;
+- credentials (`https://user:pass@...`) are forbidden;
+- fragments (`#...`) are always rejected: they are never transmitted to the
+  server and therefore can never designate a distinct resource;
+- query strings (`?...`) are rejected for notifications: only a clean
+  canonical URL is submitted to the engines.
 
-La fonction partagée `parse_http_url(url, require_clean=True)` applique ces
-règles. `require_clean` vaut `False` par défaut afin de ne pas casser les
-usages existants ; seules les notifications exigent une URL propre.
+The shared `parse_http_url(url, require_clean=True)` function applies these
+rules. `require_clean` defaults to `False` so existing usages keep working;
+only notifications require a clean URL.
 
-## Configuration des fournisseurs
+## Provider configuration
 
 ### IndexNow
 
-La clé doit être publiée conformément aux règles d'IndexNow. Si
-`key_location` est fourni, il est transmis dans le champ `keyLocation`.
+The key must be published according to the IndexNow rules. If
+`key_location` is provided, it is transmitted in the `keyLocation` field.
 
 ```python
 from kliz import IndexNowProvider
 
 provider = IndexNowProvider(
-    api_key="votre-cle-valide",
-    key_location="https://example.com/votre-cle-valide.txt",  # optionnel
+    api_key="your-valid-key",
+    key_location="https://example.com/your-valid-key.txt",  # optional
     timeout=10.0,
 )
 provider.notify("https://example.com/page")
 ```
 
-Le provider réutilise une connexion HTTP persistante (`requests.Session`) entre
-les notifications, afin de ne pas reconstruire une connexion et une poignée de
-main TLS à chaque appel. Vous pouvez injecter votre propre session (tests,
-configuration réseau partagée, proxies) :
+The provider reuses a persistent HTTP connection (`requests.Session`) between
+notifications, instead of rebuilding a connection and a TLS handshake for every
+call. You can inject your own session (tests, shared network configuration,
+proxies):
 
 ```python
 import requests
 
 provider = IndexNowProvider(
-    api_key="votre-cle-valide",
+    api_key="your-valid-key",
     session=requests.Session(),
 )
 ```
 
-La session interne garde les connexions ouvertes ; appelez `provider.close()` à
-l'arrêt de votre application pour les libérer proprement.
+The internal session keeps connections open; call `provider.close()` when your
+application shuts down to release them cleanly.
 
-Pour soumettre plusieurs URL du même hôte dans un seul appel :
+To submit several URLs of the same host in a single call:
 
 ```python
 provider.notify_many(
@@ -210,20 +219,18 @@ provider.notify_many(
 )
 ```
 
-IndexNow accepte jusqu'à 10 000 URL par requête. `kliz` classe les erreurs
-`429` et `5xx` comme retentables.
+IndexNow accepts up to 10,000 URLs per request. `kliz` classifies `429` and
+`5xx` errors as retryable.
 
 ### Google
 
-Activez l'API Google Indexing pour votre projet, créez un compte de service et
-autorisez-le sur la propriété concernée. Ne versionnez jamais le fichier JSON
-du compte de service.
+Enable the Google Indexing API for your project, create a service account and
+authorize it on the property. Never version the service-account JSON file.
 
-> **Restriction importante :** l'API Google Indexing est officiellement
-> réservée aux pages contenant un `JobPosting` ou un `BroadcastEvent` intégré
-> dans un `VideoObject`. N'utilisez pas ce provider comme API d'indexation
-> générique pour les autres contenus ; utilisez notamment un sitemap pour leur
-> couverture.
+> **Important restriction:** the Google Indexing API is officially reserved for
+> pages containing a `JobPosting` or a `BroadcastEvent` embedded in a
+> `VideoObject`. Do not use this provider as a generic indexing API for other
+> content; use a sitemap for their coverage.
 
 ```python
 from kliz import GoogleProvider
@@ -236,57 +243,53 @@ provider = GoogleProvider(
 provider.notify("https://example.com/jobs/backend-python")
 ```
 
-L'API Google Indexing est soumise aux règles d'éligibilité et aux quotas de
-Google. Une notification ne garantit pas l'indexation de l'URL.
+The Google Indexing API is subject to Google's eligibility rules and quotas. A
+notification never guarantees that the URL will be indexed.
 
-Le client Indexing est construit de manière paresseuse : le fichier de compte
-de service n'est lu qu'au premier appel de `notify`, puis réutilisé pour les
-appels suivants. La création du provider ne déclenche donc aucune lecture de
-fichier. Les erreurs de configuration (fichier absent, JSON invalide)
-remontent au moment de la notification, sont marquées comme non retentables, et
-le provider se rétablit dès que le fichier est corrigé.
+The Indexing client is built lazily: the service-account file is only read on
+the first `notify` call, then reused for subsequent calls. Creating the
+provider triggers no file read. Configuration errors (missing file, invalid
+JSON) surface at notification time, are marked as non-retryable, and the
+provider recovers as soon as the file is fixed.
 
-### Google Search Console (tous les sites)
+### Google Search Console (any site)
 
-Google ne propose pas d'API générale « indexe cette URL ». La méthode prise en
-charge pour signaler des pages modifiées est de soumettre à nouveau leur
-sitemap, ce que fait `GoogleSearchConsoleProvider` via l'API Search Console.
-Elle fonctionne pour tout type de page, contrairement à l'API Indexing
-ci-dessus.
+Google has no general "index this URL" API. The supported way to signal changed
+pages is to resubmit their sitemap, which `GoogleSearchConsoleProvider` does
+through the Search Console API. It works for every kind of page, unlike the
+Indexing API above.
 
-1. Validez le site dans [Search Console](https://search.google.com/search-console).
-2. Dans Google Cloud, activez la *Google Search Console API*, créez un compte de
-   service et téléchargez sa clé JSON.
-3. Dans Search Console, *Paramètres → Utilisateurs et autorisations*, ajoutez
-   l'e-mail du compte de service comme **Propriétaire** ou utilisateur **total**.
+1. Verify the site in [Search Console](https://search.google.com/search-console).
+2. In Google Cloud, enable the *Google Search Console API*, create a service
+   account and download its JSON key.
+3. In Search Console, *Settings → Users and permissions*, add the service
+   account's email as an **Owner** or **Full** user.
 
 ```python
 from kliz import GoogleSearchConsoleProvider
 
 provider = GoogleSearchConsoleProvider(
     "/run/secrets/search-console.json",
-    site_url="https://example.com/",  # ou "sc-domain:example.com"
-    sitemap_url="https://example.com/sitemap.xml",  # défaut : <propriété>/sitemap.xml
+    site_url="https://example.com/",  # or "sc-domain:example.com"
+    sitemap_url="https://example.com/sitemap.xml",  # default: <property>/sitemap.xml
 )
-provider.notify_many(urls)  # vérifie que les URL appartiennent à la propriété, soumet une fois
+provider.notify_many(urls)  # checks the URLs belong to the property, submits once
 ```
 
-Les URL hors de la propriété sont rejetées individuellement ; elles ne sont
-jamais envoyées. Une nouvelle soumission demande à Google de relire le sitemap,
-sans garantir l'indexation. Un HTTP 403 signifie que le compte de service n'est
-pas utilisateur de la propriété.
+URLs outside the property are rejected individually; they are never sent.
+Resubmitting asks Google to read the sitemap again, it does not guarantee
+indexing. An HTTP 403 means the service account is not a user of the property.
 
 ### GitHub Action
 
-Le dépôt est aussi une GitHub Action : après chaque déploiement en production,
-elle notifie les moteurs IndexNow et soumet à nouveau le sitemap à Google
-Search Console.
+The repository is also a GitHub Action: after each production deployment it
+notifies IndexNow engines and resubmits the sitemap to Google Search Console.
 
 ```yaml
-# .github/workflows/indexing.yml dans le dépôt de votre site
+# .github/workflows/indexing.yml in your site's repository
 name: Search engine indexing
 on:
-  deployment_status:   # envoyé par Vercel, Netlify, Cloudflare Pages... après un déploiement
+  deployment_status:   # sent by Vercel, Netlify, Cloudflare Pages... after a deploy
 
 jobs:
   index:
@@ -295,7 +298,7 @@ jobs:
       github.event.deployment_status.environment == 'Production'
     runs-on: ubuntu-latest
     steps:
-      - uses: freddychoudja/kliz-@main   # épinglez un tag de version ou un SHA
+      - uses: freddychoudja/kliz-@main   # pin a release tag or commit SHA
         with:
           sitemap: https://example.com/sitemap.xml
           indexnow-api-key: ${{ secrets.INDEXNOW_KEY }}
@@ -304,26 +307,26 @@ jobs:
           gsc-service-account-json: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
 ```
 
-Entrées : `sitemap` (URL ou fichier du dépôt) ou `urls` (une par ligne),
-`since`, `indexnow-api-key`, `indexnow-key-location`, `verify-key` (`true` par
-défaut : vérifie le fichier clé avant de notifier), `gsc-site`, `gsc-sitemap`,
-`gsc-service-account-json` (le contenu JSON, depuis un secret ; écrit dans un
-fichier temporaire privé supprimé à la fin), `dry-run`. Les providers sans
-identifiants sont ignorés. Runners Linux et macOS pris en charge.
+Inputs: `sitemap` (URL or workspace file) or `urls` (one per line), `since`,
+`indexnow-api-key`, `indexnow-key-location`, `verify-key` (default `true`:
+checks the key file before notifying), `gsc-site`, `gsc-sitemap`,
+`gsc-service-account-json` (the JSON content, from a secret; written to a
+private temporary file deleted at the end), `dry-run`. Providers without
+credentials are skipped. Linux and macOS runners are supported.
 
-## Recettes / Intégration Asynchrone
+## Recipes / Async integration
 
-`kliz` reste volontairement synchrone. Pour une exécution asynchrone, placez
-l'appel dans un worker, une tâche ou un job appartenant à votre application.
-Ainsi, les dépendances d'infrastructure ne contaminent pas le package.
+`kliz` deliberately stays synchronous. For asynchronous execution, place the
+call in a worker, a task or a job owned by your application. This way
+infrastructure dependencies never pollute the package.
 
-### Tâche Celery (Python/Django)
+### Celery task (Python/Django)
 
-Dans un projet Django utilisant déjà Celery, la tâche peut lire sa
-configuration depuis les settings et laisser Celery gérer les retries :
+In a Django project already using Celery, the task can read its configuration
+from the settings and let Celery handle retries:
 
 ```python
-# myapp/tasks.py — ce code appartient à l'application, pas à kliz
+# myapp/tasks.py — this code belongs to the application, not to kliz
 from dataclasses import asdict
 
 from celery import shared_task
@@ -354,23 +357,21 @@ def notify_search_engines(self, url: str) -> dict[str, dict[str, object]]:
     return {name: asdict(result) for name, result in results.items()}
 ```
 
-Depuis une vue, un signal ou un service Django :
+From a view, a signal or a Django service:
 
 ```python
 from myapp.tasks import notify_search_engines
 
-notify_search_engines.delay("https://example.com/articles/nouveau")
+notify_search_engines.delay("https://example.com/articles/new")
 ```
 
-Pour isoler les retries et quotas de chaque moteur, utilisez idéalement une
-tâche par provider. Le provider Google ne doit être ajouté que pour les pages
-officiellement éligibles.
+To isolate each engine's retries and quotas, ideally use one task per
+provider. The Google provider must only be added for officially eligible pages.
 
-### Job générique
+### Generic job
 
-Le même principe fonctionne avec un scheduler, un worker maison, RQ, Dramatiq,
-une fonction serverless ou un cron. Le job ne connaît que l'API publique de
-`kliz` :
+The same principle works with a scheduler, a home-made worker, RQ, Dramatiq, a
+serverless function or cron. The job only knows `kliz`'s public API:
 
 ```python
 from kliz import IndexNowProvider, Kliz
@@ -384,47 +385,45 @@ class ContentIndexingJob:
         return self.indexer.notify_all(payload["url"])
 
 
-# Le système de jobs choisi sérialise ce payload et appelle job.run(payload).
-job = ContentIndexingJob(api_key="votre-cle")
-result = job.run({"url": "https://example.com/page-modifiee"})
+# The chosen job system serializes this payload and calls job.run(payload).
+job = ContentIndexingJob(api_key="your-key")
+result = job.run({"url": "https://example.com/updated-page"})
 ```
 
-## Interface en ligne de commande
+## Command-line interface
 
-L'installation fournit aussi une commande `kliz` :
+The installation also provides a `kliz` command:
 
 ```bash
-export KLIZ_INDEXNOW_API_KEY="votre-cle"
-export KLIZ_INDEXNOW_KEY_LOCATION="https://example.com/votre-cle.txt"
+export KLIZ_INDEXNOW_API_KEY="your-key"
+export KLIZ_INDEXNOW_KEY_LOCATION="https://example.com/your-key.txt"
 
-kliz notify https://example.com/page  # une URL
-kliz notify --batch urls.txt          # une URL par ligne, `#` pour un commentaire
-kliz notify --sitemap https://example.com/sitemap.xml   # toutes les pages d'un sitemap
+kliz notify https://example.com/page  # a single URL
+kliz notify --batch urls.txt          # one URL per line, `#` for comments
+kliz notify --sitemap https://example.com/sitemap.xml   # every page of a sitemap
 kliz notify --sitemap https://example.com/sitemap.xml --since 2026-10-01
-kliz notify --sitemap sitemap.xml --dry-run             # lister sans rien envoyer
-kliz providers                        # liste des providers configurés
+kliz notify --sitemap sitemap.xml --dry-run             # list, send nothing
+kliz providers                        # list configured providers
 kliz --version
 ```
 
-Les crédits se passent aussi en options (`--indexnow-api-key`,
-`--indexnow-key-location`, `--google-service-account-file`). Pour Search
-Console, renseignez `--gsc-site` et `--gsc-service-account-file`
-(`KLIZ_GSC_SITE`, `KLIZ_GSC_SERVICE_ACCOUNT_FILE`) ; le sitemap soumis est
-`--gsc-sitemap`, sinon l'URL de `--sitemap`, sinon `<propriété>/sitemap.xml`. Le processus
-termine avec le code `0` si tout a réussi, `1` en cas d'échec de notification
-et `2` en cas de configuration invalide.
+Credentials can also be passed as options (`--indexnow-api-key`,
+`--indexnow-key-location`, `--google-service-account-file`). For Search
+Console, set `--gsc-site` and `--gsc-service-account-file` (`KLIZ_GSC_SITE`,
+`KLIZ_GSC_SERVICE_ACCOUNT_FILE`); the sitemap resubmitted is `--gsc-sitemap`,
+else the `--sitemap` URL, else `<property>/sitemap.xml`. The process exits
+with code `0` when everything succeeded, `1` on notification failure and `2` on
+invalid configuration.
 
 ### Sitemaps
 
-`--sitemap` (ou `read_sitemap()` en Python) lit un sitemap ou un index de
-sitemaps, depuis une URL ou un fichier local, compressé ou non. Seules les URL de
-pages (`<url><loc>`) sont retenues : les entrées image, vidéo et hreflang sont
-ignorées. Avec `--since`, seules les pages dont le `<lastmod>` est postérieur ou
-égal à la date sont notifiées (les pages sans `<lastmod>` sont conservées) ;
-s'il n'y a rien de nouveau, la commande réussit sans rien envoyer, ce qui
-convient à un pipeline de déploiement. Le XML est analysé avec `defusedxml`
-(DTD interdites) et chaque fichier est limité à 50 Mo, comme le prévoit le
-protocole sitemap.
+`--sitemap` (or `read_sitemap()` in Python) reads a sitemap or a sitemap index,
+from a URL or a local file, compressed or not. Only page URLs (`<url><loc>`) are
+kept: image, video and hreflang entries are ignored. With `--since`, only pages
+whose `<lastmod>` is on or after the date are notified (pages without
+`<lastmod>` are kept); when nothing changed the command succeeds without sending
+anything, which suits a deployment pipeline. XML is parsed with `defusedxml`
+(DTDs forbidden) and each file is capped at 50 MB, as in the sitemap protocol.
 
 ```python
 from datetime import date
@@ -433,34 +432,33 @@ from kliz import IndexNowProvider, Kliz, read_sitemap
 
 urls = read_sitemap("https://example.com/sitemap.xml", since=date(2026, 10, 1))
 if urls:
-    Kliz([IndexNowProvider(api_key="votre-cle")]).notify_many(urls)
+    Kliz([IndexNowProvider(api_key="your-key")]).notify_many(urls)
 ```
 
-### Mettre en place la clé IndexNow
+### Setting up the IndexNow key
 
 ```bash
-# Générer une clé et déposer <clé>.txt dans le dossier servi par votre site
+# Generate a key and drop <key>.txt into the folder your site serves
 KEY=$(kliz indexnow keygen --write public/ --site https://example.com)
-# ...déployer le site, puis vérifier ce que les moteurs verront réellement :
+# ...deploy the site, then check what search engines will actually see:
 kliz --indexnow-api-key "$KEY" indexnow verify-key --site https://example.com
 ```
 
-`keygen` n'écrit que la clé sur la sortie standard, pour pouvoir la capturer
-dans une variable ; les étapes suivantes vont sur la sortie d'erreur.
-`verify-key` télécharge le fichier clé (`--indexnow-key-location`, ou
-`<site>/<clé>.txt` par défaut) sans suivre les redirections et échoue avec un
-message explicite si le fichier est absent, redirige, contient une autre clé, ou
-si le site répond `200` avec une page HTML pour les chemins inconnus (piège
-fréquent des applications monopage sur Vercel ou Netlify). Les mêmes
-vérifications existent en Python via `IndexNowProvider.generate_key()` et
+`keygen` prints only the key on stdout, so it can be captured in a variable;
+the next steps go to stderr. `verify-key` fetches the key file
+(`--indexnow-key-location`, or `<site>/<key>.txt` by default) without following
+redirects and fails with an explicit message when the file is missing, redirects,
+holds another key, or when the site answers `200` with an HTML page for unknown
+paths (a common trap with single-page apps on Vercel or Netlify). The same
+checks are available from Python through `IndexNowProvider.generate_key()` and
 `provider.verify_key(site_url)`.
 
 ## Tests
 
-Les tests mockent les appels `requests` et le client Google. Ils ne nécessitent
-donc ni accès réseau, ni clé IndexNow, ni compte de service Google.
+The tests mock the `requests` calls and the Google client. They require no
+network access, no IndexNow key and no Google service account.
 
-La validation complète locale est :
+The full local validation is:
 
 ```bash
 ruff format --check src tests
@@ -472,39 +470,38 @@ twine check --strict dist/*
 pip-audit . --strict
 ```
 
-## Exploitation en production
+## Production use
 
-Le package ne stocke aucun secret et n'impose aucun système de tâches. Dans
-l'application qui l'utilise :
+The package stores no secrets and imposes no task system. In the application
+that uses it:
 
-- injectez les clés par un gestionnaire de secrets ;
-- activez le retry opt-in de `Kliz` (`max_attempts`) ou appliquez un backoff
-  applicatif aux résultats `retryable=True` ;
-- placez les échecs définitifs dans une dead-letter queue ;
-- mesurez latence, taux de succès, codes HTTP et quotas par provider ;
-- ne partagez pas une même instance `GoogleProvider` entre plusieurs threads ;
-- conservez un sitemap à jour : une notification ne garantit jamais
-  l'indexation.
+- inject keys through a secrets manager;
+- enable Kliz opt-in retry (`max_attempts`) or apply an application-level
+  backoff to `retryable=True` results;
+- place permanent failures in a dead-letter queue;
+- measure latency, success rate, HTTP codes and quotas per provider;
+- never share a single `GoogleProvider` instance between several threads;
+- keep a sitemap up to date: a notification never guarantees indexing.
 
-## Publication
+## Release
 
-Les tags `vX.Y.Z` déclenchent le workflow de release. Le tag doit correspondre
-exactement à la version de `pyproject.toml`. La publication utilise le Trusted
-Publishing PyPI et ne nécessite aucun token PyPI permanent dans GitHub.
+`vX.Y.Z` tags trigger the release workflow. The tag must match the version in
+`pyproject.toml` exactly. Publishing uses PyPI Trusted Publishing and requires
+no permanent PyPI token in GitHub.
 
-Avant la première release, configurez sur PyPI un publisher avec le dépôt
-`freddychoudja/kliz-`, le workflow `release.yml` et l'environnement `pypi`.
+Before the first release, configure a publisher on PyPI with the
+`freddychoudja/kliz-` repository, the `release.yml` workflow and the `pypi`
+environment.
 
-## Contribuer
+## Contributing
 
-Les contributions sont les bienvenues. Consultez
-[CONTRIBUTING.md](CONTRIBUTING.md) avant d'ouvrir une issue ou une pull
-request.
+Contributions are welcome. See [CONTRIBUTING.md](https://github.com/freddychoudja/kliz-/blob/main/CONTRIBUTING.md) before
+opening an issue or a pull request.
 
-Le code source et le suivi du projet sont disponibles sur
+Source code and project tracking are available on
 [GitHub](https://github.com/freddychoudja/kliz-).
 
-## Licence
+## License
 
-`kliz` est distribué sous la [licence MIT](LICENSE). Copyright © 2026 Freddy
+`kliz` is distributed under the [MIT license](https://github.com/freddychoudja/kliz-/blob/main/LICENSE). Copyright © 2026 Freddy
 Choudja.
