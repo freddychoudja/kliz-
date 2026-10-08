@@ -8,6 +8,7 @@ from kliz.providers import (
     BaseProvider,
     BatchProvider,
     GoogleProvider,
+    GoogleSearchConsoleProvider,
     IndexNowProvider,
 )
 from kliz.results import NotificationResult
@@ -17,6 +18,7 @@ __all__ = [
     "BaseProvider",
     "BatchProvider",
     "GoogleProvider",
+    "GoogleSearchConsoleProvider",
     "IndexNowProvider",
     "Kliz",
     "KlizError",

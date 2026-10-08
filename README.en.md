@@ -241,6 +241,34 @@ provider triggers no file read. Configuration errors (missing file, invalid
 JSON) surface at notification time, are marked as non-retryable, and the
 provider recovers as soon as the file is fixed.
 
+### Google Search Console (any site)
+
+Google has no general "index this URL" API. The supported way to signal changed
+pages is to resubmit their sitemap, which `GoogleSearchConsoleProvider` does
+through the Search Console API. It works for every kind of page, unlike the
+Indexing API above.
+
+1. Verify the site in [Search Console](https://search.google.com/search-console).
+2. In Google Cloud, enable the *Google Search Console API*, create a service
+   account and download its JSON key.
+3. In Search Console, *Settings → Users and permissions*, add the service
+   account's email as an **Owner** or **Full** user.
+
+```python
+from kliz import GoogleSearchConsoleProvider
+
+provider = GoogleSearchConsoleProvider(
+    "/run/secrets/search-console.json",
+    site_url="https://example.com/",  # or "sc-domain:example.com"
+    sitemap_url="https://example.com/sitemap.xml",  # default: <property>/sitemap.xml
+)
+provider.notify_many(urls)  # checks the URLs belong to the property, submits once
+```
+
+URLs outside the property are rejected individually; they are never sent.
+Resubmitting asks Google to read the sitemap again, it does not guarantee
+indexing. An HTTP 403 means the service account is not a user of the property.
+
 ## Recipes / Async integration
 
 `kliz` deliberately stays synchronous. For asynchronous execution, place the
@@ -335,7 +363,10 @@ kliz --version
 ```
 
 Credentials can also be passed as options (`--indexnow-api-key`,
-`--indexnow-key-location`, `--google-service-account-file`). The process exits
+`--indexnow-key-location`, `--google-service-account-file`). For Search
+Console, set `--gsc-site` and `--gsc-service-account-file` (`KLIZ_GSC_SITE`,
+`KLIZ_GSC_SERVICE_ACCOUNT_FILE`); the sitemap resubmitted is `--gsc-sitemap`,
+else the `--sitemap` URL, else `<property>/sitemap.xml`. The process exits
 with code `0` when everything succeeded, `1` on notification failure and `2` on
 invalid configuration.
 

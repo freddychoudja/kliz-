@@ -245,6 +245,36 @@ fichier. Les erreurs de configuration (fichier absent, JSON invalide)
 remontent au moment de la notification, sont marquées comme non retentables, et
 le provider se rétablit dès que le fichier est corrigé.
 
+### Google Search Console (tous les sites)
+
+Google ne propose pas d'API générale « indexe cette URL ». La méthode prise en
+charge pour signaler des pages modifiées est de soumettre à nouveau leur
+sitemap, ce que fait `GoogleSearchConsoleProvider` via l'API Search Console.
+Elle fonctionne pour tout type de page, contrairement à l'API Indexing
+ci-dessus.
+
+1. Validez le site dans [Search Console](https://search.google.com/search-console).
+2. Dans Google Cloud, activez la *Google Search Console API*, créez un compte de
+   service et téléchargez sa clé JSON.
+3. Dans Search Console, *Paramètres → Utilisateurs et autorisations*, ajoutez
+   l'e-mail du compte de service comme **Propriétaire** ou utilisateur **total**.
+
+```python
+from kliz import GoogleSearchConsoleProvider
+
+provider = GoogleSearchConsoleProvider(
+    "/run/secrets/search-console.json",
+    site_url="https://example.com/",  # ou "sc-domain:example.com"
+    sitemap_url="https://example.com/sitemap.xml",  # défaut : <propriété>/sitemap.xml
+)
+provider.notify_many(urls)  # vérifie que les URL appartiennent à la propriété, soumet une fois
+```
+
+Les URL hors de la propriété sont rejetées individuellement ; elles ne sont
+jamais envoyées. Une nouvelle soumission demande à Google de relire le sitemap,
+sans garantir l'indexation. Un HTTP 403 signifie que le compte de service n'est
+pas utilisateur de la propriété.
+
 ## Recettes / Intégration Asynchrone
 
 `kliz` reste volontairement synchrone. Pour une exécution asynchrone, placez
@@ -341,7 +371,10 @@ kliz --version
 ```
 
 Les crédits se passent aussi en options (`--indexnow-api-key`,
-`--indexnow-key-location`, `--google-service-account-file`). Le processus
+`--indexnow-key-location`, `--google-service-account-file`). Pour Search
+Console, renseignez `--gsc-site` et `--gsc-service-account-file`
+(`KLIZ_GSC_SITE`, `KLIZ_GSC_SERVICE_ACCOUNT_FILE`) ; le sitemap soumis est
+`--gsc-sitemap`, sinon l'URL de `--sitemap`, sinon `<propriété>/sitemap.xml`. Le processus
 termine avec le code `0` si tout a réussi, `1` en cas d'échec de notification
 et `2` en cas de configuration invalide.
 

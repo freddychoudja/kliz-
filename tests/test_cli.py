@@ -12,6 +12,7 @@ import pytest
 
 from kliz import IndexNowProvider, NotificationResult, ProviderError, SitemapError
 from kliz.cli import ConfigurationError, main
+from kliz.providers import GoogleSearchConsoleProvider
 
 
 def test_main_version(capsys: pytest.CaptureFixture[str]) -> None:
@@ -266,6 +267,7 @@ def test_build_indexer_creates_indexnow() -> None:
         indexnow_api_key="abcdefgh",
         indexnow_key_location="https://example.com/key.txt",
         google_service_account_file=None,
+        gsc_site=None,
     )
     indexer = _build_indexer(args)
     assert len(indexer.providers) == 1
@@ -279,6 +281,7 @@ def test_build_indexer_requires_key_location() -> None:
         indexnow_api_key="abcdefgh",
         indexnow_key_location=None,
         google_service_account_file=None,
+        gsc_site=None,
     )
     with pytest.raises(ConfigurationError, match="key-location"):
         _build_indexer(args)
@@ -291,6 +294,7 @@ def test_build_indexer_creates_google() -> None:
         indexnow_api_key=None,
         indexnow_key_location=None,
         google_service_account_file="/dev/null",
+        gsc_site=None,
     )
     indexer = _build_indexer(args)
     assert len(indexer.providers) == 1
@@ -304,6 +308,7 @@ def test_build_indexer_no_providers_gives_config_error() -> None:
         indexnow_api_key=None,
         indexnow_key_location=None,
         google_service_account_file=None,
+        gsc_site=None,
     )
     with pytest.raises(ConfigurationError, match="no providers configured"):
         _build_indexer(args)
@@ -525,3 +530,76 @@ def test_notify_sitemap_errors_exit_1(capsys: pytest.CaptureFixture[str]) -> Non
     with patch("kliz.cli.read_sitemap", side_effect=error):
         assert main([*INDEXNOW_ARGS, "notify", "--sitemap", "s.xml"]) == 1
     assert "HTML page" in capsys.readouterr().err
+
+
+def _gsc_args(**overrides: object) -> argparse.Namespace:
+    values: dict[str, object] = {
+        "indexnow_api_key": None,
+        "indexnow_key_location": None,
+        "google_service_account_file": None,
+        "gsc_site": "https://example.com/",
+        "gsc_sitemap": None,
+        "gsc_service_account_file": "/dev/null",
+    }
+    values.update(overrides)
+    return argparse.Namespace(**values)
+
+
+@pytest.mark.parametrize(
+    ("overrides", "expected_sitemap"),
+    [
+        ({}, "https://example.com/sitemap.xml"),
+        ({"sitemap": "https://example.com/s.xml"}, "https://example.com/s.xml"),
+        ({"sitemap": "local-sitemap.xml"}, "https://example.com/sitemap.xml"),
+        (
+            {
+                "sitemap": "https://example.com/s.xml",
+                "gsc_sitemap": "https://example.com/g.xml",
+            },
+            "https://example.com/g.xml",
+        ),
+    ],
+)
+def test_build_indexer_creates_search_console(
+    overrides: dict[str, object], expected_sitemap: str
+) -> None:
+    from kliz.cli import _build_indexer
+
+    indexer = _build_indexer(_gsc_args(**overrides))
+
+    (provider,) = indexer.providers
+    assert isinstance(provider, GoogleSearchConsoleProvider)
+    assert provider.site_url == "https://example.com/"
+    assert provider.sitemap_url == expected_sitemap
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"gsc_service_account_file": None}, "--gsc-service-account-file is required"),
+        ({"gsc_service_account_file": "/nonexistent/sa.json"}, "not found"),
+        ({"gsc_site": "ftp://example.com"}, "Search Console: "),
+        ({"gsc_sitemap": "https://other.example/s.xml"}, "sitemap_url is invalid"),
+    ],
+)
+def test_build_indexer_search_console_config_errors(
+    overrides: dict[str, object], message: str
+) -> None:
+    from kliz.cli import _build_indexer
+
+    with pytest.raises(ConfigurationError, match=message):
+        _build_indexer(_gsc_args(**overrides))
+
+
+def test_gsc_options_read_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    from kliz.cli import _build_parser
+
+    monkeypatch.setenv("KLIZ_GSC_SITE", "sc-domain:example.com")
+    monkeypatch.setenv("KLIZ_GSC_SITEMAP", "https://example.com/s.xml")
+    monkeypatch.setenv("KLIZ_GSC_SERVICE_ACCOUNT_FILE", "/secrets/sa.json")
+
+    args = _build_parser().parse_args(["providers"])
+
+    assert args.gsc_site == "sc-domain:example.com"
+    assert args.gsc_sitemap == "https://example.com/s.xml"
+    assert args.gsc_service_account_file == "/secrets/sa.json"

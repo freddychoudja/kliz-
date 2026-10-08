@@ -19,6 +19,9 @@ The project follows semantic versioning.
   gzip, sitemap indexes, `--since` filtering on `<lastmod>`), with `defusedxml`
   parsing, 50 MB cap and clear errors for HTML pages served instead of a sitemap.
   New runtime dependency: `defusedxml`.
+- `GoogleSearchConsoleProvider`: resubmits a sitemap through the Search Console
+  API, the supported way to signal changes to Google for any page. CLI options
+  `--gsc-site`, `--gsc-sitemap`, `--gsc-service-account-file` (`KLIZ_GSC_*`).
 - `kliz notify --dry-run` lists the URLs without sending anything.
 
 ### Fixed

@@ -345,6 +345,8 @@
 - [ ] Endpoints IndexNow dédiés sélectionnables (Bing, Yandex, Seznam, Naver, Yep)
 - [ ] `BingUrlSubmissionProvider` (API Bing Webmaster)
 - [ ] `BaiduProvider` (API push Baidu — indispensable pour le marché chinois)
+- [x] `GoogleSearchConsoleProvider` : soumission du sitemap via l’API Search Console
+      (la voie officielle pour **tous** les sites, contrairement à l’API Indexing)
 - [ ] `GoogleProvider` : `URL_DELETED` + requêtes groupées (batch HTTP de 100)
 - [ ] API `notify(url, action="updated" | "deleted")` commune
 - [ ] Découverte de providers tiers via entry points `kliz.providers` (`kliz-<moteur>` sur PyPI)

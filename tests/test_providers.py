@@ -10,8 +10,9 @@ from conftest import make_mock_session
 from google.auth.exceptions import TransportError
 from googleapiclient.errors import HttpError
 
+from kliz import Kliz
 from kliz.exceptions import ProviderError
-from kliz.providers.google import GoogleProvider
+from kliz.providers.google import GoogleProvider, GoogleSearchConsoleProvider
 from kliz.providers.indexnow import IndexNowProvider
 
 
@@ -525,3 +526,197 @@ def test_indexnow_verify_key_wraps_network_errors() -> None:
     with pytest.raises(ProviderError, match="could not be reached") as excinfo:
         provider.verify_key("https://example.com")
     assert excinfo.value.retryable is True
+
+
+def test_search_console_builds_client_lazily_with_webmasters_scope(
+    google_client_mocks: dict[str, Mock],
+) -> None:
+    provider = GoogleSearchConsoleProvider("/secrets/sa.json", "https://a.example")
+
+    google_client_mocks["build"].assert_not_called()
+    assert provider.notify("https://a.example/page") is True
+    assert provider.notify("https://a.example/other") is True
+
+    google_client_mocks["credentials_factory"].assert_called_once_with(
+        "/secrets/sa.json",
+        scopes=["https://www.googleapis.com/auth/webmasters"],
+    )
+    google_client_mocks["build"].assert_called_once_with(
+        "searchconsole",
+        "v1",
+        http=google_client_mocks["authorized_http_factory"].return_value,
+        cache_discovery=False,
+    )
+
+
+def test_search_console_resubmits_the_sitemap(
+    google_client_mocks: dict[str, Mock],
+) -> None:
+    sitemaps = google_client_mocks["build"].return_value.sitemaps.return_value
+    provider = GoogleSearchConsoleProvider(
+        "/secrets/sa.json", "https://a.example/", num_retries=4
+    )
+
+    assert provider.notify_many(["https://a.example/1", "https://a.example/2"])
+
+    sitemaps.submit.assert_called_once_with(
+        siteUrl="https://a.example/", feedpath="https://a.example/sitemap.xml"
+    )
+    sitemaps.submit.return_value.execute.assert_called_once_with(num_retries=4)
+
+
+@pytest.mark.parametrize(
+    ("site_url", "sitemap_url", "expected_site", "expected_sitemap"),
+    [
+        (
+            "HTTPS://A.example",
+            None,
+            "https://a.example/",
+            "https://a.example/sitemap.xml",
+        ),
+        (
+            "https://a.example/blog",
+            None,
+            "https://a.example/blog/",
+            "https://a.example/blog/sitemap.xml",
+        ),
+        (
+            " SC-Domain:A.Example. ",
+            None,
+            "sc-domain:a.example",
+            "https://a.example/sitemap.xml",
+        ),
+        (
+            "sc-domain:a.example",
+            "https://www.a.example/sitemap_index.xml",
+            "sc-domain:a.example",
+            "https://www.a.example/sitemap_index.xml",
+        ),
+    ],
+)
+def test_search_console_normalizes_property_and_default_sitemap(
+    site_url: str,
+    sitemap_url: Optional[str],
+    expected_site: str,
+    expected_sitemap: str,
+) -> None:
+    provider = GoogleSearchConsoleProvider("sa.json", site_url, sitemap_url)
+
+    assert provider.site_url == expected_site
+    assert provider.sitemap_url == expected_sitemap
+
+
+@pytest.mark.parametrize(
+    ("site_url", "inside", "outside"),
+    [
+        (
+            "https://a.example/blog/",
+            ["https://a.example/blog/", "https://A.example/blog/post?id=1"],
+            [
+                "http://a.example/blog/x",
+                "https://a.example/shop",
+                "https://www.a.example/blog/x",
+                "https://a.example:8443/blog/x",
+            ],
+        ),
+        (
+            "sc-domain:a.example",
+            ["http://a.example/x", "https://www.a.example/y"],
+            ["https://b.example/", "https://evila.example/"],
+        ),
+    ],
+)
+def test_search_console_validates_urls_against_the_property(
+    site_url: str, inside: list[str], outside: list[str]
+) -> None:
+    provider = GoogleSearchConsoleProvider(
+        "sa.json", site_url, "https://a.example/blog/sitemap.xml"
+    )
+
+    for url in inside:
+        assert provider.validate_url(url).hostname
+    for url in outside:
+        with pytest.raises(ValueError, match="outside the Search Console property"):
+            provider.validate_url(url)
+
+
+def test_search_console_does_not_submit_when_a_url_is_outside(
+    google_client_mocks: dict[str, Mock],
+) -> None:
+    provider = GoogleSearchConsoleProvider("sa.json", "https://a.example/")
+
+    with pytest.raises(ValueError, match="outside"):
+        provider.notify_many(["https://a.example/1", "https://b.example/2"])
+    with pytest.raises(ValueError, match="non-empty"):
+        provider.notify_many([])
+    google_client_mocks["build"].assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"site_url": ""}, "site_url"),
+        ({"site_url": "sc-domain:"}, "sc-domain:example.com"),
+        ({"site_url": "sc-domain:a.example/path"}, "sc-domain:example.com"),
+        ({"site_url": "ftp://a.example"}, "http"),
+        ({"site_url": "https://a.example/?x=1"}, "query"),
+        (
+            {
+                "site_url": "https://a.example/",
+                "sitemap_url": "https://b.example/s.xml",
+            },
+            "sitemap_url is invalid",
+        ),
+        ({"site_url": "https://a.example/", "timeout": 0}, "timeout"),
+    ],
+)
+def test_search_console_validates_configuration(
+    kwargs: dict[str, object], message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        GoogleSearchConsoleProvider("sa.json", **kwargs)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("status_code", "retryable", "hint"),
+    [
+        (403, False, "Owner or Full user"),
+        (404, False, "exact form"),
+        (400, False, "HTTP 400"),
+        (503, True, "HTTP 503"),
+    ],
+)
+def test_search_console_explains_api_errors(
+    google_client_mocks: dict[str, Mock],
+    status_code: int,
+    retryable: bool,
+    hint: str,
+) -> None:
+    error = HttpError(Mock(status=status_code, reason="x"), b"{}")
+    sitemaps = google_client_mocks["build"].return_value.sitemaps.return_value
+    sitemaps.submit.return_value.execute.side_effect = error
+    provider = GoogleSearchConsoleProvider("sa.json", "https://a.example/")
+
+    with pytest.raises(ProviderError, match=hint) as captured:
+        provider.notify("https://a.example/")
+
+    assert captured.value.retryable is retryable
+    assert captured.value.status_code == status_code
+    assert captured.value.provider == "GoogleSearchConsoleProvider"
+
+
+def test_kliz_rejects_outside_urls_individually_for_search_console(
+    google_client_mocks: dict[str, Mock],
+) -> None:
+    sitemaps = google_client_mocks["build"].return_value.sitemaps.return_value
+    indexer = Kliz([GoogleSearchConsoleProvider("sa.json", "https://a.example/")])
+
+    results = indexer.notify_many_detailed(
+        ["https://a.example/1", "https://b.example/2", "https://a.example/3"]
+    )["GoogleSearchConsoleProvider"]
+
+    assert [(r.success, r.urls) for r in results] == [
+        (False, ("https://b.example/2",)),
+        (True, ("https://a.example/1", "https://a.example/3")),
+    ]
+    sitemaps.submit.assert_called_once()
