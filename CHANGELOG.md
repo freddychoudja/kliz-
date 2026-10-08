@@ -38,6 +38,13 @@ The project follows semantic versioning.
   injectable `rng`. `ProviderError` and `NotificationResult` gain
   `retry_after`; results also report `attempts`. CLI `--max-attempts`
   (`KLIZ_MAX_ATTEMPTS`) and action input `max-attempts` (default 3).
+- `kliz.normalize_url()`; providers submit normalized URLs (lowercase scheme
+  and host, punycode for international domains, no default port, `/` for an
+  empty path, percent-encoding of unsafe characters) and `notify_many`
+  deduplicates on that form.
+- `allow_query` on `IndexNowProvider`, `BatchProvider` and `GoogleProvider`
+  to accept canonical URLs with a query string; CLI `--allow-query`
+  (`KLIZ_ALLOW_QUERY`) and action input `allow-query`.
 - `kliz notify --dry-run` lists the URLs without sending anything.
 
 ### Changed

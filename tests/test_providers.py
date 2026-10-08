@@ -819,3 +819,33 @@ def test_google_reports_retry_after_header(
 
     assert captured.value.status_code == 429
     assert captured.value.retry_after == 12.0
+
+
+def test_google_provider_sends_normalized_url_and_allows_query_on_request(
+    google_client_mocks: dict[str, Mock],
+) -> None:
+    publish = google_client_mocks["build"].return_value.urlNotifications.return_value
+    strict = GoogleProvider("sa.json")
+    lenient = GoogleProvider("sa.json", allow_query=True)
+
+    strict.notify("HTTPS://Example.com:443/jobs/1")
+    with pytest.raises(ValueError, match="query"):
+        strict.notify("https://example.com/jobs?id=1")
+    lenient.notify("https://example.com/jobs?id=1")
+
+    assert [c.kwargs["body"]["url"] for c in publish.publish.call_args_list] == [
+        "https://example.com/jobs/1",
+        "https://example.com/jobs?id=1",
+    ]
+
+
+def test_search_console_matches_international_domains() -> None:
+    provider = GoogleSearchConsoleProvider(
+        "sa.json", "sc-domain:bücher.example", "https://xn--bcher-kva.example/s.xml"
+    )
+
+    assert provider.validate_url("https://www.BÜCHER.example/x").hostname == (
+        "www.xn--bcher-kva.example"
+    )
+    with pytest.raises(ValueError, match="outside"):
+        provider.validate_url("https://buecher.example/")

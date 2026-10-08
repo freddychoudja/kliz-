@@ -189,7 +189,7 @@
 | :-: | :-: | :---- | :------- | :----: |
 | 8 | 🔴 v0.2.1 | Lots robustes | Corriger les 2 bugs de `notify_many` + CLI vraiment par lots | ✅ |
 | 9 | 🔴 v0.2.1 | Retry intelligent | `Retry-After`, plafond, vrai jitter, échéance globale | ✅ |
-| 10 | 🔴 v0.2.1 | Normalisation des URL | `allow_query`, IDN, ports par défaut, dédoublonnage | ⬜ |
+| 10 | 🔴 v0.2.1 | Normalisation des URL | `allow_query`, IDN, ports par défaut, dédoublonnage | ✅ |
 | 11 | 🟠 v0.3 | Packaging mondial | Anglais d’abord, extra `[google]`, fin de Python 3.9 | ✅ |
 | 12 | 🟠 v0.3 | Observabilité | `logging`, hooks d’événements, zéro fuite de secret | ⬜ |
 | 13 | 🟠 v0.3 | CLI professionnelle | `--json`, `--dry-run`, stdin, `keygen`/`verify-key`, config | ⬜ |
@@ -251,7 +251,7 @@
 
 ---
 
-## **Phase 10 — Normalisation des URL** 🔴
+## **Phase 10 — Normalisation des URL** ✅
 
 > **Expliqué simplement :** beaucoup de sites légitimes ont des URL canoniques avec `?`
 > (WordPress `?p=123`, fiches produit). Les refuser toujours, c’est fermer la porte à une
@@ -260,9 +260,11 @@
 
 ### Travail demandé
 
-- [ ] Option `allow_query=False` sur les providers (strict par défaut, ouvrable)
-- [ ] Normaliser : schéma/hôte en minuscules, IDN → punycode, suppression des ports par défaut
-- [ ] Fonction publique `kliz.normalize_url()` réutilisable par les applications
+- [x] Option `allow_query=False` sur les providers (strict par défaut, ouvrable)
+- [x] Normaliser : schéma/hôte en minuscules, IDN → punycode, suppression des ports par défaut
+- [x] Fonction publique `kliz.normalize_url()` réutilisable par les applications
+- [x] Bonus : encodage des caractères non sûrs ; dédoublonnage sur la forme normalisée ;
+      `--allow-query` CLI et entrée `allow-query` de l’Action
 
 ---
 

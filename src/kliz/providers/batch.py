@@ -2,12 +2,12 @@
 
 from abc import abstractmethod
 from collections.abc import Sequence
-from urllib.parse import SplitResult
+from urllib.parse import SplitResult, urlsplit
 
 import requests
 
 from kliz._http import create_session
-from kliz._validation import parse_http_url
+from kliz._validation import normalize_url, parse_http_url
 from kliz.providers.base import BaseProvider
 
 
@@ -15,7 +15,9 @@ class BatchProvider(BaseProvider):
     """Provider that notifies one or many URLs belonging to the same host.
 
     Subclasses implement :meth:`_notify_many`. ``notify`` is implemented as a
-    single-URL batch so adapters only maintain one submission path.
+    single-URL batch so adapters only maintain one submission path. URLs are
+    normalized (see :func:`kliz.normalize_url`) before being submitted; URLs
+    with a query string are rejected unless ``allow_query`` is true.
     """
 
     max_urls_per_request: int = 1
@@ -25,11 +27,13 @@ class BatchProvider(BaseProvider):
         *,
         timeout: float = 10.0,
         session: requests.Session | None = None,
+        allow_query: bool = False,
     ) -> None:
         if timeout <= 0:
             raise ValueError("timeout must be greater than zero")
 
         self.timeout = timeout
+        self.allow_query = allow_query
         self._session = create_session(session)
 
     def close(self) -> None:
@@ -55,7 +59,8 @@ class BatchProvider(BaseProvider):
         failing a whole batch. Subclasses add their own per-URL rules.
         """
 
-        return parse_http_url(url, require_clean=True)
+        parse_http_url(url, require_clean=not self.allow_query)
+        return urlsplit(normalize_url(url))
 
     @abstractmethod
     def _notify_many(
@@ -77,8 +82,8 @@ class BatchProvider(BaseProvider):
                 f"provider accepts at most {self.max_urls_per_request} URLs per request"
             )
 
-        normalized_urls = [url.strip() for url in urls]
-        parsed_urls = [self.validate_url(url) for url in normalized_urls]
+        parsed_urls = [self.validate_url(url) for url in urls]
+        normalized_urls = [parsed.geturl() for parsed in parsed_urls]
         hosts = {parsed.hostname.lower() for parsed in parsed_urls if parsed.hostname}
         if len(hosts) != 1:
             raise ValueError("all batch URLs must belong to the same host")

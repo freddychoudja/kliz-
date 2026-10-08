@@ -100,6 +100,13 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Attempts per notification for temporary failures (429, 5xx,"
         " network), honoring Retry-After; default 1 (KLIZ_MAX_ATTEMPTS env var)",
     )
+    parser.add_argument(
+        "--allow-query",
+        action="store_true",
+        default=os.environ.get("KLIZ_ALLOW_QUERY", "").lower() in {"1", "true", "yes"},
+        help="Accept URLs with a query string, e.g. https://example.com/?p=123"
+        " (KLIZ_ALLOW_QUERY=true)",
+    )
     sub = parser.add_subparsers(dest="command", required=True)
     p_notify = sub.add_parser("notify", help="Notify providers of a URL")
     p_notify.add_argument("url", nargs="?", default=None, help="URL to notify")
@@ -299,6 +306,7 @@ def _build_indexer(args: argparse.Namespace) -> Kliz:
             IndexNowProvider(
                 api_key=args.indexnow_api_key,
                 key_location=args.indexnow_key_location,
+                allow_query=args.allow_query,
             ),
         )
     if args.google_service_account_file:
@@ -307,7 +315,9 @@ def _build_indexer(args: argparse.Namespace) -> Kliz:
                 f"service account file not found: {args.google_service_account_file}",
             )
         providers.append(
-            GoogleProvider(args.google_service_account_file),
+            GoogleProvider(
+                args.google_service_account_file, allow_query=args.allow_query
+            ),
         )
     if args.gsc_site:
         providers.append(_build_search_console(args))

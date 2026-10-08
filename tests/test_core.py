@@ -584,3 +584,57 @@ def test_invalid_retry_settings_are_rejected(
 ) -> None:
     with pytest.raises(ValueError, match=message):
         Kliz([StubProvider(return_true)], **kwargs)  # type: ignore[arg-type]
+
+
+def test_notify_many_deduplicates_equivalent_urls() -> None:
+    provider = BatchStubProvider()
+    indexer = Kliz([provider])
+
+    indexer.notify_many(
+        [
+            "https://example.com/a",
+            "HTTPS://EXAMPLE.com:443/a",
+            "https://example.com",
+            "https://example.com/",
+            "not a url",
+        ]
+    )
+
+    assert provider.batches == [
+        ["https://example.com/a", "https://example.com/", "not a url"]
+    ]
+
+
+def test_indexnow_sends_normalized_urls_and_ascii_host() -> None:
+    provider, session = _indexnow_with_session()
+
+    Kliz([provider]).notify_many(["https://Bücher.example:443/Straße"])
+
+    payload = session.post.call_args.kwargs["json"]
+    assert payload["host"] == "xn--bcher-kva.example"
+    assert payload["urlList"] == ["https://xn--bcher-kva.example/Stra%C3%9Fe"]
+
+
+def test_indexnow_allow_query_accepts_query_strings() -> None:
+    session = make_mock_session()
+    session.post.return_value = Mock(status_code=200)
+    strict = IndexNowProvider(api_key="abcdefgh12", session=session)
+    lenient = IndexNowProvider(api_key="abcdefgh12", session=session, allow_query=True)
+
+    with pytest.raises(ValueError, match="query string"):
+        strict.notify("https://a.example/?p=123")
+    assert lenient.notify("https://a.example/?p=123") is True
+    assert session.post.call_args.kwargs["json"]["urlList"] == [
+        "https://a.example/?p=123"
+    ]
+    with pytest.raises(ValueError, match="fragment"):
+        lenient.notify("https://a.example/?p=1#top")
+
+
+def test_indexnow_key_location_matches_normalized_hosts() -> None:
+    provider, session = _indexnow_with_session(
+        key_location="https://xn--bcher-kva.example/key.txt"
+    )
+
+    assert provider.notify("https://BÜCHER.example/page") is True
+    session.post.assert_called_once()

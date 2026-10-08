@@ -42,6 +42,13 @@ Le projet suit le versionnage sémantique.
   `NotificationResult` gagnent `retry_after` ; les résultats indiquent aussi
   `attempts`. Option CLI `--max-attempts` (`KLIZ_MAX_ATTEMPTS`) et entrée
   d'action `max-attempts` (3 par défaut).
+- `kliz.normalize_url()` ; les providers soumettent des URL normalisées
+  (schéma et hôte en minuscules, punycode pour les domaines internationaux,
+  sans port par défaut, `/` pour un chemin vide, encodage des caractères non
+  sûrs) et `notify_many` dédoublonne sur cette forme.
+- `allow_query` sur `IndexNowProvider`, `BatchProvider` et `GoogleProvider`
+  pour accepter des URL canoniques avec chaîne de requête ; option CLI
+  `--allow-query` (`KLIZ_ALLOW_QUERY`) et entrée d'action `allow-query`.
 - `kliz notify --dry-run` liste les URL sans rien envoyer.
 
 ### Modifié

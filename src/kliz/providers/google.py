@@ -3,10 +3,10 @@
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
-from urllib.parse import SplitResult
+from urllib.parse import SplitResult, urlsplit
 
 from kliz._http import parse_retry_after
-from kliz._validation import parse_http_url
+from kliz._validation import normalize_url, parse_http_url
 from kliz.exceptions import MissingDependencyError, ProviderError
 from kliz.providers.base import BaseProvider
 
@@ -119,7 +119,11 @@ class _GoogleApiProvider(BaseProvider):
 
 
 class GoogleProvider(_GoogleApiProvider):
-    """Notify Google for eligible JobPosting or BroadcastEvent pages only."""
+    """Notify Google for eligible JobPosting or BroadcastEvent pages only.
+
+    URLs are normalized before being sent; URLs with a query string are
+    rejected unless ``allow_query`` is true.
+    """
 
     api_name = "indexing"
     api_version = "v3"
@@ -131,14 +135,16 @@ class GoogleProvider(_GoogleApiProvider):
         *,
         timeout: float = 60.0,
         num_retries: int = 2,
+        allow_query: bool = False,
     ) -> None:
         super().__init__(service_account_file, timeout=timeout, num_retries=num_retries)
+        self.allow_query = allow_query
 
     def notify(self, url: str) -> bool:
         """Publish a ``URL_UPDATED`` notification to Google."""
 
-        parse_http_url(url, require_clean=True)
-        normalized_url = url.strip()
+        parse_http_url(url, require_clean=not self.allow_query)
+        normalized_url = normalize_url(url)
         service = self._get_service()
         self._execute(
             service.urlNotifications().publish(
@@ -204,18 +210,20 @@ class GoogleSearchConsoleProvider(_GoogleApiProvider):
     def validate_url(self, url: str) -> SplitResult:
         """Return *url* parsed, or raise ``ValueError`` if outside the property."""
 
-        parsed_url = parse_http_url(url)
-        host = (parsed_url.hostname or "").lower()
+        parsed_url = urlsplit(normalize_url(url))
+        host = parsed_url.hostname or ""
         if self.site_url.startswith(_DOMAIN_PROPERTY_PREFIX):
-            domain = self.site_url[len(_DOMAIN_PROPERTY_PREFIX) :]
+            root = normalize_url(
+                f"https://{self.site_url[len(_DOMAIN_PROPERTY_PREFIX) :]}"
+            )
+            domain = urlsplit(root).hostname or ""
             inside = host == domain or host.endswith(f".{domain}")
         else:
-            prefix = parse_http_url(self.site_url)
+            prefix = urlsplit(normalize_url(self.site_url))
             inside = (
-                parsed_url.scheme.lower() == prefix.scheme
-                and host == prefix.hostname
-                and parsed_url.port == prefix.port
-                and (parsed_url.path or "/").startswith(prefix.path)
+                parsed_url.scheme == prefix.scheme
+                and parsed_url.netloc == prefix.netloc
+                and parsed_url.path.startswith(prefix.path)
             )
         if not inside:
             raise ValueError(

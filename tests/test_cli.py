@@ -269,6 +269,7 @@ def test_build_indexer_creates_indexnow() -> None:
         google_service_account_file=None,
         gsc_site=None,
         max_attempts=1,
+        allow_query=False,
     )
     indexer = _build_indexer(args)
     assert len(indexer.providers) == 1
@@ -284,6 +285,7 @@ def test_build_indexer_requires_key_location() -> None:
         google_service_account_file=None,
         gsc_site=None,
         max_attempts=1,
+        allow_query=False,
     )
     with pytest.raises(ConfigurationError, match="key-location"):
         _build_indexer(args)
@@ -298,6 +300,7 @@ def test_build_indexer_creates_google() -> None:
         google_service_account_file="/dev/null",
         gsc_site=None,
         max_attempts=1,
+        allow_query=False,
     )
     indexer = _build_indexer(args)
     assert len(indexer.providers) == 1
@@ -313,6 +316,7 @@ def test_build_indexer_no_providers_gives_config_error() -> None:
         google_service_account_file=None,
         gsc_site=None,
         max_attempts=1,
+        allow_query=False,
     )
     with pytest.raises(ConfigurationError, match="no providers configured"):
         _build_indexer(args)
@@ -545,6 +549,7 @@ def _gsc_args(**overrides: object) -> argparse.Namespace:
         "gsc_sitemap": None,
         "gsc_service_account_file": "/dev/null",
         "max_attempts": 1,
+        "allow_query": False,
     }
     values.update(overrides)
     return argparse.Namespace(**values)
@@ -638,3 +643,16 @@ def test_non_numeric_max_attempts_env_is_a_usage_error(
     monkeypatch.setenv("KLIZ_MAX_ATTEMPTS", "lots")
 
     assert main([*INDEXNOW_ARGS, "providers"]) == 2
+
+
+def test_allow_query_flag_reaches_providers(monkeypatch: pytest.MonkeyPatch) -> None:
+    from kliz.cli import _build_indexer, _build_parser
+
+    args = _build_parser().parse_args([*INDEXNOW_ARGS, "--allow-query", "providers"])
+    (provider,) = _build_indexer(args).providers
+    assert isinstance(provider, IndexNowProvider) and provider.allow_query is True
+
+    monkeypatch.setenv("KLIZ_ALLOW_QUERY", "true")
+    assert _build_parser().parse_args(["providers"]).allow_query is True
+    monkeypatch.setenv("KLIZ_ALLOW_QUERY", "false")
+    assert _build_parser().parse_args(["providers"]).allow_query is False

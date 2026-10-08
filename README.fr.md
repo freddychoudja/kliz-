@@ -178,12 +178,19 @@ Toutes les URL soumises à un provider sont contrôlées avant tout envoi :
 - les identifiants (`https://user:pass@...`) sont interdits ;
 - les fragments (`#...`) sont toujours rejetés : ils ne sont jamais transmis au
   serveur et ne peuvent donc désigner un contenu distinct ;
-- les chaînes de requête (`?...`) sont rejetées pour les notifications : seule
-  une URL canonique propre est soumise aux moteurs.
+- les chaînes de requête (`?...`) sont rejetées par défaut ; passez
+  `allow_query=True` à `IndexNowProvider` ou `GoogleProvider` (CLI
+  `--allow-query`, entrée d'action `allow-query`) si vos URL canoniques en
+  contiennent, comme `/?p=123` sous WordPress.
 
-La fonction partagée `parse_http_url(url, require_clean=True)` applique ces
-règles. `require_clean` vaut `False` par défaut afin de ne pas casser les
-usages existants ; seules les notifications exigent une URL propre.
+Les URL acceptées sont ensuite normalisées par `kliz.normalize_url()` : schéma
+et hôte en minuscules, noms de domaine internationaux en forme ASCII
+(`bücher.example` → `xn--bcher-kva.example`), ports par défaut et point final
+de l'hôte supprimés, chemin vide remplacé par `/`, et caractères interdits dans
+une URL encodés en pourcentage. La casse du chemin, les échappements existants
+et l'ordre des paramètres sont conservés. `notify_many` dédoublonne sur la forme
+normalisée : `HTTPS://Example.com:443/a` et `https://example.com/a` ne comptent
+qu'une fois.
 
 ## Configuration des fournisseurs
 
@@ -330,7 +337,7 @@ Entrées : `sitemap` (URL ou fichier du dépôt) ou `urls` (une par ligne),
 défaut : vérifie le fichier clé avant de notifier), `gsc-site`, `gsc-sitemap`,
 `gsc-service-account-json` (le contenu JSON, depuis un secret ; écrit dans un
 fichier temporaire privé supprimé à la fin), `max-attempts` (`3` par défaut),
-`dry-run`. Les providers sans
+`allow-query`, `dry-run`. Les providers sans
 identifiants sont ignorés. Runners Linux et macOS pris en charge.
 
 ## Recettes / Intégration Asynchrone

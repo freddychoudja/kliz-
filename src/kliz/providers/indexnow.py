@@ -4,12 +4,12 @@ import re
 import secrets
 import string
 from pathlib import PurePosixPath
-from urllib.parse import SplitResult
+from urllib.parse import SplitResult, urlsplit
 
 import requests
 
 from kliz._http import get, post_json, raise_for_indexing_status
-from kliz._validation import parse_http_url
+from kliz._validation import normalize_url, parse_http_url
 from kliz.exceptions import ProviderError
 from kliz.providers.batch import BatchProvider
 
@@ -32,6 +32,7 @@ class IndexNowProvider(BatchProvider):
         timeout: float = 10.0,
         *,
         session: requests.Session | None = None,
+        allow_query: bool = False,
     ) -> None:
         if not isinstance(api_key, str) or not self._key_pattern.fullmatch(api_key):
             raise ValueError(
@@ -40,7 +41,7 @@ class IndexNowProvider(BatchProvider):
         if key_location is not None:
             parse_http_url(key_location, require_clean=True)
 
-        super().__init__(timeout=timeout, session=session)
+        super().__init__(timeout=timeout, session=session, allow_query=allow_query)
         self.api_key = api_key
         self.key_location = key_location
 
@@ -156,7 +157,7 @@ class IndexNowProvider(BatchProvider):
         if self.key_location is None:
             return
 
-        key_url = parse_http_url(self.key_location, require_clean=True)
+        key_url = urlsplit(normalize_url(self.key_location))
         if key_url.hostname is None or submitted_url.hostname is None:
             raise ValueError("key_location and url must include a hostname")
         if key_url.hostname.lower() != submitted_url.hostname.lower():

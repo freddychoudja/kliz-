@@ -2,6 +2,7 @@
 
 from importlib.metadata import PackageNotFoundError, version
 
+from kliz._validation import normalize_url
 from kliz.core import Kliz
 from kliz.exceptions import KlizError, MissingDependencyError, ProviderError
 from kliz.providers import (
@@ -26,6 +27,7 @@ __all__ = [
     "NotificationResult",
     "ProviderError",
     "SitemapError",
+    "normalize_url",
     "read_sitemap",
 ]
 

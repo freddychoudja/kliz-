@@ -178,12 +178,18 @@ Every URL submitted to a provider is checked before being sent:
 - credentials (`https://user:pass@...`) are forbidden;
 - fragments (`#...`) are always rejected: they are never transmitted to the
   server and therefore can never designate a distinct resource;
-- query strings (`?...`) are rejected for notifications: only a clean
-  canonical URL is submitted to the engines.
+- query strings (`?...`) are rejected by default; pass `allow_query=True` to
+  `IndexNowProvider` or `GoogleProvider` (CLI `--allow-query`, action input
+  `allow-query`) when your canonical URLs use them, such as WordPress's
+  `/?p=123`.
 
-The shared `parse_http_url(url, require_clean=True)` function applies these
-rules. `require_clean` defaults to `False` so existing usages keep working;
-only notifications require a clean URL.
+Accepted URLs are then normalized with `kliz.normalize_url()`: lowercase scheme
+and host, international domain names in ASCII form (`bücher.example` →
+`xn--bcher-kva.example`), default ports and trailing host dots removed, an
+empty path turned into `/`, and characters not allowed in a URL
+percent-encoded. Path case, existing escapes and parameter order are kept.
+`notify_many` deduplicates on the normalized form, so
+`HTTPS://Example.com:443/a` and `https://example.com/a` count once.
 
 ## Provider configuration
 
@@ -324,7 +330,7 @@ Inputs: `sitemap` (URL or workspace file) or `urls` (one per line), `since`,
 checks the key file before notifying), `gsc-site`, `gsc-sitemap`,
 `gsc-service-account-json` (the JSON content, from a secret; written to a
 private temporary file deleted at the end), `max-attempts` (default `3`),
-`dry-run`. Providers without
+`allow-query`, `dry-run`. Providers without
 credentials are skipped. Linux and macOS runners are supported.
 
 ## Recipes / Async integration

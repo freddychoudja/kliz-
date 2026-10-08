@@ -9,6 +9,7 @@ from collections.abc import Callable, Iterable, Sequence
 from typing import Any
 from urllib.parse import SplitResult
 
+from kliz._validation import normalize_url
 from kliz.exceptions import ProviderError
 from kliz.providers.base import BaseProvider
 from kliz.results import NotificationResult
@@ -234,7 +235,7 @@ class Kliz:
             raise ValueError("urls must be a non-empty sequence")
         if not all(isinstance(url, str) for url in url_list):
             raise TypeError("urls must be a sequence of strings")
-        return list(dict.fromkeys(url.strip() for url in url_list))
+        return list(dict.fromkeys(_canonical(url) for url in url_list))
 
     def _retry_delay(
         self, attempt: int, exc: ProviderError, started: float
@@ -265,3 +266,12 @@ class Kliz:
             suffix = "" if occurrence == 1 else f"#{occurrence}"
             names.append(f"{provider.name}{suffix}")
         return names
+
+
+def _canonical(url: str) -> str:
+    """Normalize *url*, or keep it stripped so its provider can reject it."""
+
+    try:
+        return normalize_url(url)
+    except ValueError:
+        return url.strip()
