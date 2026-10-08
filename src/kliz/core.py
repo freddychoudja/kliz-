@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import random
 import time
 from collections import Counter
@@ -9,24 +10,46 @@ from collections.abc import Callable, Iterable, Sequence
 from typing import Any
 from urllib.parse import SplitResult
 
+from kliz._validation import normalize_url
 from kliz.exceptions import ProviderError
 from kliz.providers.base import BaseProvider
-from kliz.results import NotificationResult
+from kliz.results import NotificationResult, RetryEvent
+
+logger = logging.getLogger(__name__)
 
 _RETRY_BASE_DELAY = 1.0
-_JITTER_RANGE = 0.25
+_JITTER_RATIO = 0.25
 
 
 class Kliz:
-    """Dispatch indexing notifications to a collection of providers."""
+    """Dispatch indexing notifications to a collection of providers.
+
+    Retry is off by default (``max_attempts=1``). When enabled, retryable
+    failures wait for the server's ``Retry-After`` if it sent one, otherwise
+    for an exponential backoff (1 s, 2 s, 4 s... plus up to 25 % jitter)
+    capped at ``max_delay``. A ``Retry-After`` longer than ``max_delay``, or a
+    wait that would overrun ``deadline`` (seconds since the first attempt),
+    stops retrying; the result then carries ``retry_after`` so the caller can
+    schedule a later attempt.
+
+    ``on_result`` is called with every final :class:`NotificationResult` and
+    ``on_retry`` with a :class:`RetryEvent` before each wait, e.g. to feed
+    metrics. Exceptions raised by these hooks are logged, never propagated.
+    Outcomes are also logged on the ``kliz`` logger.
+    """
 
     def __init__(
         self,
         providers: Iterable[BaseProvider],
         *,
         max_attempts: int = 1,
+        max_delay: float = 60.0,
+        deadline: float | None = None,
         sleep: Callable[[float], None] = time.sleep,
         clock: Callable[[], float] = time.monotonic,
+        rng: random.Random | None = None,
+        on_result: Callable[[NotificationResult], None] | None = None,
+        on_retry: Callable[[RetryEvent], None] | None = None,
     ) -> None:
         if isinstance(providers, (str, bytes)):
             raise TypeError("providers must be an iterable of BaseProvider instances")
@@ -41,11 +64,20 @@ class Kliz:
             or max_attempts < 1
         ):
             raise ValueError("max_attempts must be a positive integer")
+        if not max_delay > 0:
+            raise ValueError("max_delay must be greater than zero")
+        if deadline is not None and not deadline > 0:
+            raise ValueError("deadline must be greater than zero")
 
         self.providers = tuple(provider_list)
         self.max_attempts = max_attempts
+        self.max_delay = max_delay
+        self.deadline = deadline
         self._sleep = sleep
         self._clock = clock
+        self._rng = rng if rng is not None else random.Random()
+        self._on_result = on_result
+        self._on_retry = on_retry
 
     def close(self) -> None:
         """Close every provider, releasing pooled connections."""
@@ -72,7 +104,7 @@ class Kliz:
 
         return {
             name: self._notify_provider(provider, url)
-            for provider, name in zip(self.providers, self._result_names())
+            for provider, name in zip(self.providers, self._result_names(), strict=True)
         }
 
     def notify_many(self, urls: Sequence[str]) -> dict[str, bool]:
@@ -98,7 +130,7 @@ class Kliz:
         url_list = self._validate_urls(urls)
         return {
             name: self._notify_provider_many(provider, url_list)
-            for provider, name in zip(self.providers, self._result_names())
+            for provider, name in zip(self.providers, self._result_names(), strict=True)
         }
 
     def _notify_provider(self, provider: BaseProvider, url: str) -> NotificationResult:
@@ -135,8 +167,8 @@ class Kliz:
             for chunk in chunks
         ]
 
-    @staticmethod
     def _group_by_host(
+        self,
         provider: BaseProvider,
         validate_url: Callable[[str], SplitResult],
         urls: list[str],
@@ -148,11 +180,13 @@ class Kliz:
                 parsed_url = validate_url(url)
             except ValueError as exc:
                 rejected.append(
-                    NotificationResult(
-                        provider=provider.name,
-                        success=False,
-                        error=str(exc),
-                        urls=(url,),
+                    self._finish(
+                        NotificationResult(
+                            provider=provider.name,
+                            success=False,
+                            error=str(exc),
+                            urls=(url,),
+                        )
                     )
                 )
                 continue
@@ -167,35 +201,83 @@ class Kliz:
         payload: Any,
         urls: tuple[str, ...],
     ) -> NotificationResult:
+        started = self._clock()
         for attempt in range(1, self.max_attempts + 1):
             try:
                 success = bool(func(payload))
-                return NotificationResult(
-                    provider=provider.name,
-                    success=success,
-                    error=None if success else "provider returned False",
-                    urls=urls,
+                return self._finish(
+                    NotificationResult(
+                        provider=provider.name,
+                        success=success,
+                        error=None if success else "provider returned False",
+                        urls=urls,
+                        attempts=attempt,
+                    )
                 )
             except ProviderError as exc:
-                if attempt < self.max_attempts and exc.retryable:
-                    self._sleep_between_attempts(attempt)
+                delay = self._retry_delay(attempt, exc, started)
+                if delay is not None:
+                    event = RetryEvent(provider.name, attempt, delay, exc, urls)
+                    logger.info(
+                        "%s: %s; retrying in %.1f s (attempt %d of %d)",
+                        provider.name,
+                        exc,
+                        delay,
+                        attempt + 1,
+                        self.max_attempts,
+                    )
+                    self._call_hook(self._on_retry, event)
+                    self._sleep(delay)
                     continue
-                return NotificationResult(
-                    provider=provider.name,
-                    success=False,
-                    retryable=exc.retryable,
-                    error=str(exc),
-                    status_code=exc.status_code,
-                    urls=urls,
+                return self._finish(
+                    NotificationResult(
+                        provider=provider.name,
+                        success=False,
+                        retryable=exc.retryable,
+                        error=str(exc),
+                        status_code=exc.status_code,
+                        urls=urls,
+                        retry_after=exc.retry_after,
+                        attempts=attempt,
+                    )
                 )
             except Exception as exc:
-                return NotificationResult(
-                    provider=provider.name,
-                    success=False,
-                    error=str(exc) or exc.__class__.__name__,
-                    urls=urls,
+                return self._finish(
+                    NotificationResult(
+                        provider=provider.name,
+                        success=False,
+                        error=str(exc) or exc.__class__.__name__,
+                        urls=urls,
+                        attempts=attempt,
+                    )
                 )
         raise AssertionError("unreachable")  # pragma: no cover
+
+    def _finish(self, result: NotificationResult) -> NotificationResult:
+        """Log a final result and pass it to the ``on_result`` hook."""
+
+        count = len(result.urls)
+        if result.success:
+            logger.info("%s: notified %d URL(s)", result.provider, count)
+        elif count == 1:
+            logger.warning(
+                "%s: %s failed: %s", result.provider, result.urls[0], result.error
+            )
+        else:
+            logger.warning(
+                "%s: %d URL(s) failed: %s", result.provider, count, result.error
+            )
+        self._call_hook(self._on_result, result)
+        return result
+
+    @staticmethod
+    def _call_hook(hook: Callable[[Any], None] | None, value: Any) -> None:
+        if hook is None:
+            return
+        try:
+            hook(value)
+        except Exception:
+            logger.exception("kliz hook %r raised; ignoring it", hook)
 
     def _validate_urls(self, urls: Sequence[str]) -> list[str]:
         if isinstance(urls, (str, bytes)):
@@ -209,12 +291,27 @@ class Kliz:
             raise ValueError("urls must be a non-empty sequence")
         if not all(isinstance(url, str) for url in url_list):
             raise TypeError("urls must be a sequence of strings")
-        return list(dict.fromkeys(url.strip() for url in url_list))
+        return list(dict.fromkeys(_canonical(url) for url in url_list))
 
-    def _sleep_between_attempts(self, attempt: int) -> None:
-        delay = _RETRY_BASE_DELAY * (2 ** (attempt - 1))
-        delay += random.Random(self._clock()).uniform(0.0, _JITTER_RANGE)
-        self._sleep(delay)
+    def _retry_delay(
+        self, attempt: int, exc: ProviderError, started: float
+    ) -> float | None:
+        """Return how long to wait before the next attempt, or ``None`` to stop."""
+
+        if not exc.retryable or attempt >= self.max_attempts:
+            return None
+        if exc.retry_after is not None:
+            if exc.retry_after > self.max_delay:
+                return None
+            delay = exc.retry_after
+        else:
+            backoff = _RETRY_BASE_DELAY * (2 ** (attempt - 1))
+            jitter = 1.0 + self._rng.uniform(0.0, _JITTER_RATIO)
+            delay = min(backoff * jitter, self.max_delay)
+        if self.deadline is not None:
+            if self._clock() - started + delay > self.deadline:
+                return None
+        return delay
 
     def _result_names(self) -> list[str]:
         counts: Counter[str] = Counter()
@@ -225,3 +322,12 @@ class Kliz:
             suffix = "" if occurrence == 1 else f"#{occurrence}"
             names.append(f"{provider.name}{suffix}")
         return names
+
+
+def _canonical(url: str) -> str:
+    """Normalize *url*, or keep it stripped so its provider can reject it."""
+
+    try:
+        return normalize_url(url)
+    except ValueError:
+        return url.strip()

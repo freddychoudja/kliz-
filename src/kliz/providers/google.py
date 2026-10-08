@@ -1,20 +1,29 @@
 """Google Indexing API and Search Console providers."""
 
+import logging
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Optional, Union
-from urllib.parse import SplitResult
+from typing import Any
+from urllib.parse import SplitResult, urlsplit
 
-import google_auth_httplib2
-import httplib2
-from google.auth.exceptions import GoogleAuthError, TransportError
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
-
-from kliz._validation import parse_http_url
-from kliz.exceptions import ProviderError
+from kliz._http import parse_retry_after
+from kliz._validation import normalize_url, parse_http_url
+from kliz.exceptions import MissingDependencyError, ProviderError
 from kliz.providers.base import BaseProvider
+
+try:
+    import google_auth_httplib2
+    import httplib2
+    from google.auth.exceptions import GoogleAuthError, TransportError
+    from google.oauth2 import service_account
+    from googleapiclient.discovery import build
+    from googleapiclient.errors import HttpError
+except ImportError as exc:  # pragma: no cover - covered by the wheel CI job
+    _GOOGLE_IMPORT_ERROR: ImportError | None = exc
+else:
+    _GOOGLE_IMPORT_ERROR = None
+
+logger = logging.getLogger(__name__)
 
 _DOMAIN_PROPERTY_PREFIX = "sc-domain:"
 
@@ -28,11 +37,16 @@ class _GoogleApiProvider(BaseProvider):
 
     def __init__(
         self,
-        service_account_file: Union[str, Path],
+        service_account_file: str | Path,
         *,
         timeout: float,
         num_retries: int,
     ) -> None:
+        if _GOOGLE_IMPORT_ERROR is not None:
+            raise MissingDependencyError(
+                f"{type(self).__name__} needs the Google client libraries:"
+                " pip install 'kliz[google]'"
+            ) from _GOOGLE_IMPORT_ERROR
         if not str(service_account_file):
             raise ValueError("service_account_file must not be empty")
         if timeout <= 0:
@@ -43,7 +57,7 @@ class _GoogleApiProvider(BaseProvider):
         self.service_account_file = service_account_file
         self.timeout = timeout
         self.num_retries = num_retries
-        self._service: Optional[Any] = None
+        self._service: Any | None = None
 
     def _execute(self, request: Any) -> None:
         """Run a Google API request, mapping failures to :class:`ProviderError`."""
@@ -53,11 +67,13 @@ class _GoogleApiProvider(BaseProvider):
         except HttpError as exc:
             status_code = int(exc.resp.status)
             retryable = status_code in {408, 429} or status_code >= 500
+            headers = exc.resp if isinstance(exc.resp, dict) else {}
             raise ProviderError(
                 self._rejection_message(status_code),
                 provider=self.name,
                 retryable=retryable,
                 status_code=status_code,
+                retry_after=parse_retry_after(headers.get("retry-after")),
             ) from exc
         except (TransportError, httplib2.HttpLib2Error, OSError) as exc:
             raise ProviderError(
@@ -106,7 +122,11 @@ class _GoogleApiProvider(BaseProvider):
 
 
 class GoogleProvider(_GoogleApiProvider):
-    """Notify Google for eligible JobPosting or BroadcastEvent pages only."""
+    """Notify Google for eligible JobPosting or BroadcastEvent pages only.
+
+    URLs are normalized before being sent; URLs with a query string are
+    rejected unless ``allow_query`` is true.
+    """
 
     api_name = "indexing"
     api_version = "v3"
@@ -114,18 +134,21 @@ class GoogleProvider(_GoogleApiProvider):
 
     def __init__(
         self,
-        service_account_file: Union[str, Path],
+        service_account_file: str | Path,
         *,
         timeout: float = 60.0,
         num_retries: int = 2,
+        allow_query: bool = False,
     ) -> None:
         super().__init__(service_account_file, timeout=timeout, num_retries=num_retries)
+        self.allow_query = allow_query
 
     def notify(self, url: str) -> bool:
         """Publish a ``URL_UPDATED`` notification to Google."""
 
-        parse_http_url(url, require_clean=True)
-        normalized_url = url.strip()
+        parse_http_url(url, require_clean=not self.allow_query)
+        normalized_url = normalize_url(url)
+        logger.debug("%s: publishing URL_UPDATED for %s", self.name, normalized_url)
         service = self._get_service()
         self._execute(
             service.urlNotifications().publish(
@@ -156,9 +179,9 @@ class GoogleSearchConsoleProvider(_GoogleApiProvider):
 
     def __init__(
         self,
-        service_account_file: Union[str, Path],
+        service_account_file: str | Path,
         site_url: str,
-        sitemap_url: Optional[str] = None,
+        sitemap_url: str | None = None,
         *,
         timeout: float = 60.0,
         num_retries: int = 2,
@@ -191,18 +214,20 @@ class GoogleSearchConsoleProvider(_GoogleApiProvider):
     def validate_url(self, url: str) -> SplitResult:
         """Return *url* parsed, or raise ``ValueError`` if outside the property."""
 
-        parsed_url = parse_http_url(url)
-        host = (parsed_url.hostname or "").lower()
+        parsed_url = urlsplit(normalize_url(url))
+        host = parsed_url.hostname or ""
         if self.site_url.startswith(_DOMAIN_PROPERTY_PREFIX):
-            domain = self.site_url[len(_DOMAIN_PROPERTY_PREFIX) :]
+            root = normalize_url(
+                f"https://{self.site_url[len(_DOMAIN_PROPERTY_PREFIX) :]}"
+            )
+            domain = urlsplit(root).hostname or ""
             inside = host == domain or host.endswith(f".{domain}")
         else:
-            prefix = parse_http_url(self.site_url)
+            prefix = urlsplit(normalize_url(self.site_url))
             inside = (
-                parsed_url.scheme.lower() == prefix.scheme
-                and host == prefix.hostname
-                and parsed_url.port == prefix.port
-                and (parsed_url.path or "/").startswith(prefix.path)
+                parsed_url.scheme == prefix.scheme
+                and parsed_url.netloc == prefix.netloc
+                and parsed_url.path.startswith(prefix.path)
             )
         if not inside:
             raise ValueError(
@@ -211,6 +236,12 @@ class GoogleSearchConsoleProvider(_GoogleApiProvider):
         return parsed_url
 
     def _submit(self) -> bool:
+        logger.debug(
+            "%s: resubmitting %s to property %s",
+            self.name,
+            self.sitemap_url,
+            self.site_url,
+        )
         service = self._get_service()
         self._execute(
             service.sitemaps().submit(siteUrl=self.site_url, feedpath=self.sitemap_url)

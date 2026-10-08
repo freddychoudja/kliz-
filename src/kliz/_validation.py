@@ -1,6 +1,10 @@
 """Shared input validation helpers."""
 
-from urllib.parse import SplitResult, urlsplit
+from urllib.parse import SplitResult, quote, urlsplit, urlunsplit
+
+_DEFAULT_PORTS = {"http": 80, "https": 443}
+# RFC 3986 reserved and unreserved characters, plus "%" to keep escapes intact.
+_URL_SAFE = "/:@!$&'()*+,;=-._~%?"
 
 
 def parse_http_url(url: str, *, require_clean: bool = False) -> SplitResult:
@@ -32,3 +36,32 @@ def parse_http_url(url: str, *, require_clean: bool = False) -> SplitResult:
         raise ValueError("url must not contain a query string")
 
     return parsed_url
+
+
+def normalize_url(url: str) -> str:
+    """Return the canonical form of an absolute HTTP(S) URL.
+
+    The scheme and host are lowercased, internationalized hostnames are
+    converted to their ASCII (punycode) form, default ports and a trailing
+    dot on the host are dropped, an empty path becomes ``/`` and characters
+    not allowed in a URL (non-ASCII, spaces) are percent-encoded. Existing
+    escapes, case and parameter order are kept, since servers may treat them
+    as significant. Raises ``ValueError`` for URLs that
+    :func:`parse_http_url` rejects.
+    """
+
+    parsed = parse_http_url(url)
+    scheme = parsed.scheme.lower()
+    host = (parsed.hostname or "").rstrip(".")
+    if not host.isascii():
+        try:
+            host = host.encode("idna").decode("ascii")
+        except UnicodeError as exc:
+            raise ValueError("url has an invalid internationalized hostname") from exc
+    if ":" in host:
+        host = f"[{host}]"
+    port = parsed.port
+    netloc = host if port in (None, _DEFAULT_PORTS[scheme]) else f"{host}:{port}"
+    path = quote(parsed.path or "/", safe=_URL_SAFE)
+    query = quote(parsed.query, safe=_URL_SAFE)
+    return urlunsplit((scheme, netloc, path, query, ""))

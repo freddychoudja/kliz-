@@ -1,20 +1,22 @@
 """IndexNow provider implementation."""
 
+import logging
 import re
 import secrets
 import string
 from pathlib import PurePosixPath
-from typing import Optional, Union
-from urllib.parse import SplitResult
+from urllib.parse import SplitResult, urlsplit
 
 import requests
 
 from kliz._http import get, post_json, raise_for_indexing_status
-from kliz._validation import parse_http_url
+from kliz._validation import normalize_url, parse_http_url
 from kliz.exceptions import ProviderError
 from kliz.providers.batch import BatchProvider
 
-PayloadValue = Union[str, list[str]]
+PayloadValue = str | list[str]
+
+logger = logging.getLogger(__name__)
 
 _KEY_ALPHABET = string.ascii_letters + string.digits
 
@@ -29,10 +31,11 @@ class IndexNowProvider(BatchProvider):
     def __init__(
         self,
         api_key: str,
-        key_location: Optional[str] = None,
+        key_location: str | None = None,
         timeout: float = 10.0,
         *,
-        session: Optional[requests.Session] = None,
+        session: requests.Session | None = None,
+        allow_query: bool = False,
     ) -> None:
         if not isinstance(api_key, str) or not self._key_pattern.fullmatch(api_key):
             raise ValueError(
@@ -41,7 +44,7 @@ class IndexNowProvider(BatchProvider):
         if key_location is not None:
             parse_http_url(key_location, require_clean=True)
 
-        super().__init__(timeout=timeout, session=session)
+        super().__init__(timeout=timeout, session=session, allow_query=allow_query)
         self.api_key = api_key
         self.key_location = key_location
 
@@ -55,7 +58,7 @@ class IndexNowProvider(BatchProvider):
             raise ValueError("length must be between 8 and 128")
         return "".join(secrets.choice(_KEY_ALPHABET) for _ in range(length))
 
-    def key_file_url(self, site_url: Optional[str] = None) -> str:
+    def key_file_url(self, site_url: str | None = None) -> str:
         """Return where engines look for the key file.
 
         That is ``key_location`` when set, otherwise ``<site>/<key>.txt`` at the
@@ -69,34 +72,37 @@ class IndexNowProvider(BatchProvider):
         site = parse_http_url(site_url)
         return f"{site.scheme.lower()}://{site.netloc}/{self.api_key}.txt"
 
-    def verify_key(self, site_url: Optional[str] = None) -> str:
+    def verify_key(self, site_url: str | None = None) -> str:
         """Check that the key file is published the way engines expect.
 
         Returns the verified key file URL, or raises :class:`ProviderError`
         describing what an engine would get instead of the key. Redirects are
-        not followed: engines are not required to follow them.
+        not followed: engines are not required to follow them. Messages and
+        logs show the key as ``<key>``.
         """
 
         location = self.key_file_url(site_url)
+        shown = self._redact(location)
         response = get(
             self._session,
             location,
             timeout=self.timeout,
             provider=self.name,
             allow_redirects=False,
+            log_url=shown,
         )
         status_code = response.status_code
         if 300 <= status_code < 400:
-            target = response.headers.get("Location", "another URL")
+            target = self._redact(response.headers.get("Location", "another URL"))
             raise ProviderError(
-                f"key file {location} redirects (HTTP {status_code}) to {target};"
+                f"key file {shown} redirects (HTTP {status_code}) to {target};"
                 " serve it directly with HTTP 200",
                 provider=self.name,
                 status_code=status_code,
             )
         if status_code != 200:
             raise ProviderError(
-                f"key file {location} returned HTTP {status_code}",
+                f"key file {shown} returned HTTP {status_code}",
                 provider=self.name,
                 retryable=status_code == 429 or status_code >= 500,
                 status_code=status_code,
@@ -108,17 +114,20 @@ class IndexNowProvider(BatchProvider):
         content_type = response.headers.get("Content-Type", "").lower()
         if "html" in content_type or body.startswith("<"):
             raise ProviderError(
-                f"key file {location} returned an HTML page instead of the key;"
+                f"key file {shown} returned an HTML page instead of the key;"
                 " the file is probably missing and the site answers 200 for"
                 " unknown paths",
                 provider=self.name,
                 status_code=status_code,
             )
         raise ProviderError(
-            f"key file {location} does not contain the API key",
+            f"key file {shown} does not contain the API key",
             provider=self.name,
             status_code=status_code,
         )
+
+    def _redact(self, text: str) -> str:
+        return text.replace(self.api_key, "<key>")
 
     def _notify_many(
         self,
@@ -137,6 +146,13 @@ class IndexNowProvider(BatchProvider):
         if self.key_location:
             payload["keyLocation"] = self.key_location
 
+        logger.debug(
+            "%s: submitting %d URL(s) for %s to %s",
+            self.name,
+            len(urls),
+            host,
+            self.endpoint,
+        )
         response = post_json(
             self._session,
             self.endpoint,
@@ -157,7 +173,7 @@ class IndexNowProvider(BatchProvider):
         if self.key_location is None:
             return
 
-        key_url = parse_http_url(self.key_location, require_clean=True)
+        key_url = urlsplit(normalize_url(self.key_location))
         if key_url.hostname is None or submitted_url.hostname is None:
             raise ValueError("key_location and url must include a hostname")
         if key_url.hostname.lower() != submitted_url.hostname.lower():

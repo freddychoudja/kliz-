@@ -54,3 +54,38 @@ def test_shared_url_validation_allows_query_strings_by_default() -> None:
 def test_shared_url_validation_rejects_query_strings_in_clean_mode() -> None:
     with pytest.raises(ValueError, match="query"):
         parse_http_url("https://example.com/page?id=77", require_clean=True)
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("HTTPS://Example.COM:443", "https://example.com/"),
+        ("  http://a.example:80/x?b=2&a=1  ", "http://a.example/x?b=2&a=1"),
+        ("https://a.example:8443/Case/Path", "https://a.example:8443/Case/Path"),
+        ("https://a.example./p", "https://a.example/p"),
+        ("https://Bücher.example/Straße", "https://xn--bcher-kva.example/Stra%C3%9Fe"),
+        (
+            "https://a.example/a b?q=café&x=%2F",
+            "https://a.example/a%20b?q=caf%C3%A9&x=%2F",
+        ),
+        ("http://[::1]:80/", "http://[::1]/"),
+        ("https://a.example?x=1", "https://a.example/?x=1"),
+    ],
+)
+def test_normalize_url(url: str, expected: str) -> None:
+    assert kliz.normalize_url(url) == expected
+    assert kliz.normalize_url(expected) == expected
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://a.example/#top",
+        "ftp://a.example/",
+        "https://a.example:99999/",
+        "https://" + "é" * 70 + ".example/",
+    ],
+)
+def test_normalize_url_rejects_invalid_urls(url: str) -> None:
+    with pytest.raises(ValueError):
+        kliz.normalize_url(url)

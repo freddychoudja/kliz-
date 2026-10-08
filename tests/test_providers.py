@@ -1,6 +1,7 @@
 """Unit tests for the built-in indexing providers."""
 
-from typing import Optional
+from collections.abc import Callable
+from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
 import httplib2
@@ -11,7 +12,9 @@ from google.auth.exceptions import TransportError
 from googleapiclient.errors import HttpError
 
 from kliz import Kliz
-from kliz.exceptions import ProviderError
+from kliz._http import parse_retry_after
+from kliz.cli import main
+from kliz.exceptions import MissingDependencyError, ProviderError
 from kliz.providers.google import GoogleProvider, GoogleSearchConsoleProvider
 from kliz.providers.indexnow import IndexNowProvider
 
@@ -405,8 +408,8 @@ def _verifying_provider(
     *,
     status_code: int = 200,
     text: str = "indexnow-key",
-    headers: Optional[dict[str, str]] = None,
-    key_location: Optional[str] = None,
+    headers: dict[str, str] | None = None,
+    key_location: str | None = None,
 ) -> tuple[IndexNowProvider, Mock]:
     session = make_mock_session()
     session.get.return_value = Mock(
@@ -596,7 +599,7 @@ def test_search_console_resubmits_the_sitemap(
 )
 def test_search_console_normalizes_property_and_default_sitemap(
     site_url: str,
-    sitemap_url: Optional[str],
+    sitemap_url: str | None,
     expected_site: str,
     expected_sitemap: str,
 ) -> None:
@@ -720,3 +723,129 @@ def test_kliz_rejects_outside_urls_individually_for_search_console(
         (True, ("https://a.example/1", "https://a.example/3")),
     ]
     sitemaps.submit.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("factory", "name"),
+    [
+        (lambda: GoogleProvider("sa.json"), "GoogleProvider"),
+        (
+            lambda: GoogleSearchConsoleProvider("sa.json", "https://a.example/"),
+            "GoogleSearchConsoleProvider",
+        ),
+    ],
+)
+def test_google_providers_explain_missing_extra(
+    monkeypatch: pytest.MonkeyPatch, factory: Callable[[], object], name: str
+) -> None:
+    monkeypatch.setattr(
+        "kliz.providers.google._GOOGLE_IMPORT_ERROR", ImportError("no google")
+    )
+
+    with pytest.raises(
+        MissingDependencyError, match=r"pip install 'kliz\[google\]'"
+    ) as exc:
+        factory()
+
+    assert name in str(exc.value)
+    assert isinstance(exc.value, ImportError)
+
+
+def test_cli_missing_extra_is_a_configuration_error(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(
+        "kliz.providers.google._GOOGLE_IMPORT_ERROR", ImportError("no google")
+    )
+
+    exit_code = main(
+        [
+            "--gsc-site",
+            "https://a.example/",
+            "--gsc-service-account-file",
+            "/dev/null",
+            "providers",
+        ]
+    )
+
+    assert exit_code == 2
+    assert "kliz[google]" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("120", 120.0),
+        (" 0 ", 0.0),
+        ("Thu, 08 Oct 2026 12:01:30 GMT", 90.0),
+        ("Thu, 08 Oct 2026 11:00:00 GMT", 0.0),
+        ("soon", None),
+        ("-5", None),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_parse_retry_after(value: object, expected: float | None) -> None:
+    now = datetime(2026, 10, 8, 12, 0, 0, tzinfo=timezone.utc)
+
+    assert parse_retry_after(value, now=now) == expected
+
+
+def test_indexnow_reports_retry_after_header() -> None:
+    session = make_mock_session()
+    session.post.return_value = Mock(status_code=429, headers={"Retry-After": "30"})
+    provider = IndexNowProvider(api_key="indexnow-key", session=session)
+
+    with pytest.raises(ProviderError) as captured:
+        provider.notify("https://example.com/page")
+
+    assert captured.value.retryable is True
+    assert captured.value.retry_after == 30.0
+
+
+def test_google_reports_retry_after_header(
+    google_client_mocks: dict[str, Mock],
+) -> None:
+    response = httplib2.Response({"status": "429", "retry-after": "12"})
+    error = HttpError(response, b"{}")
+    service = google_client_mocks["build"].return_value
+    service.urlNotifications.return_value.publish.return_value.execute.side_effect = (
+        error
+    )
+    provider = GoogleProvider("sa.json")
+
+    with pytest.raises(ProviderError) as captured:
+        provider.notify("https://example.com/job")
+
+    assert captured.value.status_code == 429
+    assert captured.value.retry_after == 12.0
+
+
+def test_google_provider_sends_normalized_url_and_allows_query_on_request(
+    google_client_mocks: dict[str, Mock],
+) -> None:
+    publish = google_client_mocks["build"].return_value.urlNotifications.return_value
+    strict = GoogleProvider("sa.json")
+    lenient = GoogleProvider("sa.json", allow_query=True)
+
+    strict.notify("HTTPS://Example.com:443/jobs/1")
+    with pytest.raises(ValueError, match="query"):
+        strict.notify("https://example.com/jobs?id=1")
+    lenient.notify("https://example.com/jobs?id=1")
+
+    assert [c.kwargs["body"]["url"] for c in publish.publish.call_args_list] == [
+        "https://example.com/jobs/1",
+        "https://example.com/jobs?id=1",
+    ]
+
+
+def test_search_console_matches_international_domains() -> None:
+    provider = GoogleSearchConsoleProvider(
+        "sa.json", "sc-domain:bücher.example", "https://xn--bcher-kva.example/s.xml"
+    )
+
+    assert provider.validate_url("https://www.BÜCHER.example/x").hostname == (
+        "www.xn--bcher-kva.example"
+    )
+    with pytest.raises(ValueError, match="outside"):
+        provider.validate_url("https://buecher.example/")

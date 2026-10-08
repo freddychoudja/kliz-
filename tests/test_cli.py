@@ -268,6 +268,9 @@ def test_build_indexer_creates_indexnow() -> None:
         indexnow_key_location="https://example.com/key.txt",
         google_service_account_file=None,
         gsc_site=None,
+        max_attempts=1,
+        allow_query=False,
+        timeout=None,
     )
     indexer = _build_indexer(args)
     assert len(indexer.providers) == 1
@@ -282,6 +285,9 @@ def test_build_indexer_requires_key_location() -> None:
         indexnow_key_location=None,
         google_service_account_file=None,
         gsc_site=None,
+        max_attempts=1,
+        allow_query=False,
+        timeout=None,
     )
     with pytest.raises(ConfigurationError, match="key-location"):
         _build_indexer(args)
@@ -295,6 +301,9 @@ def test_build_indexer_creates_google() -> None:
         indexnow_key_location=None,
         google_service_account_file="/dev/null",
         gsc_site=None,
+        max_attempts=1,
+        allow_query=False,
+        timeout=None,
     )
     indexer = _build_indexer(args)
     assert len(indexer.providers) == 1
@@ -309,6 +318,9 @@ def test_build_indexer_no_providers_gives_config_error() -> None:
         indexnow_key_location=None,
         google_service_account_file=None,
         gsc_site=None,
+        max_attempts=1,
+        allow_query=False,
+        timeout=None,
     )
     with pytest.raises(ConfigurationError, match="no providers configured"):
         _build_indexer(args)
@@ -406,7 +418,7 @@ def test_indexnow_verify_key_success(capsys: pytest.CaptureFixture[str]) -> None
 
     assert exit_code == 0
     verify.assert_called_once_with("https://a.example")
-    assert "✅ https://a.example/abcdefgh.txt" in capsys.readouterr().out
+    assert "✅ https://a.example/<key>.txt" in capsys.readouterr().out
 
 
 def test_indexnow_verify_key_failure_exits_1(
@@ -540,6 +552,9 @@ def _gsc_args(**overrides: object) -> argparse.Namespace:
         "gsc_site": "https://example.com/",
         "gsc_sitemap": None,
         "gsc_service_account_file": "/dev/null",
+        "max_attempts": 1,
+        "allow_query": False,
+        "timeout": None,
     }
     values.update(overrides)
     return argparse.Namespace(**values)
@@ -551,6 +566,7 @@ def _gsc_args(**overrides: object) -> argparse.Namespace:
         ({}, "https://example.com/sitemap.xml"),
         ({"sitemap": "https://example.com/s.xml"}, "https://example.com/s.xml"),
         ({"sitemap": "local-sitemap.xml"}, "https://example.com/sitemap.xml"),
+        ({"gsc_sitemap": ""}, "https://example.com/sitemap.xml"),
         (
             {
                 "sitemap": "https://example.com/s.xml",
@@ -603,3 +619,45 @@ def test_gsc_options_read_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     assert args.gsc_site == "sc-domain:example.com"
     assert args.gsc_sitemap == "https://example.com/s.xml"
     assert args.gsc_service_account_file == "/secrets/sa.json"
+
+
+def test_max_attempts_reaches_the_orchestrator(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from kliz.cli import _build_indexer, _build_parser
+
+    monkeypatch.setenv("KLIZ_MAX_ATTEMPTS", "4")
+    args = _build_parser().parse_args(
+        [*INDEXNOW_ARGS, "notify", "https://example.com/a"]
+    )
+    assert args.max_attempts == 4
+
+    args = _build_parser().parse_args(
+        [*INDEXNOW_ARGS, "--max-attempts", "2", "notify", "https://example.com/a"]
+    )
+    assert _build_indexer(args).max_attempts == 2
+
+
+def test_invalid_max_attempts_is_a_configuration_error() -> None:
+    assert main([*INDEXNOW_ARGS, "--max-attempts", "0", "providers"]) == 2
+
+
+def test_non_numeric_max_attempts_env_is_a_usage_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("KLIZ_MAX_ATTEMPTS", "lots")
+
+    assert main([*INDEXNOW_ARGS, "providers"]) == 2
+
+
+def test_allow_query_flag_reaches_providers(monkeypatch: pytest.MonkeyPatch) -> None:
+    from kliz.cli import _build_indexer, _build_parser
+
+    args = _build_parser().parse_args([*INDEXNOW_ARGS, "--allow-query", "providers"])
+    (provider,) = _build_indexer(args).providers
+    assert isinstance(provider, IndexNowProvider) and provider.allow_query is True
+
+    monkeypatch.setenv("KLIZ_ALLOW_QUERY", "true")
+    assert _build_parser().parse_args(["providers"]).allow_query is True
+    monkeypatch.setenv("KLIZ_ALLOW_QUERY", "false")
+    assert _build_parser().parse_args(["providers"]).allow_query is False

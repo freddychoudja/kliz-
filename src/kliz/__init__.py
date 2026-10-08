@@ -1,9 +1,11 @@
 """Public API for kliz."""
 
+import logging
 from importlib.metadata import PackageNotFoundError, version
 
+from kliz._validation import normalize_url
 from kliz.core import Kliz
-from kliz.exceptions import KlizError, ProviderError
+from kliz.exceptions import KlizError, MissingDependencyError, ProviderError
 from kliz.providers import (
     BaseProvider,
     BatchProvider,
@@ -11,7 +13,7 @@ from kliz.providers import (
     GoogleSearchConsoleProvider,
     IndexNowProvider,
 )
-from kliz.results import NotificationResult
+from kliz.results import NotificationResult, RetryEvent
 from kliz.sitemap import SitemapError, read_sitemap
 
 __all__ = [
@@ -22,11 +24,16 @@ __all__ = [
     "IndexNowProvider",
     "Kliz",
     "KlizError",
+    "MissingDependencyError",
     "NotificationResult",
     "ProviderError",
+    "RetryEvent",
     "SitemapError",
+    "normalize_url",
     "read_sitemap",
 ]
+
+logging.getLogger("kliz").addHandler(logging.NullHandler())
 
 try:
     __version__ = version("kliz")

@@ -2,10 +2,10 @@
 
 import gzip
 import io
+import logging
 import zlib
 from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Optional, Union
 from xml.etree.ElementTree import Element
 
 import requests
@@ -14,12 +14,14 @@ from defusedxml.ElementTree import ParseError, fromstring
 
 from kliz.exceptions import KlizError
 
+logger = logging.getLogger(__name__)
+
 SITEMAP_NAMESPACE = "http://www.sitemaps.org/schemas/sitemap/0.9"
 # Sitemaps protocol limit for one (uncompressed) sitemap file.
 MAX_SITEMAP_BYTES = 50 * 1024 * 1024
 MAX_INDEX_DEPTH = 3
 
-Since = Union[date, datetime]
+Since = date | datetime
 
 
 class SitemapError(KlizError):
@@ -27,10 +29,10 @@ class SitemapError(KlizError):
 
 
 def read_sitemap(
-    source: Union[str, Path],
+    source: str | Path,
     *,
-    since: Optional[Since] = None,
-    session: Optional[requests.Session] = None,
+    since: Since | None = None,
+    session: requests.Session | None = None,
     timeout: float = 10.0,
 ) -> list[str]:
     """Return the page URLs listed in a sitemap, in document order.
@@ -54,6 +56,7 @@ def read_sitemap(
     try:
         urls: dict[str, None] = {}
         _collect(str(source), threshold, http, timeout, urls, set(), depth=0)
+        logger.info("read %d page URL(s) from %s", len(urls), source)
         return list(urls)
     finally:
         if owned_session:
@@ -62,7 +65,7 @@ def read_sitemap(
 
 def _collect(
     source: str,
-    threshold: Optional[datetime],
+    threshold: datetime | None,
     session: requests.Session,
     timeout: float,
     urls: dict[str, None],
@@ -73,6 +76,7 @@ def _collect(
     if source in visited:
         return
     visited.add(source)
+    logger.debug("reading sitemap %s", source)
 
     root = _parse(_load(source, session, timeout), source)
     kind = _local_name(root)
@@ -150,7 +154,7 @@ def _parse(data: bytes, source: str) -> Element:
         raise SitemapError(f"{source}: invalid sitemap XML ({exc})") from exc
 
 
-def _local_name(element: Element) -> Optional[str]:
+def _local_name(element: Element) -> str | None:
     """Return the tag name if it is in the sitemap namespace (or none)."""
 
     tag = element.tag
@@ -162,13 +166,13 @@ def _local_name(element: Element) -> Optional[str]:
     return tag
 
 
-def _entries(root: Element, entry_tag: str) -> list[tuple[str, Optional[str]]]:
-    entries: list[tuple[str, Optional[str]]] = []
+def _entries(root: Element, entry_tag: str) -> list[tuple[str, str | None]]:
+    entries: list[tuple[str, str | None]] = []
     for entry in root:
         if _local_name(entry) != entry_tag:
             continue
-        loc: Optional[str] = None
-        lastmod: Optional[str] = None
+        loc: str | None = None
+        lastmod: str | None = None
         for child in entry:
             name = _local_name(child)
             if name == "loc" and child.text and child.text.strip():
@@ -180,14 +184,14 @@ def _entries(root: Element, entry_tag: str) -> list[tuple[str, Optional[str]]]:
     return entries
 
 
-def _is_recent(lastmod: Optional[str], threshold: Optional[datetime]) -> bool:
+def _is_recent(lastmod: str | None, threshold: datetime | None) -> bool:
     if threshold is None or lastmod is None:
         return True
     parsed = _parse_lastmod(lastmod)
     return parsed is None or parsed >= threshold
 
 
-def _parse_lastmod(value: str) -> Optional[datetime]:
+def _parse_lastmod(value: str) -> datetime | None:
     """Parse a W3C datetime (``YYYY``, ``YYYY-MM``, date or full datetime)."""
 
     text = value.strip()

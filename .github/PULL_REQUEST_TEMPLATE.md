@@ -1,16 +1,16 @@
-## Objectif
+## Goal
 
-Décrivez le problème traité et la solution proposée.
+Describe the problem addressed and the proposed solution.
 
-## Changements
+## Changes
 
 - 
 
-## Validation
+## Checklist
 
-- [ ] Les tests existants passent.
-- [ ] Les nouveaux comportements sont testés avec des mocks.
-- [ ] Aucun secret ni identifiant réel n'est inclus.
-- [ ] Le cœur de `kliz` reste indépendant des frameworks d'application.
-- [ ] La documentation a été mise à jour si nécessaire.
-
+- [ ] Existing tests pass.
+- [ ] New behavior is tested with mocks.
+- [ ] No real secret or credential is included.
+- [ ] The `kliz` core stays independent of application frameworks.
+- [ ] Documentation (`README.md` and `README.fr.md`) and `CHANGELOG.md` are updated
+      if needed.

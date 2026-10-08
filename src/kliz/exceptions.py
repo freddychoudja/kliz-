@@ -1,10 +1,12 @@
 """Exceptions exposed by kliz."""
 
-from typing import Optional
-
 
 class KlizError(Exception):
     """Base class for all kliz-specific errors."""
+
+
+class MissingDependencyError(KlizError, ImportError):
+    """An optional dependency (``pip install 'kliz[extra]'``) is not installed."""
 
 
 class ProviderError(KlizError):
@@ -16,9 +18,11 @@ class ProviderError(KlizError):
         *,
         provider: str,
         retryable: bool = False,
-        status_code: Optional[int] = None,
+        status_code: int | None = None,
+        retry_after: float | None = None,
     ) -> None:
         super().__init__(message)
         self.provider = provider
         self.retryable = retryable
         self.status_code = status_code
+        self.retry_after = retry_after

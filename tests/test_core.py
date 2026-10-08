@@ -1,6 +1,6 @@
 """Tests for provider orchestration."""
 
-from typing import Optional
+import random
 from unittest.mock import Mock
 
 import pytest
@@ -19,7 +19,7 @@ from conftest import (
     return_true,
 )
 
-from kliz import IndexNowProvider, Kliz, NotificationResult
+from kliz import IndexNowProvider, Kliz, NotificationResult, ProviderError
 
 
 def test_notify_all_returns_boolean_statuses() -> None:
@@ -103,7 +103,10 @@ def test_retry_succeeds_on_second_attempt_with_exponential_backoff() -> None:
     result = indexer.notify_all_detailed("https://example.com")["FlakyProvider"]
 
     assert result == NotificationResult(
-        provider="FlakyProvider", success=True, urls=("https://example.com",)
+        provider="FlakyProvider",
+        success=True,
+        urls=("https://example.com",),
+        attempts=2,
     )
     assert provider.calls == 2
     assert len(sleeper.delays) == 1
@@ -129,11 +132,12 @@ def test_retry_stops_after_max_attempts_and_preserves_error() -> None:
         error="temporary failure",
         status_code=429,
         urls=("https://example.com",),
+        attempts=3,
     )
     assert provider.calls == 3
     assert len(sleeper.delays) == 2
     assert 1.0 <= sleeper.delays[0] <= 1.25
-    assert 2.0 <= sleeper.delays[1] <= 2.25
+    assert 2.0 <= sleeper.delays[1] <= 2.5
 
 
 def test_non_retryable_errors_are_not_repeated() -> None:
@@ -339,7 +343,7 @@ def test_notify_many_continues_across_providers() -> None:
 
 
 def _indexnow_with_session(
-    key_location: Optional[str] = None,
+    key_location: str | None = None,
 ) -> tuple[IndexNowProvider, Mock]:
     session = make_mock_session()
     session.post.return_value = Mock(status_code=200)
@@ -467,3 +471,170 @@ def test_notify_many_results_list_covered_urls_per_chunk() -> None:
         ("https://example.com/3",),
     ]
     assert [r.urls for r in results["StubProvider"]] == [(url,) for url in urls]
+
+
+class RetryAfterProvider(StubProvider):
+    """Fails with HTTP 429 and a Retry-After hint, then succeeds."""
+
+    def __init__(self, failures: int, retry_after: float | None) -> None:
+        self.failures = failures
+        self.retry_after = retry_after
+        self.calls = 0
+
+    def notify(self, url: str) -> bool:
+        self.calls += 1
+        if self.calls <= self.failures:
+            raise ProviderError(
+                "slow down",
+                provider=self.name,
+                retryable=True,
+                status_code=429,
+                retry_after=self.retry_after,
+            )
+        return True
+
+
+def test_retry_waits_for_retry_after_instead_of_backoff() -> None:
+    sleeper = RecordingSleep()
+    provider = RetryAfterProvider(failures=2, retry_after=7.0)
+    indexer = Kliz([provider], max_attempts=3, sleep=sleeper)
+
+    result = indexer.notify_all_detailed("https://example.com")["RetryAfterProvider"]
+
+    assert result.success is True
+    assert result.attempts == 3
+    assert sleeper.delays == [7.0, 7.0]
+
+
+def test_retry_after_longer_than_max_delay_stops_and_is_reported() -> None:
+    sleeper = RecordingSleep()
+    provider = RetryAfterProvider(failures=5, retry_after=3600.0)
+    indexer = Kliz([provider], max_attempts=5, max_delay=60, sleep=sleeper)
+
+    result = indexer.notify_all_detailed("https://example.com")["RetryAfterProvider"]
+
+    assert sleeper.delays == []
+    assert provider.calls == 1
+    assert result.success is False
+    assert result.retryable is True
+    assert result.retry_after == 3600.0
+    assert result.attempts == 1
+
+
+def test_backoff_is_capped_by_max_delay() -> None:
+    sleeper = RecordingSleep()
+    provider = FlakyProvider(failures=10)
+    indexer = Kliz(
+        [provider], max_attempts=6, max_delay=3.0, sleep=sleeper, rng=random.Random(1)
+    )
+
+    indexer.notify_all("https://example.com")
+
+    assert len(sleeper.delays) == 5
+    assert 1.0 <= sleeper.delays[0] <= 1.25
+    assert 2.0 <= sleeper.delays[1] <= 2.5
+    assert sleeper.delays[2:] == [3.0, 3.0, 3.0]
+
+
+def test_jitter_comes_from_the_injected_rng() -> None:
+    def delays(seed: int) -> list[float]:
+        sleeper = RecordingSleep()
+        Kliz(
+            [FlakyProvider(failures=10)],
+            max_attempts=4,
+            sleep=sleeper,
+            rng=random.Random(seed),
+        ).notify_all("https://example.com")
+        return sleeper.delays
+
+    assert delays(42) == delays(42)
+    assert delays(42) != delays(43)
+
+
+def test_deadline_stops_retrying_before_overrunning() -> None:
+    now = [0.0]
+    sleeper_delays: list[float] = []
+
+    def sleep(delay: float) -> None:
+        sleeper_delays.append(delay)
+        now[0] += delay
+
+    provider = RetryAfterProvider(failures=10, retry_after=4.0)
+    indexer = Kliz(
+        [provider], max_attempts=10, deadline=10.0, sleep=sleep, clock=lambda: now[0]
+    )
+
+    result = indexer.notify_all_detailed("https://example.com")["RetryAfterProvider"]
+
+    assert sleeper_delays == [4.0, 4.0]
+    assert result.attempts == 3
+    assert result.success is False
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"max_delay": 0}, "max_delay"),
+        ({"max_delay": -1.0}, "max_delay"),
+        ({"deadline": 0}, "deadline"),
+    ],
+)
+def test_invalid_retry_settings_are_rejected(
+    kwargs: dict[str, float], message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        Kliz([StubProvider(return_true)], **kwargs)  # type: ignore[arg-type]
+
+
+def test_notify_many_deduplicates_equivalent_urls() -> None:
+    provider = BatchStubProvider()
+    indexer = Kliz([provider])
+
+    indexer.notify_many(
+        [
+            "https://example.com/a",
+            "HTTPS://EXAMPLE.com:443/a",
+            "https://example.com",
+            "https://example.com/",
+            "not a url",
+        ]
+    )
+
+    assert provider.batches == [
+        ["https://example.com/a", "https://example.com/", "not a url"]
+    ]
+
+
+def test_indexnow_sends_normalized_urls_and_ascii_host() -> None:
+    provider, session = _indexnow_with_session()
+
+    Kliz([provider]).notify_many(["https://Bücher.example:443/Straße"])
+
+    payload = session.post.call_args.kwargs["json"]
+    assert payload["host"] == "xn--bcher-kva.example"
+    assert payload["urlList"] == ["https://xn--bcher-kva.example/Stra%C3%9Fe"]
+
+
+def test_indexnow_allow_query_accepts_query_strings() -> None:
+    session = make_mock_session()
+    session.post.return_value = Mock(status_code=200)
+    strict = IndexNowProvider(api_key="abcdefgh12", session=session)
+    lenient = IndexNowProvider(api_key="abcdefgh12", session=session, allow_query=True)
+
+    with pytest.raises(ValueError, match="query string"):
+        strict.notify("https://a.example/?p=123")
+    assert lenient.notify("https://a.example/?p=123") is True
+    assert session.post.call_args.kwargs["json"]["urlList"] == [
+        "https://a.example/?p=123"
+    ]
+    with pytest.raises(ValueError, match="fragment"):
+        lenient.notify("https://a.example/?p=1#top")
+
+
+def test_indexnow_key_location_matches_normalized_hosts() -> None:
+    provider, session = _indexnow_with_session(
+        key_location="https://xn--bcher-kva.example/key.txt"
+    )
+
+    assert provider.notify("https://BÜCHER.example/page") is True
+    session.post.assert_called_once()

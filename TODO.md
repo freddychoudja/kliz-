@@ -188,11 +188,11 @@
 | # | Palier | Phase | Objectif | Statut |
 | :-: | :-: | :---- | :------- | :----: |
 | 8 | 🔴 v0.2.1 | Lots robustes | Corriger les 2 bugs de `notify_many` + CLI vraiment par lots | ✅ |
-| 9 | 🔴 v0.2.1 | Retry intelligent | `Retry-After`, plafond, vrai jitter, échéance globale | ⬜ |
-| 10 | 🔴 v0.2.1 | Normalisation des URL | `allow_query`, IDN, ports par défaut, dédoublonnage | ⬜ |
-| 11 | 🟠 v0.3 | Packaging mondial | Anglais d’abord, extra `[google]`, fin de Python 3.9 | ⬜ |
-| 12 | 🟠 v0.3 | Observabilité | `logging`, hooks d’événements, zéro fuite de secret | ⬜ |
-| 13 | 🟠 v0.3 | CLI professionnelle | `--json`, `--dry-run`, stdin, `keygen`/`verify-key`, config | ⬜ |
+| 9 | 🔴 v0.2.1 | Retry intelligent | `Retry-After`, plafond, vrai jitter, échéance globale | ✅ |
+| 10 | 🔴 v0.2.1 | Normalisation des URL | `allow_query`, IDN, ports par défaut, dédoublonnage | ✅ |
+| 11 | 🟠 v0.3 | Packaging mondial | Anglais d’abord, extra `[google]`, fin de Python 3.9 | ✅ |
+| 12 | 🟠 v0.3 | Observabilité | `logging`, hooks d’événements, zéro fuite de secret | ✅ |
+| 13 | 🟠 v0.3 | CLI professionnelle | `--json`, `--dry-run`, stdin, `keygen`/`verify-key`, config | ✅ |
 | 14 | 🟡 v0.4 | Sitemaps ⭐ | « Donnez-nous votre sitemap » : index, gzip, `lastmod` | ✅ |
 | 15 | 🟡 v0.4 | État & quotas | Ne notifier que ce qui a changé, respecter les quotas | ⬜ |
 | 16 | 🟡 v0.4 | Plus de moteurs + plugins | Bing, Yandex, Naver, Seznam, Baidu… + entry points | ⬜ |
@@ -233,7 +233,7 @@
 
 ---
 
-## **Phase 9 — Retry intelligent** 🔴
+## **Phase 9 — Retry intelligent** ✅
 
 > **Expliqué simplement :** quand le serveur répond « 429 — revenez dans 120 s », le facteur
 > l’ignore et revient dans 1 s. Et sa « secousse aléatoire » est calculée à partir de
@@ -241,14 +241,17 @@
 
 ### Travail demandé
 
-- [ ] Lire l’en-tête `Retry-After` (secondes ou date HTTP) et le porter dans `ProviderError`
-- [ ] Plafond de délai (`max_delay`) et échéance totale (`deadline`) optionnels
-- [ ] Jitter via un `random.Random` injectable (« full jitter » recommandé par AWS)
-- [ ] Documenter la différence avec `GoogleProvider(num_retries=…)` (double retry possible)
+- [x] Lire l’en-tête `Retry-After` (secondes ou date HTTP) et le porter dans `ProviderError`
+- [x] Plafond de délai (`max_delay`) et échéance totale (`deadline`) optionnels
+- [x] Jitter via un `random.Random` injectable (proportionnel, ≤ 25 % — choix : garder un
+      délai minimal garanti plutôt que le « full jitter »)
+- [x] Bonus : `attempts` et `retry_after` dans les résultats ; `--max-attempts` CLI ;
+      entrée `max-attempts` de l’Action (3 par défaut)
+- [x] Documenter la différence avec `GoogleProvider(num_retries=…)` (double retry possible)
 
 ---
 
-## **Phase 10 — Normalisation des URL** 🔴
+## **Phase 10 — Normalisation des URL** ✅
 
 > **Expliqué simplement :** beaucoup de sites légitimes ont des URL canoniques avec `?`
 > (WordPress `?p=123`, fiches produit). Les refuser toujours, c’est fermer la porte à une
@@ -257,13 +260,15 @@
 
 ### Travail demandé
 
-- [ ] Option `allow_query=False` sur les providers (strict par défaut, ouvrable)
-- [ ] Normaliser : schéma/hôte en minuscules, IDN → punycode, suppression des ports par défaut
-- [ ] Fonction publique `kliz.normalize_url()` réutilisable par les applications
+- [x] Option `allow_query=False` sur les providers (strict par défaut, ouvrable)
+- [x] Normaliser : schéma/hôte en minuscules, IDN → punycode, suppression des ports par défaut
+- [x] Fonction publique `kliz.normalize_url()` réutilisable par les applications
+- [x] Bonus : encodage des caractères non sûrs ; dédoublonnage sur la forme normalisée ;
+      `--allow-query` CLI et entrée `allow-query` de l’Action
 
 ---
 
-## **Phase 11 — Packaging mondial** 🟠
+## **Phase 11 — Packaging mondial** ✅
 
 > **Expliqué simplement :** la vitrine PyPI est en français, et installer `kliz` pour
 > IndexNow seul télécharge toute la bibliothèque Google (~plusieurs dizaines de Mo). Un
@@ -271,40 +276,45 @@
 
 ### Travail demandé
 
-- [ ] `README.md` en anglais (vitrine PyPI) ; version française dans `README.fr.md`
+- [x] `README.md` en anglais (vitrine PyPI) ; version française dans `README.fr.md`
       (idem `CHANGELOG`, `CONTRIBUTING`, description `pyproject`, aide de la CLI)
-- [ ] Dépendances Google dans un extra : `pip install kliz[google]` ; le cœur ne dépend que
+- [x] Dépendances Google dans un extra : `pip install kliz[google]` ; le cœur ne dépend que
       de `requests` ; message d’erreur clair si l’extra manque
-- [ ] Supprimer Python 3.9 (fin de vie octobre 2025) ; aligner `ruff target-version` et
+- [x] Supprimer Python 3.9 (fin de vie octobre 2025) ; aligner `ruff target-version` et
       `mypy python_version` (aujourd’hui incohérents : py39 vs 3.10)
-- [ ] Classifier `Development Status :: 4 - Beta`, mots-clés enrichis (bing, yandex, sitemap…)
+- [x] Classifier `Development Status :: 4 - Beta`, mots-clés enrichis (bing, yandex, sitemap…)
+- [x] Mesuré : `pip install kliz` = 7 paquets / ~4 Mo (contre 24 / ~144 Mo avant)
+- [ ] Reste : le site statique `docs/index.html` est encore en français → Phase 22
 
 ---
 
-## **Phase 12 — Observabilité** 🟠
+## **Phase 12 — Observabilité** ✅
 
 > **Expliqué simplement :** en production, `kliz` est muet : aucun log. Quand ça casse à
 > 3 h du matin, personne ne sait ce qui s’est passé.
 
 ### Travail demandé
 
-- [ ] `logging.getLogger("kliz")` : requêtes, statuts, tentatives, délais (niveau DEBUG/INFO)
-- [ ] Hook optionnel `on_result` / `on_retry` sur `Kliz` (métriques, Prometheus, OTel)
-- [ ] Test garantissant que la clé IndexNow n’apparaît **jamais** dans les logs ni les erreurs
+- [x] `logging.getLogger("kliz")` : requêtes, statuts, tentatives, délais (niveau DEBUG/INFO)
+- [x] Hook optionnel `on_result` / `on_retry` sur `Kliz` (métriques, Prometheus, OTel)
+- [x] Test garantissant que la clé IndexNow n’apparaît **jamais** dans les logs ni les erreurs
+- [x] Bonus : `-v` / `-vv` dans la CLI ; Action en `-v` ; le test de fuite a trouvé et
+      corrigé une vraie fuite (message d’exception réseau contenant l’URL du fichier clé)
 
 ---
 
-## **Phase 13 — CLI professionnelle** 🟠
+## **Phase 13 — CLI professionnelle** ✅
 
 ### Travail demandé
 
-- [ ] `--json` (sortie machine pour CI/scripts), lecture depuis stdin (`-`)
+- [x] `--json` (sortie machine pour CI/scripts), lecture depuis stdin (`-`)
 - [x] `--dry-run`
-- [ ] `--max-attempts`, `--timeout`
+- [x] `--max-attempts`
+- [x] `--timeout`
 - [x] `kliz indexnow keygen` (génère une clé + le fichier à publier)
 - [x] `kliz indexnow verify-key` (vérifie que le fichier clé est bien servi en ligne,
       y compris le piège « 200 + page HTML » des SPA, testé sur almight.me)
-- [ ] Configuration par fichier : `[tool.kliz]` dans `pyproject.toml` ou `kliz.toml`
+- [x] Configuration par fichier : `[tool.kliz]` dans `pyproject.toml` ou `kliz.toml`
 - [x] Ignorer les lignes `#` même indentées (bug mineur : `line.startswith("#")` sans `strip`)
 
 ---
@@ -369,9 +379,11 @@
 
 ### Travail demandé
 
-- [ ] Dépôt `kliz-action` (ou `action.yml` à la racine) : entrées `sitemap`, `urls`, `since`
+- [x] `action.yml` à la racine : entrées `sitemap`, `urls`, `since`, clés, `dry-run`,
+      vérification de clé ; job CI d’exécution à blanc
 - [ ] Mode « diff » : ne notifier que les pages modifiées par le commit
-- [ ] Publication sur le GitHub Marketplace
+- [ ] Publication sur le GitHub Marketplace (exige un dépôt **sans workflows** :
+      dupliquer `action.yml` dans un dépôt dédié `kliz-action`)
 - [ ] Image Docker officielle (`ghcr.io/…/kliz`) pour GitLab CI, cron, Kubernetes
 
 ---

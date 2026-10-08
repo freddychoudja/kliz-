@@ -1,0 +1,126 @@
+name: kliz search engine indexing
+description: >-
+  Notify Bing, Yandex, Naver, Seznam, Yep (IndexNow) and Google (Search
+  Console) that the pages of a sitemap or a URL list changed.
+author: Freddy Choudja
+branding:
+  icon: search
+  color: blue
+
+inputs:
+  sitemap:
+    description: Sitemap or sitemap index to notify (URL or file in the workspace).
+    required: false
+    default: ""
+  since:
+    description: With sitemap, only pages whose lastmod is on or after this ISO date.
+    required: false
+    default: ""
+  urls:
+    description: URLs to notify, one per line (used when sitemap is empty).
+    required: false
+    default: ""
+  indexnow-api-key:
+    description: IndexNow key (store it as a secret).
+    required: false
+    default: ""
+  indexnow-key-location:
+    description: URL of the published IndexNow key file.
+    required: false
+    default: ""
+  verify-key:
+    description: Check the IndexNow key file is served correctly before notifying.
+    required: false
+    default: "true"
+  gsc-site:
+    description: Search Console property (https://example.com/ or sc-domain:example.com).
+    required: false
+    default: ""
+  gsc-sitemap:
+    description: Sitemap URL to resubmit to Search Console (default the sitemap input).
+    required: false
+    default: ""
+  gsc-service-account-json:
+    description: Content of the Search Console service account JSON key (a secret).
+    required: false
+    default: ""
+  allow-query:
+    description: Accept URLs with a query string (e.g. https://example.com/?p=123).
+    required: false
+    default: "false"
+  max-attempts:
+    description: Attempts per notification for temporary failures (honors Retry-After).
+    required: false
+    default: "3"
+  dry-run:
+    description: List the URLs without notifying anything.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Install kliz
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          echo "::error title=kliz::this action supports Linux and macOS runners"
+          exit 2
+        fi
+        python3 -m venv "$RUNNER_TEMP/kliz-venv"
+        "$RUNNER_TEMP/kliz-venv/bin/python" -m pip install --quiet \
+          --disable-pip-version-check "$ACTION_PATH[google]"
+
+    - name: Notify search engines
+      shell: bash
+      env:
+        INPUT_SITEMAP: ${{ inputs.sitemap }}
+        INPUT_SINCE: ${{ inputs.since }}
+        INPUT_URLS: ${{ inputs.urls }}
+        INPUT_VERIFY_KEY: ${{ inputs.verify-key }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+        INPUT_GSC_SERVICE_ACCOUNT_JSON: ${{ inputs.gsc-service-account-json }}
+        KLIZ_INDEXNOW_API_KEY: ${{ inputs.indexnow-api-key }}
+        KLIZ_INDEXNOW_KEY_LOCATION: ${{ inputs.indexnow-key-location }}
+        KLIZ_GSC_SITE: ${{ inputs.gsc-site }}
+        KLIZ_GSC_SITEMAP: ${{ inputs.gsc-sitemap }}
+        KLIZ_MAX_ATTEMPTS: ${{ inputs.max-attempts }}
+        KLIZ_ALLOW_QUERY: ${{ inputs.allow-query }}
+      run: |
+        set -euo pipefail
+        kliz="$RUNNER_TEMP/kliz-venv/bin/kliz"
+
+        if [[ -n "$INPUT_GSC_SERVICE_ACCOUNT_JSON" ]]; then
+          gsc_file="$(mktemp "$RUNNER_TEMP/kliz-gsc-XXXXXX")"
+          trap 'rm -f "$gsc_file"' EXIT
+          printf '%s' "$INPUT_GSC_SERVICE_ACCOUNT_JSON" > "$gsc_file"
+          export KLIZ_GSC_SERVICE_ACCOUNT_FILE="$gsc_file"
+        fi
+
+        notify=()
+        if [[ -n "$INPUT_SITEMAP" ]]; then
+          notify+=(--sitemap "$INPUT_SITEMAP")
+          if [[ -n "$INPUT_SINCE" ]]; then
+            notify+=(--since "$INPUT_SINCE")
+          fi
+        elif [[ -n "$INPUT_URLS" ]]; then
+          urls_file="$RUNNER_TEMP/kliz-urls.txt"
+          printf '%s\n' "$INPUT_URLS" > "$urls_file"
+          notify+=(--batch "$urls_file")
+        else
+          echo "::error title=kliz::set the sitemap or urls input"
+          exit 2
+        fi
+
+        if [[ "$INPUT_DRY_RUN" == "true" ]]; then
+          "$kliz" -v notify "${notify[@]}" --dry-run
+          exit 0
+        fi
+
+        if [[ "$INPUT_VERIFY_KEY" == "true" && -n "$KLIZ_INDEXNOW_API_KEY" ]]; then
+          "$kliz" indexnow verify-key
+        fi
+        "$kliz" -v notify "${notify[@]}"
