@@ -1,5 +1,6 @@
 """Google Indexing API and Search Console providers."""
 
+import logging
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,8 @@ except ImportError as exc:  # pragma: no cover - covered by the wheel CI job
     _GOOGLE_IMPORT_ERROR: ImportError | None = exc
 else:
     _GOOGLE_IMPORT_ERROR = None
+
+logger = logging.getLogger(__name__)
 
 _DOMAIN_PROPERTY_PREFIX = "sc-domain:"
 
@@ -145,6 +148,7 @@ class GoogleProvider(_GoogleApiProvider):
 
         parse_http_url(url, require_clean=not self.allow_query)
         normalized_url = normalize_url(url)
+        logger.debug("%s: publishing URL_UPDATED for %s", self.name, normalized_url)
         service = self._get_service()
         self._execute(
             service.urlNotifications().publish(
@@ -232,6 +236,12 @@ class GoogleSearchConsoleProvider(_GoogleApiProvider):
         return parsed_url
 
     def _submit(self) -> bool:
+        logger.debug(
+            "%s: resubmitting %s to property %s",
+            self.name,
+            self.sitemap_url,
+            self.site_url,
+        )
         service = self._get_service()
         self._execute(
             service.sitemaps().submit(siteUrl=self.site_url, feedpath=self.sitemap_url)

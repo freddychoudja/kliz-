@@ -489,6 +489,39 @@ twine check --strict dist/*
 pip-audit . --strict
 ```
 
+## Logging and metrics
+
+`kliz` logs on the `kliz` logger (and its `kliz.core`, `kliz.sitemap`,
+`kliz.providers.*` children) and stays silent until your application configures
+logging: successes and retries at `INFO`, failures and rejected URLs at
+`WARNING`, HTTP requests at `DEBUG`. API keys are never logged; key file URLs
+show the key as `<key>`. On the command line, `-v` prints `INFO` and `-vv`
+`DEBUG` to stderr; the GitHub Action runs with `-v`.
+
+```python
+import logging
+
+from kliz import Kliz, NotificationResult, RetryEvent
+
+logging.basicConfig(level=logging.INFO)
+
+
+def record(result: NotificationResult) -> None:
+    metrics.increment(f"indexing.{result.provider}.{'ok' if result.success else 'failed'}")
+
+
+def on_retry(event: RetryEvent) -> None:
+    metrics.increment(f"indexing.{event.provider}.retry")
+
+
+indexer = Kliz(providers, max_attempts=3, on_result=record, on_retry=on_retry)
+```
+
+`on_result` receives every final `NotificationResult` (including URLs rejected
+before sending) and `on_retry` a `RetryEvent` (`provider`, `attempt`, `delay`,
+`error`, `urls`) before each wait. An exception raised by a hook is logged and
+ignored, so metrics can never break indexing.
+
 ## Production use
 
 The package stores no secrets and imposes no task system. In the application

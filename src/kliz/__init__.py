@@ -1,5 +1,6 @@
 """Public API for kliz."""
 
+import logging
 from importlib.metadata import PackageNotFoundError, version
 
 from kliz._validation import normalize_url
@@ -12,7 +13,7 @@ from kliz.providers import (
     GoogleSearchConsoleProvider,
     IndexNowProvider,
 )
-from kliz.results import NotificationResult
+from kliz.results import NotificationResult, RetryEvent
 from kliz.sitemap import SitemapError, read_sitemap
 
 __all__ = [
@@ -26,10 +27,13 @@ __all__ = [
     "MissingDependencyError",
     "NotificationResult",
     "ProviderError",
+    "RetryEvent",
     "SitemapError",
     "normalize_url",
     "read_sitemap",
 ]
+
+logging.getLogger("kliz").addHandler(logging.NullHandler())
 
 try:
     __version__ = version("kliz")

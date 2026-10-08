@@ -116,11 +116,11 @@ runs:
         fi
 
         if [[ "$INPUT_DRY_RUN" == "true" ]]; then
-          "$kliz" notify "${notify[@]}" --dry-run
+          "$kliz" -v notify "${notify[@]}" --dry-run
           exit 0
         fi
 
         if [[ "$INPUT_VERIFY_KEY" == "true" && -n "$KLIZ_INDEXNOW_API_KEY" ]]; then
           "$kliz" indexnow verify-key
         fi
-        "$kliz" notify "${notify[@]}"
+        "$kliz" -v notify "${notify[@]}"

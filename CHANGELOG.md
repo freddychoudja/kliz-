@@ -45,6 +45,10 @@ The project follows semantic versioning.
 - `allow_query` on `IndexNowProvider`, `BatchProvider` and `GoogleProvider`
   to accept canonical URLs with a query string; CLI `--allow-query`
   (`KLIZ_ALLOW_QUERY`) and action input `allow-query`.
+- Logging on the `kliz` logger hierarchy (silent by default through a
+  `NullHandler`), `on_result` / `on_retry` hooks on `Kliz` with the new
+  `RetryEvent`, and CLI `-v` / `-vv`. The GitHub Action logs at `INFO`. API
+  keys are redacted as `<key>` in key file messages and never logged.
 - `kliz notify --dry-run` lists the URLs without sending anything.
 
 ### Changed

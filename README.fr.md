@@ -501,6 +501,40 @@ twine check --strict dist/*
 pip-audit . --strict
 ```
 
+## Logs et métriques
+
+`kliz` journalise sur le logger `kliz` (et ses enfants `kliz.core`,
+`kliz.sitemap`, `kliz.providers.*`) et reste silencieux tant que votre
+application ne configure pas `logging` : succès et retries en `INFO`, échecs et
+URL rejetées en `WARNING`, requêtes HTTP en `DEBUG`. Les clés d'API ne sont
+jamais journalisées ; les URL de fichier clé affichent la clé sous la forme
+`<key>`. En ligne de commande, `-v` affiche le niveau `INFO` et `-vv` le niveau
+`DEBUG` sur la sortie d'erreur ; la GitHub Action s'exécute avec `-v`.
+
+```python
+import logging
+
+from kliz import Kliz, NotificationResult, RetryEvent
+
+logging.basicConfig(level=logging.INFO)
+
+
+def record(result: NotificationResult) -> None:
+    metrics.increment(f"indexing.{result.provider}.{'ok' if result.success else 'failed'}")
+
+
+def on_retry(event: RetryEvent) -> None:
+    metrics.increment(f"indexing.{event.provider}.retry")
+
+
+indexer = Kliz(providers, max_attempts=3, on_result=record, on_retry=on_retry)
+```
+
+`on_result` reçoit chaque `NotificationResult` final (y compris les URL rejetées
+avant envoi) et `on_retry` un `RetryEvent` (`provider`, `attempt`, `delay`,
+`error`, `urls`) avant chaque attente. Une exception levée par un hook est
+journalisée puis ignorée : les métriques ne peuvent jamais casser l'indexation.
+
 ## Exploitation en production
 
 Le package ne stocke aucun secret et n'impose aucun système de tâches. Dans

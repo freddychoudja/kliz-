@@ -2,6 +2,7 @@
 
 import gzip
 import io
+import logging
 import zlib
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -12,6 +13,8 @@ from defusedxml import DefusedXmlException
 from defusedxml.ElementTree import ParseError, fromstring
 
 from kliz.exceptions import KlizError
+
+logger = logging.getLogger(__name__)
 
 SITEMAP_NAMESPACE = "http://www.sitemaps.org/schemas/sitemap/0.9"
 # Sitemaps protocol limit for one (uncompressed) sitemap file.
@@ -53,6 +56,7 @@ def read_sitemap(
     try:
         urls: dict[str, None] = {}
         _collect(str(source), threshold, http, timeout, urls, set(), depth=0)
+        logger.info("read %d page URL(s) from %s", len(urls), source)
         return list(urls)
     finally:
         if owned_session:
@@ -72,6 +76,7 @@ def _collect(
     if source in visited:
         return
     visited.add(source)
+    logger.debug("reading sitemap %s", source)
 
     root = _parse(_load(source, session, timeout), source)
     kind = _local_name(root)

@@ -49,6 +49,11 @@ Le projet suit le versionnage sémantique.
 - `allow_query` sur `IndexNowProvider`, `BatchProvider` et `GoogleProvider`
   pour accepter des URL canoniques avec chaîne de requête ; option CLI
   `--allow-query` (`KLIZ_ALLOW_QUERY`) et entrée d'action `allow-query`.
+- Journalisation sur la hiérarchie de loggers `kliz` (silencieuse par défaut
+  grâce à un `NullHandler`), hooks `on_result` / `on_retry` sur `Kliz` avec le
+  nouveau `RetryEvent`, et options CLI `-v` / `-vv`. La GitHub Action journalise
+  en `INFO`. Les clés d'API sont masquées en `<key>` dans les messages de
+  fichier clé et ne sont jamais journalisées.
 - `kliz notify --dry-run` liste les URL sans rien envoyer.
 
 ### Modifié

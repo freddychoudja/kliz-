@@ -1,5 +1,6 @@
 """IndexNow provider implementation."""
 
+import logging
 import re
 import secrets
 import string
@@ -14,6 +15,8 @@ from kliz.exceptions import ProviderError
 from kliz.providers.batch import BatchProvider
 
 PayloadValue = str | list[str]
+
+logger = logging.getLogger(__name__)
 
 _KEY_ALPHABET = string.ascii_letters + string.digits
 
@@ -74,29 +77,32 @@ class IndexNowProvider(BatchProvider):
 
         Returns the verified key file URL, or raises :class:`ProviderError`
         describing what an engine would get instead of the key. Redirects are
-        not followed: engines are not required to follow them.
+        not followed: engines are not required to follow them. Messages and
+        logs show the key as ``<key>``.
         """
 
         location = self.key_file_url(site_url)
+        shown = self._redact(location)
         response = get(
             self._session,
             location,
             timeout=self.timeout,
             provider=self.name,
             allow_redirects=False,
+            log_url=shown,
         )
         status_code = response.status_code
         if 300 <= status_code < 400:
-            target = response.headers.get("Location", "another URL")
+            target = self._redact(response.headers.get("Location", "another URL"))
             raise ProviderError(
-                f"key file {location} redirects (HTTP {status_code}) to {target};"
+                f"key file {shown} redirects (HTTP {status_code}) to {target};"
                 " serve it directly with HTTP 200",
                 provider=self.name,
                 status_code=status_code,
             )
         if status_code != 200:
             raise ProviderError(
-                f"key file {location} returned HTTP {status_code}",
+                f"key file {shown} returned HTTP {status_code}",
                 provider=self.name,
                 retryable=status_code == 429 or status_code >= 500,
                 status_code=status_code,
@@ -108,17 +114,20 @@ class IndexNowProvider(BatchProvider):
         content_type = response.headers.get("Content-Type", "").lower()
         if "html" in content_type or body.startswith("<"):
             raise ProviderError(
-                f"key file {location} returned an HTML page instead of the key;"
+                f"key file {shown} returned an HTML page instead of the key;"
                 " the file is probably missing and the site answers 200 for"
                 " unknown paths",
                 provider=self.name,
                 status_code=status_code,
             )
         raise ProviderError(
-            f"key file {location} does not contain the API key",
+            f"key file {shown} does not contain the API key",
             provider=self.name,
             status_code=status_code,
         )
+
+    def _redact(self, text: str) -> str:
+        return text.replace(self.api_key, "<key>")
 
     def _notify_many(
         self,
@@ -137,6 +146,13 @@ class IndexNowProvider(BatchProvider):
         if self.key_location:
             payload["keyLocation"] = self.key_location
 
+        logger.debug(
+            "%s: submitting %d URL(s) for %s to %s",
+            self.name,
+            len(urls),
+            host,
+            self.endpoint,
+        )
         response = post_json(
             self._session,
             self.endpoint,

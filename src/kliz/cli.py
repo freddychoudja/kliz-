@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 import sys
 from collections.abc import Callable
@@ -30,6 +31,7 @@ def main(argv: list[str] | None = None) -> int:
     except SystemExit as exc:
         code: int = exc.code if isinstance(exc.code, int) else 0
         return code
+    _configure_logging(args.verbose)
     try:
         command: Callable[[argparse.Namespace], int] = args.command
         return command(args)
@@ -47,6 +49,25 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
 
+_LOG_HANDLER_NAME = "kliz-cli"
+
+
+def _configure_logging(verbosity: int) -> None:
+    """Send ``kliz`` log records to stderr when -v is given."""
+
+    kliz_logger = logging.getLogger("kliz")
+    for handler in list(kliz_logger.handlers):
+        if handler.get_name() == _LOG_HANDLER_NAME:
+            kliz_logger.removeHandler(handler)
+    if verbosity <= 0:
+        return
+    handler = logging.StreamHandler(sys.stderr)
+    handler.set_name(_LOG_HANDLER_NAME)
+    handler.setFormatter(logging.Formatter("%(levelname)s %(name)s: %(message)s"))
+    kliz_logger.addHandler(handler)
+    kliz_logger.setLevel(logging.INFO if verbosity == 1 else logging.DEBUG)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="kliz",
@@ -59,6 +80,13 @@ def _build_parser() -> argparse.ArgumentParser:
         "--version",
         action="version",
         version=__version__,
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="count",
+        default=0,
+        help="Log progress to stderr (-v: info, -vv: debug with HTTP details)",
     )
     parser.add_argument(
         "--indexnow-api-key",
@@ -250,7 +278,8 @@ def _cmd_indexnow_verify_key(args: argparse.Namespace) -> int:
         location = provider.verify_key(args.site)
     finally:
         provider.close()
-    print(f"✅ {location} serves the IndexNow key")
+    shown = location.replace(args.indexnow_api_key, "<key>")
+    print(f"✅ {shown} serves the IndexNow key")
     return 0
 
 

@@ -414,7 +414,7 @@ def test_indexnow_verify_key_success(capsys: pytest.CaptureFixture[str]) -> None
 
     assert exit_code == 0
     verify.assert_called_once_with("https://a.example")
-    assert "✅ https://a.example/abcdefgh.txt" in capsys.readouterr().out
+    assert "✅ https://a.example/<key>.txt" in capsys.readouterr().out
 
 
 def test_indexnow_verify_key_failure_exits_1(

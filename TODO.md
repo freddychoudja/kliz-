@@ -191,7 +191,7 @@
 | 9 | 🔴 v0.2.1 | Retry intelligent | `Retry-After`, plafond, vrai jitter, échéance globale | ✅ |
 | 10 | 🔴 v0.2.1 | Normalisation des URL | `allow_query`, IDN, ports par défaut, dédoublonnage | ✅ |
 | 11 | 🟠 v0.3 | Packaging mondial | Anglais d’abord, extra `[google]`, fin de Python 3.9 | ✅ |
-| 12 | 🟠 v0.3 | Observabilité | `logging`, hooks d’événements, zéro fuite de secret | ⬜ |
+| 12 | 🟠 v0.3 | Observabilité | `logging`, hooks d’événements, zéro fuite de secret | ✅ |
 | 13 | 🟠 v0.3 | CLI professionnelle | `--json`, `--dry-run`, stdin, `keygen`/`verify-key`, config | ⬜ |
 | 14 | 🟡 v0.4 | Sitemaps ⭐ | « Donnez-nous votre sitemap » : index, gzip, `lastmod` | ✅ |
 | 15 | 🟡 v0.4 | État & quotas | Ne notifier que ce qui a changé, respecter les quotas | ⬜ |
@@ -288,16 +288,18 @@
 
 ---
 
-## **Phase 12 — Observabilité** 🟠
+## **Phase 12 — Observabilité** ✅
 
 > **Expliqué simplement :** en production, `kliz` est muet : aucun log. Quand ça casse à
 > 3 h du matin, personne ne sait ce qui s’est passé.
 
 ### Travail demandé
 
-- [ ] `logging.getLogger("kliz")` : requêtes, statuts, tentatives, délais (niveau DEBUG/INFO)
-- [ ] Hook optionnel `on_result` / `on_retry` sur `Kliz` (métriques, Prometheus, OTel)
-- [ ] Test garantissant que la clé IndexNow n’apparaît **jamais** dans les logs ni les erreurs
+- [x] `logging.getLogger("kliz")` : requêtes, statuts, tentatives, délais (niveau DEBUG/INFO)
+- [x] Hook optionnel `on_result` / `on_retry` sur `Kliz` (métriques, Prometheus, OTel)
+- [x] Test garantissant que la clé IndexNow n’apparaît **jamais** dans les logs ni les erreurs
+- [x] Bonus : `-v` / `-vv` dans la CLI ; Action en `-v` ; le test de fuite a trouvé et
+      corrigé une vraie fuite (message d’exception réseau contenant l’URL du fichier clé)
 
 ---
 
