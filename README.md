@@ -422,6 +422,8 @@ kliz notify --batch urls.txt          # one URL per line, `#` for comments
 kliz notify --sitemap https://example.com/sitemap.xml   # every page of a sitemap
 kliz notify --sitemap https://example.com/sitemap.xml --since 2026-10-01
 kliz notify --sitemap sitemap.xml --dry-run             # list, send nothing
+cat urls.txt | kliz notify -          # URLs from stdin (also --batch -)
+kliz notify --sitemap sitemap.xml --json                # machine-readable report
 kliz providers                        # list configured providers
 kliz --version
 ```
@@ -433,6 +435,31 @@ Console, set `--gsc-site` and `--gsc-service-account-file` (`KLIZ_GSC_SITE`,
 else the `--sitemap` URL, else `<property>/sitemap.xml`. The process exits
 with code `0` when everything succeeded, `1` on notification failure and `2` on
 invalid configuration.
+
+### Settings file
+
+Instead of long options, put the settings in `kliz.toml`, or under
+`[tool.kliz]` in `pyproject.toml`, in the directory where you run `kliz`
+(or pass `--config PATH`). Keys are the long option names:
+
+```toml
+# kliz.toml
+sitemap = "https://example.com/sitemap.xml"   # used by `kliz notify` with no URL
+indexnow-key-location = "https://example.com/your-key.txt"
+gsc-site = "https://example.com/"
+max-attempts = 3
+timeout = 15
+allow-query = false
+```
+
+Command-line options win over `KLIZ_*` environment variables, which win over
+the file. Keep secrets (`indexnow-api-key`, service account files) in the
+environment or a secrets manager rather than in a committed file. `--timeout`
+(`KLIZ_TIMEOUT`) sets the network timeout for every provider and sitemap.
+
+`--json` prints one JSON document on stdout, with `ok`, `dry_run`, the `urls`
+and, per provider, every result (`success`, `urls`, `error`, `status_code`,
+`retryable`, `retry_after`, `attempts`); the exit code is unchanged.
 
 ### Sitemaps
 

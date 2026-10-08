@@ -49,6 +49,12 @@ The project follows semantic versioning.
   `NullHandler`), `on_result` / `on_retry` hooks on `Kliz` with the new
   `RetryEvent`, and CLI `-v` / `-vv`. The GitHub Action logs at `INFO`. API
   keys are redacted as `<key>` in key file messages and never logged.
+- CLI settings file: `kliz.toml` or `[tool.kliz]` in `pyproject.toml` (or
+  `--config PATH`), below flags and `KLIZ_*` variables in precedence; a
+  `sitemap` setting makes `kliz notify` work without arguments. New `tomli`
+  dependency on Python 3.10 only.
+- `kliz notify --json` report, URLs from stdin (`kliz notify -`,
+  `--batch -`) and `--timeout` (`KLIZ_TIMEOUT`).
 - `kliz notify --dry-run` lists the URLs without sending anything.
 
 ### Changed
@@ -58,6 +64,9 @@ The project follows semantic versioning.
 
 - Retry jitter is proportional (up to 25 % of the delay) instead of a fixed
   0–0.25 s.
+
+- Invalid provider settings in the CLI (such as a malformed IndexNow key) exit
+  with code `2` and a clear message instead of an "unexpected error".
 
 ### Fixed
 

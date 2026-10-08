@@ -192,7 +192,7 @@
 | 10 | 🔴 v0.2.1 | Normalisation des URL | `allow_query`, IDN, ports par défaut, dédoublonnage | ✅ |
 | 11 | 🟠 v0.3 | Packaging mondial | Anglais d’abord, extra `[google]`, fin de Python 3.9 | ✅ |
 | 12 | 🟠 v0.3 | Observabilité | `logging`, hooks d’événements, zéro fuite de secret | ✅ |
-| 13 | 🟠 v0.3 | CLI professionnelle | `--json`, `--dry-run`, stdin, `keygen`/`verify-key`, config | ⬜ |
+| 13 | 🟠 v0.3 | CLI professionnelle | `--json`, `--dry-run`, stdin, `keygen`/`verify-key`, config | ✅ |
 | 14 | 🟡 v0.4 | Sitemaps ⭐ | « Donnez-nous votre sitemap » : index, gzip, `lastmod` | ✅ |
 | 15 | 🟡 v0.4 | État & quotas | Ne notifier que ce qui a changé, respecter les quotas | ⬜ |
 | 16 | 🟡 v0.4 | Plus de moteurs + plugins | Bing, Yandex, Naver, Seznam, Baidu… + entry points | ⬜ |
@@ -303,18 +303,18 @@
 
 ---
 
-## **Phase 13 — CLI professionnelle** 🟠
+## **Phase 13 — CLI professionnelle** ✅
 
 ### Travail demandé
 
-- [ ] `--json` (sortie machine pour CI/scripts), lecture depuis stdin (`-`)
+- [x] `--json` (sortie machine pour CI/scripts), lecture depuis stdin (`-`)
 - [x] `--dry-run`
 - [x] `--max-attempts`
-- [ ] `--timeout`
+- [x] `--timeout`
 - [x] `kliz indexnow keygen` (génère une clé + le fichier à publier)
 - [x] `kliz indexnow verify-key` (vérifie que le fichier clé est bien servi en ligne,
       y compris le piège « 200 + page HTML » des SPA, testé sur almight.me)
-- [ ] Configuration par fichier : `[tool.kliz]` dans `pyproject.toml` ou `kliz.toml`
+- [x] Configuration par fichier : `[tool.kliz]` dans `pyproject.toml` ou `kliz.toml`
 - [x] Ignorer les lignes `#` même indentées (bug mineur : `line.startswith("#")` sans `strip`)
 
 ---

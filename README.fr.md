@@ -431,6 +431,8 @@ kliz notify --batch urls.txt          # une URL par ligne, `#` pour un commentai
 kliz notify --sitemap https://example.com/sitemap.xml   # toutes les pages d'un sitemap
 kliz notify --sitemap https://example.com/sitemap.xml --since 2026-10-01
 kliz notify --sitemap sitemap.xml --dry-run             # lister sans rien envoyer
+cat urls.txt | kliz notify -          # URL depuis l'entrée standard (aussi --batch -)
+kliz notify --sitemap sitemap.xml --json                # rapport lisible par une machine
 kliz providers                        # liste des providers configurés
 kliz --version
 ```
@@ -442,6 +444,33 @@ Console, renseignez `--gsc-site` et `--gsc-service-account-file`
 `--gsc-sitemap`, sinon l'URL de `--sitemap`, sinon `<propriété>/sitemap.xml`. Le processus
 termine avec le code `0` si tout a réussi, `1` en cas d'échec de notification
 et `2` en cas de configuration invalide.
+
+### Fichier de configuration
+
+Plutôt que de longues options, placez la configuration dans `kliz.toml`, ou
+sous `[tool.kliz]` dans `pyproject.toml`, dans le dossier où vous lancez `kliz`
+(ou passez `--config CHEMIN`). Les clés reprennent le nom des options longues :
+
+```toml
+# kliz.toml
+sitemap = "https://example.com/sitemap.xml"   # utilisé par `kliz notify` sans URL
+indexnow-key-location = "https://example.com/votre-cle.txt"
+gsc-site = "https://example.com/"
+max-attempts = 3
+timeout = 15
+allow-query = false
+```
+
+Les options de la ligne de commande l'emportent sur les variables `KLIZ_*`,
+qui l'emportent sur le fichier. Gardez les secrets (`indexnow-api-key`,
+fichiers de compte de service) dans l'environnement ou un gestionnaire de
+secrets plutôt que dans un fichier versionné. `--timeout` (`KLIZ_TIMEOUT`)
+règle le délai réseau de tous les providers et sitemaps.
+
+`--json` affiche un document JSON sur la sortie standard, avec `ok`, `dry_run`,
+les `urls` et, par provider, chaque résultat (`success`, `urls`, `error`,
+`status_code`, `retryable`, `retry_after`, `attempts`) ; le code de sortie est
+inchangé.
 
 ### Sitemaps
 

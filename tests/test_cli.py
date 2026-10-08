@@ -270,6 +270,7 @@ def test_build_indexer_creates_indexnow() -> None:
         gsc_site=None,
         max_attempts=1,
         allow_query=False,
+        timeout=None,
     )
     indexer = _build_indexer(args)
     assert len(indexer.providers) == 1
@@ -286,6 +287,7 @@ def test_build_indexer_requires_key_location() -> None:
         gsc_site=None,
         max_attempts=1,
         allow_query=False,
+        timeout=None,
     )
     with pytest.raises(ConfigurationError, match="key-location"):
         _build_indexer(args)
@@ -301,6 +303,7 @@ def test_build_indexer_creates_google() -> None:
         gsc_site=None,
         max_attempts=1,
         allow_query=False,
+        timeout=None,
     )
     indexer = _build_indexer(args)
     assert len(indexer.providers) == 1
@@ -317,6 +320,7 @@ def test_build_indexer_no_providers_gives_config_error() -> None:
         gsc_site=None,
         max_attempts=1,
         allow_query=False,
+        timeout=None,
     )
     with pytest.raises(ConfigurationError, match="no providers configured"):
         _build_indexer(args)
@@ -550,6 +554,7 @@ def _gsc_args(**overrides: object) -> argparse.Namespace:
         "gsc_service_account_file": "/dev/null",
         "max_attempts": 1,
         "allow_query": False,
+        "timeout": None,
     }
     values.update(overrides)
     return argparse.Namespace(**values)

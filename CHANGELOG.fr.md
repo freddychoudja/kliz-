@@ -54,6 +54,12 @@ Le projet suit le versionnage sémantique.
   nouveau `RetryEvent`, et options CLI `-v` / `-vv`. La GitHub Action journalise
   en `INFO`. Les clés d'API sont masquées en `<key>` dans les messages de
   fichier clé et ne sont jamais journalisées.
+- Fichier de configuration de la CLI : `kliz.toml` ou `[tool.kliz]` dans
+  `pyproject.toml` (ou `--config CHEMIN`), après les options et les variables
+  `KLIZ_*` en priorité ; un réglage `sitemap` permet `kliz notify` sans
+  argument. Nouvelle dépendance `tomli` sous Python 3.10 uniquement.
+- Rapport `kliz notify --json`, URL depuis l'entrée standard (`kliz notify -`,
+  `--batch -`) et `--timeout` (`KLIZ_TIMEOUT`).
 - `kliz notify --dry-run` liste les URL sans rien envoyer.
 
 ### Modifié
@@ -63,6 +69,10 @@ Le projet suit le versionnage sémantique.
 
 - Le jitter du retry est proportionnel (jusqu'à 25 % du délai) au lieu d'un
   fixe de 0 à 0,25 s.
+
+- Des réglages de provider invalides dans la CLI (comme une clé IndexNow mal
+  formée) terminent avec le code `2` et un message clair au lieu d'une
+  « erreur inattendue ».
 
 ### Corrigé
 
