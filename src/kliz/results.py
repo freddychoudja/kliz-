@@ -1,7 +1,6 @@
 """Result models returned by the kliz orchestrator."""
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -11,6 +10,6 @@ class NotificationResult:
     provider: str
     success: bool
     retryable: bool = False
-    error: Optional[str] = None
-    status_code: Optional[int] = None
+    error: str | None = None
+    status_code: int | None = None
     urls: tuple[str, ...] = ()

@@ -1,6 +1,6 @@
 """Unit tests for the built-in indexing providers."""
 
-from typing import Callable, Optional
+from collections.abc import Callable
 from unittest.mock import Mock, patch
 
 import httplib2
@@ -406,8 +406,8 @@ def _verifying_provider(
     *,
     status_code: int = 200,
     text: str = "indexnow-key",
-    headers: Optional[dict[str, str]] = None,
-    key_location: Optional[str] = None,
+    headers: dict[str, str] | None = None,
+    key_location: str | None = None,
 ) -> tuple[IndexNowProvider, Mock]:
     session = make_mock_session()
     session.get.return_value = Mock(
@@ -597,7 +597,7 @@ def test_search_console_resubmits_the_sitemap(
 )
 def test_search_console_normalizes_property_and_default_sitemap(
     site_url: str,
-    sitemap_url: Optional[str],
+    sitemap_url: str | None,
     expected_site: str,
     expected_sitemap: str,
 ) -> None:

@@ -12,6 +12,8 @@ Le projet suit le versionnage sémantique.
   Sans lui, ils lèvent `MissingDependencyError` (une `ImportError`) et la CLI
   termine avec le code `2`. Un simple `pip install kliz` passe d'environ 144 Mo
   et 24 paquets à environ 4 Mo et 7.
+- Python 3.10 ou plus récent est requis (Python 3.9 est en fin de vie depuis
+  octobre 2025).
 
 ### Ajouté
 

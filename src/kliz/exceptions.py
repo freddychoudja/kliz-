@@ -1,7 +1,5 @@
 """Exceptions exposed by kliz."""
 
-from typing import Optional
-
 
 class KlizError(Exception):
     """Base class for all kliz-specific errors."""
@@ -20,7 +18,7 @@ class ProviderError(KlizError):
         *,
         provider: str,
         retryable: bool = False,
-        status_code: Optional[int] = None,
+        status_code: int | None = None,
     ) -> None:
         super().__init__(message)
         self.provider = provider

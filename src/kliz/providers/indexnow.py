@@ -4,7 +4,6 @@ import re
 import secrets
 import string
 from pathlib import PurePosixPath
-from typing import Optional, Union
 from urllib.parse import SplitResult
 
 import requests
@@ -14,7 +13,7 @@ from kliz._validation import parse_http_url
 from kliz.exceptions import ProviderError
 from kliz.providers.batch import BatchProvider
 
-PayloadValue = Union[str, list[str]]
+PayloadValue = str | list[str]
 
 _KEY_ALPHABET = string.ascii_letters + string.digits
 
@@ -29,10 +28,10 @@ class IndexNowProvider(BatchProvider):
     def __init__(
         self,
         api_key: str,
-        key_location: Optional[str] = None,
+        key_location: str | None = None,
         timeout: float = 10.0,
         *,
-        session: Optional[requests.Session] = None,
+        session: requests.Session | None = None,
     ) -> None:
         if not isinstance(api_key, str) or not self._key_pattern.fullmatch(api_key):
             raise ValueError(
@@ -55,7 +54,7 @@ class IndexNowProvider(BatchProvider):
             raise ValueError("length must be between 8 and 128")
         return "".join(secrets.choice(_KEY_ALPHABET) for _ in range(length))
 
-    def key_file_url(self, site_url: Optional[str] = None) -> str:
+    def key_file_url(self, site_url: str | None = None) -> str:
         """Return where engines look for the key file.
 
         That is ``key_location`` when set, otherwise ``<site>/<key>.txt`` at the
@@ -69,7 +68,7 @@ class IndexNowProvider(BatchProvider):
         site = parse_http_url(site_url)
         return f"{site.scheme.lower()}://{site.netloc}/{self.api_key}.txt"
 
-    def verify_key(self, site_url: Optional[str] = None) -> str:
+    def verify_key(self, site_url: str | None = None) -> str:
         """Check that the key file is published the way engines expect.
 
         Returns the verified key file URL, or raises :class:`ProviderError`

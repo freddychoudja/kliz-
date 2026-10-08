@@ -1,7 +1,7 @@
 """Shared HTTP helpers for indexing providers."""
 
 from collections.abc import Mapping
-from typing import Any, Optional
+from typing import Any
 
 import requests
 
@@ -10,7 +10,7 @@ from kliz.exceptions import ProviderError
 DEFAULT_SUCCESS_STATUSES: set[int] = {200, 202}
 
 
-def create_session(session: Optional[requests.Session] = None) -> requests.Session:
+def create_session(session: requests.Session | None = None) -> requests.Session:
     """Return *session* or a fresh :class:`requests.Session`."""
 
     return session if session is not None else requests.Session()
@@ -80,7 +80,7 @@ def raise_for_indexing_status(
     response: requests.Response,
     *,
     provider: str,
-    success_statuses: Optional[set[int]] = None,
+    success_statuses: set[int] | None = None,
 ) -> bool:
     """Return ``True`` for accepted statuses or raise :class:`ProviderError`."""
 

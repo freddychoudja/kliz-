@@ -2,7 +2,6 @@
 
 from abc import abstractmethod
 from collections.abc import Sequence
-from typing import Optional
 from urllib.parse import SplitResult
 
 import requests
@@ -25,7 +24,7 @@ class BatchProvider(BaseProvider):
         self,
         *,
         timeout: float = 10.0,
-        session: Optional[requests.Session] = None,
+        session: requests.Session | None = None,
     ) -> None:
         if timeout <= 0:
             raise ValueError("timeout must be greater than zero")

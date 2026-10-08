@@ -2,7 +2,7 @@
 
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 from urllib.parse import SplitResult
 
 from kliz._validation import parse_http_url
@@ -17,7 +17,7 @@ try:
     from googleapiclient.discovery import build
     from googleapiclient.errors import HttpError
 except ImportError as exc:  # pragma: no cover - covered by the wheel CI job
-    _GOOGLE_IMPORT_ERROR: Optional[ImportError] = exc
+    _GOOGLE_IMPORT_ERROR: ImportError | None = exc
 else:
     _GOOGLE_IMPORT_ERROR = None
 
@@ -33,7 +33,7 @@ class _GoogleApiProvider(BaseProvider):
 
     def __init__(
         self,
-        service_account_file: Union[str, Path],
+        service_account_file: str | Path,
         *,
         timeout: float,
         num_retries: int,
@@ -53,7 +53,7 @@ class _GoogleApiProvider(BaseProvider):
         self.service_account_file = service_account_file
         self.timeout = timeout
         self.num_retries = num_retries
-        self._service: Optional[Any] = None
+        self._service: Any | None = None
 
     def _execute(self, request: Any) -> None:
         """Run a Google API request, mapping failures to :class:`ProviderError`."""
@@ -124,7 +124,7 @@ class GoogleProvider(_GoogleApiProvider):
 
     def __init__(
         self,
-        service_account_file: Union[str, Path],
+        service_account_file: str | Path,
         *,
         timeout: float = 60.0,
         num_retries: int = 2,
@@ -166,9 +166,9 @@ class GoogleSearchConsoleProvider(_GoogleApiProvider):
 
     def __init__(
         self,
-        service_account_file: Union[str, Path],
+        service_account_file: str | Path,
         site_url: str,
-        sitemap_url: Optional[str] = None,
+        sitemap_url: str | None = None,
         *,
         timeout: float = 60.0,
         num_retries: int = 2,

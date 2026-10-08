@@ -72,7 +72,7 @@ class Kliz:
 
         return {
             name: self._notify_provider(provider, url)
-            for provider, name in zip(self.providers, self._result_names())
+            for provider, name in zip(self.providers, self._result_names(), strict=True)
         }
 
     def notify_many(self, urls: Sequence[str]) -> dict[str, bool]:
@@ -98,7 +98,7 @@ class Kliz:
         url_list = self._validate_urls(urls)
         return {
             name: self._notify_provider_many(provider, url_list)
-            for provider, name in zip(self.providers, self._result_names())
+            for provider, name in zip(self.providers, self._result_names(), strict=True)
         }
 
     def _notify_provider(self, provider: BaseProvider, url: str) -> NotificationResult:

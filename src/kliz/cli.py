@@ -5,8 +5,8 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from collections.abc import Callable
 from datetime import datetime
-from typing import Callable
 
 from kliz import Kliz, __version__
 from kliz.exceptions import KlizError, MissingDependencyError

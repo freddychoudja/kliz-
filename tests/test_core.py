@@ -1,6 +1,5 @@
 """Tests for provider orchestration."""
 
-from typing import Optional
 from unittest.mock import Mock
 
 import pytest
@@ -339,7 +338,7 @@ def test_notify_many_continues_across_providers() -> None:
 
 
 def _indexnow_with_session(
-    key_location: Optional[str] = None,
+    key_location: str | None = None,
 ) -> tuple[IndexNowProvider, Mock]:
     session = make_mock_session()
     session.post.return_value = Mock(status_code=200)
