@@ -5,6 +5,8 @@ Le projet suit le versionnage sémantique.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-08
+
 ### Ajouté
 
 - Identité visuelle « Signal » dans `docs/brand/` : symbole, logos horizontaux et

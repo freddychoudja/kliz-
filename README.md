@@ -118,7 +118,7 @@ jobs:
       github.event.deployment_status.environment == 'Production'
     runs-on: ubuntu-latest
     steps:
-      - uses: freddychoudja/kliz-@v0.3.0
+      - uses: freddychoudja/kliz-@v0.3.1
         with:
           sitemap: https://example.com/sitemap.xml
           indexnow-api-key: ${{ secrets.INDEXNOW_KEY }}
