@@ -1,17 +1,22 @@
 """IndexNow provider implementation."""
 
 import re
+import secrets
+import string
 from pathlib import PurePosixPath
 from typing import Optional, Union
 from urllib.parse import SplitResult
 
 import requests
 
-from kliz._http import post_json, raise_for_indexing_status
+from kliz._http import get, post_json, raise_for_indexing_status
 from kliz._validation import parse_http_url
+from kliz.exceptions import ProviderError
 from kliz.providers.batch import BatchProvider
 
 PayloadValue = Union[str, list[str]]
+
+_KEY_ALPHABET = string.ascii_letters + string.digits
 
 
 class IndexNowProvider(BatchProvider):
@@ -39,6 +44,81 @@ class IndexNowProvider(BatchProvider):
         super().__init__(timeout=timeout, session=session)
         self.api_key = api_key
         self.key_location = key_location
+
+    @staticmethod
+    def generate_key(length: int = 32) -> str:
+        """Return a new random IndexNow key of *length* letters and digits."""
+
+        if isinstance(length, bool) or not isinstance(length, int):
+            raise TypeError("length must be an integer")
+        if not 8 <= length <= 128:
+            raise ValueError("length must be between 8 and 128")
+        return "".join(secrets.choice(_KEY_ALPHABET) for _ in range(length))
+
+    def key_file_url(self, site_url: Optional[str] = None) -> str:
+        """Return where engines look for the key file.
+
+        That is ``key_location`` when set, otherwise ``<site>/<key>.txt`` at the
+        root of *site_url*, as the IndexNow protocol specifies.
+        """
+
+        if self.key_location is not None:
+            return self.key_location
+        if site_url is None:
+            raise ValueError("site_url is required when key_location is not set")
+        site = parse_http_url(site_url)
+        return f"{site.scheme.lower()}://{site.netloc}/{self.api_key}.txt"
+
+    def verify_key(self, site_url: Optional[str] = None) -> str:
+        """Check that the key file is published the way engines expect.
+
+        Returns the verified key file URL, or raises :class:`ProviderError`
+        describing what an engine would get instead of the key. Redirects are
+        not followed: engines are not required to follow them.
+        """
+
+        location = self.key_file_url(site_url)
+        response = get(
+            self._session,
+            location,
+            timeout=self.timeout,
+            provider=self.name,
+            allow_redirects=False,
+        )
+        status_code = response.status_code
+        if 300 <= status_code < 400:
+            target = response.headers.get("Location", "another URL")
+            raise ProviderError(
+                f"key file {location} redirects (HTTP {status_code}) to {target};"
+                " serve it directly with HTTP 200",
+                provider=self.name,
+                status_code=status_code,
+            )
+        if status_code != 200:
+            raise ProviderError(
+                f"key file {location} returned HTTP {status_code}",
+                provider=self.name,
+                retryable=status_code == 429 or status_code >= 500,
+                status_code=status_code,
+            )
+
+        body = response.text.strip()
+        if body == self.api_key:
+            return location
+        content_type = response.headers.get("Content-Type", "").lower()
+        if "html" in content_type or body.startswith("<"):
+            raise ProviderError(
+                f"key file {location} returned an HTML page instead of the key;"
+                " the file is probably missing and the site answers 200 for"
+                " unknown paths",
+                provider=self.name,
+                status_code=status_code,
+            )
+        raise ProviderError(
+            f"key file {location} does not contain the API key",
+            provider=self.name,
+            status_code=status_code,
+        )
 
     def _notify_many(
         self,

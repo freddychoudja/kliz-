@@ -26,8 +26,43 @@ def post_json(
 ) -> requests.Response:
     """POST JSON and map transport failures to :class:`ProviderError`."""
 
+    return _send(
+        session, "POST", url, provider=provider, json=dict(payload), timeout=timeout
+    )
+
+
+def get(
+    session: requests.Session,
+    url: str,
+    *,
+    timeout: float,
+    provider: str,
+    allow_redirects: bool = True,
+) -> requests.Response:
+    """GET *url* and map transport failures to :class:`ProviderError`."""
+
+    return _send(
+        session,
+        "GET",
+        url,
+        provider=provider,
+        timeout=timeout,
+        allow_redirects=allow_redirects,
+    )
+
+
+def _send(
+    session: requests.Session,
+    method: str,
+    url: str,
+    *,
+    provider: str,
+    **kwargs: Any,
+) -> requests.Response:
     try:
-        return session.post(url, json=dict(payload), timeout=timeout)
+        if method == "POST":
+            return session.post(url, **kwargs)
+        return session.get(url, **kwargs)
     except (requests.Timeout, requests.ConnectionError) as exc:
         raise ProviderError(
             f"{provider} could not be reached",
