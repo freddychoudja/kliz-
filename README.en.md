@@ -67,6 +67,11 @@ statuses = indexer.notify_many(
 )
 ```
 
+URLs are deduplicated and grouped by host. An invalid URL gets its own failed
+result instead of sinking the whole batch; `notify_many_detailed` returns, per
+provider, a list of `NotificationResult` whose `urls` field tells which URLs
+each result covers.
+
 Built-in retry is **off by default** (`max_attempts=1`). Enable it with
 exponential backoff and jitter:
 
@@ -330,6 +335,24 @@ Credentials can also be passed as options (`--indexnow-api-key`,
 `--indexnow-key-location`, `--google-service-account-file`). The process exits
 with code `0` when everything succeeded, `1` on notification failure and `2` on
 invalid configuration.
+
+### Setting up the IndexNow key
+
+```bash
+# Generate a key and drop <key>.txt into the folder your site serves
+KEY=$(kliz indexnow keygen --write public/ --site https://example.com)
+# ...deploy the site, then check what search engines will actually see:
+kliz --indexnow-api-key "$KEY" indexnow verify-key --site https://example.com
+```
+
+`keygen` prints only the key on stdout, so it can be captured in a variable;
+the next steps go to stderr. `verify-key` fetches the key file
+(`--indexnow-key-location`, or `<site>/<key>.txt` by default) without following
+redirects and fails with an explicit message when the file is missing, redirects,
+holds another key, or when the site answers `200` with an HTML page for unknown
+paths (a common trap with single-page apps on Vercel or Netlify). The same
+checks are available from Python through `IndexNowProvider.generate_key()` and
+`provider.verify_key(site_url)`.
 
 ## Tests
 

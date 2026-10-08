@@ -1,5 +1,8 @@
 """Tests for provider orchestration."""
 
+from typing import Optional
+from unittest.mock import Mock
+
 import pytest
 from conftest import (
     BatchStubProvider,
@@ -8,6 +11,7 @@ from conftest import (
     NamedProvider,
     RecordingSleep,
     StubProvider,
+    make_mock_session,
     raise_non_retryable,
     raise_retryable,
     raise_unknown,
@@ -15,7 +19,7 @@ from conftest import (
     return_true,
 )
 
-from kliz import Kliz, NotificationResult
+from kliz import IndexNowProvider, Kliz, NotificationResult
 
 
 def test_notify_all_returns_boolean_statuses() -> None:
@@ -38,6 +42,7 @@ def test_notify_all_detailed_preserves_retry_information() -> None:
         retryable=True,
         error="temporary failure",
         status_code=429,
+        urls=("https://example.com",),
     )
 
 
@@ -97,7 +102,9 @@ def test_retry_succeeds_on_second_attempt_with_exponential_backoff() -> None:
 
     result = indexer.notify_all_detailed("https://example.com")["FlakyProvider"]
 
-    assert result == NotificationResult(provider="FlakyProvider", success=True)
+    assert result == NotificationResult(
+        provider="FlakyProvider", success=True, urls=("https://example.com",)
+    )
     assert provider.calls == 2
     assert len(sleeper.delays) == 1
     assert 1.0 <= sleeper.delays[0] <= 1.25
@@ -121,6 +128,7 @@ def test_retry_stops_after_max_attempts_and_preserves_error() -> None:
         retryable=True,
         error="temporary failure",
         status_code=429,
+        urls=("https://example.com",),
     )
     assert provider.calls == 3
     assert len(sleeper.delays) == 2
@@ -146,6 +154,7 @@ def test_non_retryable_errors_are_not_repeated() -> None:
         retryable=False,
         error="permanent failure",
         status_code=400,
+        urls=("https://example.com",),
     )
     assert provider.calls == 1
     assert sleeper.delays == []
@@ -327,3 +336,134 @@ def test_notify_many_continues_across_providers() -> None:
         "StubProvider": False,
         "BatchStubProvider": True,
     }
+
+
+def _indexnow_with_session(
+    key_location: Optional[str] = None,
+) -> tuple[IndexNowProvider, Mock]:
+    session = make_mock_session()
+    session.post.return_value = Mock(status_code=200)
+    provider = IndexNowProvider(
+        api_key="abcdefgh12", key_location=key_location, session=session
+    )
+    return provider, session
+
+
+def test_notify_many_groups_mixed_hosts_into_separate_batches() -> None:
+    provider, session = _indexnow_with_session()
+    indexer = Kliz([provider])
+
+    results = indexer.notify_many_detailed(
+        [
+            "https://a.example/1",
+            "https://www.a.example/2",
+            "https://a.example/3",
+        ]
+    )["IndexNowProvider"]
+
+    assert [r.success for r in results] == [True, True]
+    assert [r.urls for r in results] == [
+        ("https://a.example/1", "https://a.example/3"),
+        ("https://www.a.example/2",),
+    ]
+    hosts = [call.kwargs["json"]["host"] for call in session.post.call_args_list]
+    assert hosts == ["a.example", "www.a.example"]
+
+
+def test_notify_many_rejects_invalid_urls_individually() -> None:
+    provider, session = _indexnow_with_session()
+    indexer = Kliz([provider])
+
+    results = indexer.notify_many_detailed(
+        [
+            "https://a.example/1",
+            "https://a.example/2?id=1",
+            "ftp://a.example/3",
+            "https://a.example/4",
+        ]
+    )["IndexNowProvider"]
+
+    assert results[0] == NotificationResult(
+        provider="IndexNowProvider",
+        success=False,
+        error="url must not contain a query string",
+        urls=("https://a.example/2?id=1",),
+    )
+    assert results[1].success is False
+    assert results[1].urls == ("ftp://a.example/3",)
+    assert results[2] == NotificationResult(
+        provider="IndexNowProvider",
+        success=True,
+        urls=("https://a.example/1", "https://a.example/4"),
+    )
+    session.post.assert_called_once()
+    assert session.post.call_args.kwargs["json"]["urlList"] == [
+        "https://a.example/1",
+        "https://a.example/4",
+    ]
+
+
+def test_notify_many_rejects_urls_outside_key_location_individually() -> None:
+    provider, session = _indexnow_with_session(
+        key_location="https://a.example/blog/key.txt"
+    )
+    indexer = Kliz([provider])
+
+    results = indexer.notify_many_detailed(
+        ["https://a.example/blog/1", "https://a.example/shop/2"]
+    )["IndexNowProvider"]
+
+    assert results[0].success is False
+    assert results[0].urls == ("https://a.example/shop/2",)
+    assert "key_location" in str(results[0].error)
+    assert results[1].success is True
+    assert results[1].urls == ("https://a.example/blog/1",)
+    session.post.assert_called_once()
+
+
+def test_notify_many_reports_all_rejected_without_sending() -> None:
+    provider, session = _indexnow_with_session()
+    indexer = Kliz([provider])
+
+    statuses = indexer.notify_many(["https://a.example/1?x=1"])
+
+    assert statuses == {"IndexNowProvider": False}
+    session.post.assert_not_called()
+
+
+def test_notify_many_strips_and_deduplicates_urls() -> None:
+    provider = BatchStubProvider()
+    indexer = Kliz([provider])
+
+    indexer.notify_many(
+        [
+            "https://example.com/1",
+            " https://example.com/1 ",
+            "https://example.com/2",
+            "https://example.com/1",
+        ]
+    )
+
+    assert provider.batches == [["https://example.com/1", "https://example.com/2"]]
+
+
+def test_notify_many_rejects_non_string_items() -> None:
+    indexer = Kliz([StubProvider(return_true)])
+
+    with pytest.raises(TypeError, match="sequence of strings"):
+        indexer.notify_many(["https://example.com/1", 42])  # type: ignore[list-item]
+
+
+def test_notify_many_results_list_covered_urls_per_chunk() -> None:
+    provider = BatchStubProvider(max_urls_per_request=2)
+    single = StubProvider(return_true)
+    indexer = Kliz([provider, single])
+    urls = ["https://example.com/1", "https://example.com/2", "https://example.com/3"]
+
+    results = indexer.notify_many_detailed(urls)
+
+    assert [r.urls for r in results["BatchStubProvider"]] == [
+        ("https://example.com/1", "https://example.com/2"),
+        ("https://example.com/3",),
+    ]
+    assert [r.urls for r in results["StubProvider"]] == [(url,) for url in urls]

@@ -49,6 +49,15 @@ class BatchProvider(BaseProvider):
         normalized_urls, parsed_urls = self._validate_urls(urls)
         return self._notify_many(normalized_urls, parsed_urls)
 
+    def validate_url(self, url: str) -> SplitResult:
+        """Return *url* parsed, or raise ``ValueError`` if it would be rejected.
+
+        Orchestrators call this to drop invalid URLs one by one instead of
+        failing a whole batch. Subclasses add their own per-URL rules.
+        """
+
+        return parse_http_url(url, require_clean=True)
+
     @abstractmethod
     def _notify_many(
         self,
@@ -70,9 +79,7 @@ class BatchProvider(BaseProvider):
             )
 
         normalized_urls = [url.strip() for url in urls]
-        parsed_urls = [
-            parse_http_url(url, require_clean=True) for url in normalized_urls
-        ]
+        parsed_urls = [self.validate_url(url) for url in normalized_urls]
         hosts = {parsed.hostname.lower() for parsed in parsed_urls if parsed.hostname}
         if len(hosts) != 1:
             raise ValueError("all batch URLs must belong to the same host")

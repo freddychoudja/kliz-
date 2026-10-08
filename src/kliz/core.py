@@ -7,6 +7,7 @@ import time
 from collections import Counter
 from collections.abc import Callable, Iterable, Sequence
 from typing import Any
+from urllib.parse import SplitResult
 
 from kliz.exceptions import ProviderError
 from kliz.providers.base import BaseProvider
@@ -87,7 +88,11 @@ class Kliz:
     ) -> dict[str, list[NotificationResult]]:
         """Notify all providers with multiple URLs.
 
-        Preserves per-chunk outcome details without hiding errors.
+        URLs are stripped and deduplicated. For batch providers exposing
+        ``validate_url``, invalid URLs are reported as individual failures
+        (listed first) and valid ones are grouped by host before chunking, so
+        one bad or foreign URL never sinks a whole batch. Each result's
+        ``urls`` tells which URLs it covers.
         """
 
         url_list = self._validate_urls(urls)
@@ -97,38 +102,79 @@ class Kliz:
         }
 
     def _notify_provider(self, provider: BaseProvider, url: str) -> NotificationResult:
-        return self._execute_with_retry(provider, provider.notify, url)
+        return self._execute_with_retry(provider, provider.notify, url, (url,))
 
     def _notify_provider_many(
         self, provider: BaseProvider, urls: list[str]
     ) -> list[NotificationResult]:
         notify_many_fn = getattr(provider, "notify_many", None)
-        if callable(notify_many_fn):
-            max_urls = getattr(provider, "max_urls_per_request", None)
-            if isinstance(max_urls, int) and max_urls > 0:
-                chunks = [urls[i : i + max_urls] for i in range(0, len(urls), max_urls)]
-            else:
-                chunks = [urls]
-
+        if not callable(notify_many_fn):
             return [
-                self._execute_with_retry(provider, notify_many_fn, chunk)
-                for chunk in chunks
+                self._execute_with_retry(provider, provider.notify, url, (url,))
+                for url in urls
             ]
 
-        return [
-            self._execute_with_retry(provider, provider.notify, url) for url in urls
+        rejected: list[NotificationResult] = []
+        batches = [urls]
+        validate_url = getattr(provider, "validate_url", None)
+        if callable(validate_url):
+            rejected, batches = self._group_by_host(provider, validate_url, urls)
+
+        max_urls = getattr(provider, "max_urls_per_request", None)
+        if isinstance(max_urls, int) and max_urls > 0:
+            chunks = [
+                batch[i : i + max_urls]
+                for batch in batches
+                for i in range(0, len(batch), max_urls)
+            ]
+        else:
+            chunks = batches
+
+        return rejected + [
+            self._execute_with_retry(provider, notify_many_fn, chunk, tuple(chunk))
+            for chunk in chunks
         ]
 
+    @staticmethod
+    def _group_by_host(
+        provider: BaseProvider,
+        validate_url: Callable[[str], SplitResult],
+        urls: list[str],
+    ) -> tuple[list[NotificationResult], list[list[str]]]:
+        rejected: list[NotificationResult] = []
+        groups: dict[str, list[str]] = {}
+        for url in urls:
+            try:
+                parsed_url = validate_url(url)
+            except ValueError as exc:
+                rejected.append(
+                    NotificationResult(
+                        provider=provider.name,
+                        success=False,
+                        error=str(exc),
+                        urls=(url,),
+                    )
+                )
+                continue
+            host = (parsed_url.hostname or "").lower()
+            groups.setdefault(host, []).append(url)
+        return rejected, list(groups.values())
+
     def _execute_with_retry(
-        self, provider: BaseProvider, func: Callable[..., Any], *args: Any
+        self,
+        provider: BaseProvider,
+        func: Callable[[Any], Any],
+        payload: Any,
+        urls: tuple[str, ...],
     ) -> NotificationResult:
         for attempt in range(1, self.max_attempts + 1):
             try:
-                success = bool(func(*args))
+                success = bool(func(payload))
                 return NotificationResult(
                     provider=provider.name,
                     success=success,
                     error=None if success else "provider returned False",
+                    urls=urls,
                 )
             except ProviderError as exc:
                 if attempt < self.max_attempts and exc.retryable:
@@ -140,12 +186,14 @@ class Kliz:
                     retryable=exc.retryable,
                     error=str(exc),
                     status_code=exc.status_code,
+                    urls=urls,
                 )
             except Exception as exc:
                 return NotificationResult(
                     provider=provider.name,
                     success=False,
                     error=str(exc) or exc.__class__.__name__,
+                    urls=urls,
                 )
         raise AssertionError("unreachable")  # pragma: no cover
 
@@ -159,7 +207,9 @@ class Kliz:
 
         if not url_list:
             raise ValueError("urls must be a non-empty sequence")
-        return url_list
+        if not all(isinstance(url, str) for url in url_list):
+            raise TypeError("urls must be a sequence of strings")
+        return list(dict.fromkeys(url.strip() for url in url_list))
 
     def _sleep_between_attempts(self, attempt: int) -> None:
         delay = _RETRY_BASE_DELAY * (2 ** (attempt - 1))

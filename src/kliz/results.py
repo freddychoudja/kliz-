@@ -13,3 +13,4 @@ class NotificationResult:
     retryable: bool = False
     error: Optional[str] = None
     status_code: Optional[int] = None
+    urls: tuple[str, ...] = ()

@@ -68,6 +68,11 @@ statuses = indexer.notify_many(
 )
 ```
 
+Les URL sont dédoublonnées et regroupées par hôte. Une URL invalide obtient son
+propre résultat d'échec au lieu de faire échouer tout le lot ;
+`notify_many_detailed` renvoie, par provider, une liste de `NotificationResult`
+dont le champ `urls` indique les URL couvertes par chaque résultat.
+
 Le retry intégré est **désactivé par défaut** (`max_attempts=1`). Pour l'activer
 avec backoff exponentiel et jitter :
 
@@ -336,6 +341,25 @@ Les crédits se passent aussi en options (`--indexnow-api-key`,
 `--indexnow-key-location`, `--google-service-account-file`). Le processus
 termine avec le code `0` si tout a réussi, `1` en cas d'échec de notification
 et `2` en cas de configuration invalide.
+
+### Mettre en place la clé IndexNow
+
+```bash
+# Générer une clé et déposer <clé>.txt dans le dossier servi par votre site
+KEY=$(kliz indexnow keygen --write public/ --site https://example.com)
+# ...déployer le site, puis vérifier ce que les moteurs verront réellement :
+kliz --indexnow-api-key "$KEY" indexnow verify-key --site https://example.com
+```
+
+`keygen` n'écrit que la clé sur la sortie standard, pour pouvoir la capturer
+dans une variable ; les étapes suivantes vont sur la sortie d'erreur.
+`verify-key` télécharge le fichier clé (`--indexnow-key-location`, ou
+`<site>/<clé>.txt` par défaut) sans suivre les redirections et échoue avec un
+message explicite si le fichier est absent, redirige, contient une autre clé, ou
+si le site répond `200` avec une page HTML pour les chemins inconnus (piège
+fréquent des applications monopage sur Vercel ou Netlify). Les mêmes
+vérifications existent en Python via `IndexNowProvider.generate_key()` et
+`provider.verify_key(site_url)`.
 
 ## Tests
 

@@ -78,6 +78,39 @@ def _build_parser() -> argparse.ArgumentParser:
     p_notify.set_defaults(command=_cmd_notify)
     p_providers = sub.add_parser("providers", help="List configured providers")
     p_providers.set_defaults(command=_cmd_providers)
+
+    p_indexnow = sub.add_parser("indexnow", help="Manage the IndexNow key")
+    indexnow_sub = p_indexnow.add_subparsers(dest="indexnow_command", required=True)
+    p_keygen = indexnow_sub.add_parser(
+        "keygen",
+        help="Generate a key and print it (only the key goes to stdout)",
+    )
+    p_keygen.add_argument(
+        "--length", type=int, default=32, help="Key length, 8 to 128 (default 32)"
+    )
+    p_keygen.add_argument(
+        "--write",
+        metavar="DIR",
+        default=None,
+        help="Also write <key>.txt into DIR (e.g. your site's public/ folder)",
+    )
+    p_keygen.add_argument(
+        "--site",
+        default=None,
+        help="Site URL, to print where the key file must be served",
+    )
+    p_keygen.set_defaults(command=_cmd_indexnow_keygen)
+    p_verify = indexnow_sub.add_parser(
+        "verify-key",
+        help="Check that the key file is served correctly",
+    )
+    p_verify.add_argument(
+        "--site",
+        default=None,
+        help="Site URL; the key is looked up at <site>/<key>.txt unless"
+        " --indexnow-key-location is set",
+    )
+    p_verify.set_defaults(command=_cmd_indexnow_verify_key)
     return parser
 
 
@@ -85,21 +118,14 @@ def _cmd_notify(args: argparse.Namespace) -> int:
     urls = _resolve_urls(args)
     indexer = _build_indexer(args)
     all_ok = True
-    for url in urls:
-        results = indexer.notify_all_detailed(url)
-        failures = {
-            name: result.error for name, result in results.items() if not result.success
-        }
-        if failures:
-            all_ok = False
-            for name, error in failures.items():
-                print(
-                    f"❌ {url} → {name}: {error}",
-                    file=sys.stderr,
-                )
-        else:
-            names = ", ".join(results)
-            print(f"✅ {url} → {names}: OK")
+    for name, results in indexer.notify_many_detailed(urls).items():
+        for result in results:
+            all_ok = all_ok and result.success
+            for url in result.urls:
+                if result.success:
+                    print(f"✅ {url} → {name}: OK")
+                else:
+                    print(f"❌ {url} → {name}: {result.error}", file=sys.stderr)
     return 0 if all_ok else 1
 
 
@@ -108,6 +134,59 @@ def _cmd_providers(args: argparse.Namespace) -> int:
     for provider in indexer.providers:
         kind = provider.__class__.__name__
         print(f"{kind} ({provider.name})")
+    return 0
+
+
+def _cmd_indexnow_keygen(args: argparse.Namespace) -> int:
+    try:
+        key = IndexNowProvider.generate_key(args.length)
+        site_key_url = (
+            IndexNowProvider(api_key=key).key_file_url(args.site) if args.site else None
+        )
+    except (TypeError, ValueError) as exc:
+        raise ConfigurationError(str(exc)) from exc
+
+    if args.write:
+        path = os.path.join(args.write, f"{key}.txt")
+        try:
+            with open(path, "x", encoding="utf-8") as handle:
+                handle.write(key)
+        except OSError as exc:
+            raise ConfigurationError(f"cannot write {path}: {exc}") from exc
+        print(f"wrote {path}", file=sys.stderr)
+
+    print(key)
+    if site_key_url:
+        print(
+            f"serve the key file at {site_key_url}, then run:\n"
+            f"  export KLIZ_INDEXNOW_API_KEY={key}\n"
+            f"  export KLIZ_INDEXNOW_KEY_LOCATION={site_key_url}\n"
+            "  kliz indexnow verify-key",
+            file=sys.stderr,
+        )
+    return 0
+
+
+def _cmd_indexnow_verify_key(args: argparse.Namespace) -> int:
+    if not args.indexnow_api_key:
+        raise ConfigurationError(
+            "--indexnow-api-key (or KLIZ_INDEXNOW_API_KEY) is required"
+        )
+    if not args.indexnow_key_location and not args.site:
+        raise ConfigurationError("provide --site or --indexnow-key-location")
+    try:
+        provider = IndexNowProvider(
+            api_key=args.indexnow_api_key,
+            key_location=args.indexnow_key_location,
+        )
+    except ValueError as exc:
+        raise ConfigurationError(str(exc)) from exc
+
+    try:
+        location = provider.verify_key(args.site)
+    finally:
+        provider.close()
+    print(f"✅ {location} serves the IndexNow key")
     return 0
 
 
@@ -122,11 +201,8 @@ def _resolve_urls(args: argparse.Namespace) -> list[str]:
 def _read_urls_from_file(path: str) -> list[str]:
     try:
         with open(path) as handle:
-            urls = [
-                line.strip()
-                for line in handle
-                if line.strip() and not line.startswith("#")
-            ]
+            lines = (line.strip() for line in handle)
+            urls = [line for line in lines if line and not line.startswith("#")]
     except OSError as exc:
         raise ConfigurationError(f"cannot read {path}: {exc}") from exc
     if not urls:
