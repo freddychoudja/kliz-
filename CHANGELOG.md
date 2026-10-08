@@ -5,6 +5,8 @@ The project follows semantic versioning.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-08
+
 ### Added
 
 - "Signal" visual identity in `docs/brand/`: symbol, horizontal and stacked lockups
