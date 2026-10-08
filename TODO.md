@@ -193,7 +193,7 @@
 | 11 | 🟠 v0.3 | Packaging mondial | Anglais d’abord, extra `[google]`, fin de Python 3.9 | ⬜ |
 | 12 | 🟠 v0.3 | Observabilité | `logging`, hooks d’événements, zéro fuite de secret | ⬜ |
 | 13 | 🟠 v0.3 | CLI professionnelle | `--json`, `--dry-run`, stdin, `keygen`/`verify-key`, config | ⬜ |
-| 14 | 🟡 v0.4 | Sitemaps ⭐ | « Donnez-nous votre sitemap » : index, gzip, `lastmod` | ⬜ |
+| 14 | 🟡 v0.4 | Sitemaps ⭐ | « Donnez-nous votre sitemap » : index, gzip, `lastmod` | ✅ |
 | 15 | 🟡 v0.4 | État & quotas | Ne notifier que ce qui a changé, respecter les quotas | ⬜ |
 | 16 | 🟡 v0.4 | Plus de moteurs + plugins | Bing, Yandex, Naver, Seznam, Baidu… + entry points | ⬜ |
 | 17 | 🟡 v0.4 | Async | `AsyncKliz` (extra `httpx`), sûreté multi-thread | ⬜ |
@@ -298,7 +298,8 @@
 
 ### Travail demandé
 
-- [ ] `--json` (sortie machine pour CI/scripts), `--dry-run`, lecture depuis stdin (`-`)
+- [ ] `--json` (sortie machine pour CI/scripts), lecture depuis stdin (`-`)
+- [x] `--dry-run`
 - [ ] `--max-attempts`, `--timeout`
 - [x] `kliz indexnow keygen` (génère une clé + le fichier à publier)
 - [x] `kliz indexnow verify-key` (vérifie que le fichier clé est bien servi en ligne,
@@ -308,17 +309,19 @@
 
 ---
 
-## **Phase 14 — Sitemaps** ⭐ 🟡
+## **Phase 14 — Sitemaps** ⭐ ✅
 
 > **Expliqué simplement :** personne ne veut taper ses URL une à une. Le geste naturel est
 > « voici mon sitemap, débrouille-toi ». C’est la fonctionnalité qui fera dire « wow ».
 
 ### Travail demandé
 
-- [ ] `kliz.sitemap.iter_urls(url_or_path)` : sitemap simple, index de sitemaps, `.xml.gz`
-- [ ] Parsing XML sécurisé (`defusedxml`), limites de taille (50 000 URL / 50 Mo)
-- [ ] Filtre `since=` sur `<lastmod>`
-- [ ] `Kliz.notify_sitemap()` et `kliz notify --sitemap https://… --since 2026-10-01`
+- [x] `kliz.sitemap.iter_urls(url_or_path)` : sitemap simple, index de sitemaps, `.xml.gz`
+- [x] Parsing XML sécurisé (`defusedxml`), limites de taille (50 000 URL / 50 Mo)
+- [x] Filtre `since=` sur `<lastmod>`
+- [x] `kliz notify --sitemap https://… --since 2026-10-01` (+ `--dry-run`)
+      — choix : pas de `Kliz.notify_sitemap()`, `notify_many(read_sitemap(...))` suffit
+- [x] Validé sur https://almight.me/sitemap.xml : 7 pages, images ignorées
 
 ---
 

@@ -16,6 +16,12 @@ Le projet suit le versionnage sémantique.
   absents, les redirections, les mauvaises clés et les pages HTML servies en
   `200` pour les chemins inconnus.
 
+- Lecture de sitemaps : `read_sitemap()` et `kliz notify --sitemap` (URL ou
+  fichier, gzip, index de sitemaps, filtre `--since` sur `<lastmod>`), analyse
+  via `defusedxml`, plafond de 50 Mo et erreurs claires quand une page HTML est
+  servie à la place du sitemap. Nouvelle dépendance : `defusedxml`.
+- `kliz notify --dry-run` liste les URL sans rien envoyer.
+
 ### Corrigé
 
 - `Kliz.notify_many` regroupe les URL par hôte avant le découpage : mélanger

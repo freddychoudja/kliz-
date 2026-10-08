@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import argparse
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kliz import IndexNowProvider, NotificationResult, ProviderError
+from kliz import IndexNowProvider, NotificationResult, ProviderError, SitemapError
 from kliz.cli import ConfigurationError, main
 
 
@@ -438,3 +439,89 @@ def test_indexnow_verify_key_config_errors(
     monkeypatch.delenv("KLIZ_INDEXNOW_KEY_LOCATION", raising=False)
 
     assert main(argv) == 2
+
+
+INDEXNOW_ARGS = [
+    "--indexnow-api-key",
+    "abcdefgh",
+    "--indexnow-key-location",
+    "https://example.com/key.txt",
+]
+
+
+def test_notify_sitemap_sends_its_urls() -> None:
+    urls = ["https://example.com/a", "https://example.com/b"]
+    mock_indexer = MagicMock()
+    mock_indexer.notify_many_detailed.return_value = {}
+    with (
+        patch("kliz.cli.read_sitemap", return_value=urls) as read,
+        patch("kliz.cli.Kliz", return_value=mock_indexer),
+    ):
+        exit_code = main(
+            [
+                *INDEXNOW_ARGS,
+                "notify",
+                "--sitemap",
+                "https://example.com/sitemap.xml",
+                "--since",
+                "2026-10-01",
+            ]
+        )
+
+    assert exit_code == 0
+    read.assert_called_once_with(
+        "https://example.com/sitemap.xml", since=datetime(2026, 10, 1)
+    )
+    mock_indexer.notify_many_detailed.assert_called_once_with(urls)
+
+
+def test_notify_dry_run_prints_urls_without_providers(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with (
+        patch("kliz.cli.read_sitemap", return_value=["https://example.com/a"]),
+        patch("kliz.cli.Kliz") as kliz,
+    ):
+        exit_code = main(
+            ["notify", "--sitemap", "https://example.com/sitemap.xml", "--dry-run"]
+        )
+
+    assert exit_code == 0
+    kliz.assert_not_called()
+    captured = capsys.readouterr()
+    assert captured.out == "https://example.com/a\n"
+    assert "1 URL(s), nothing sent" in captured.err
+
+
+def test_notify_sitemap_with_nothing_new_succeeds(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with patch("kliz.cli.read_sitemap", return_value=[]):
+        exit_code = main(
+            [*INDEXNOW_ARGS, "notify", "--sitemap", "s.xml", "--since", "2026-10-01"]
+        )
+
+    assert exit_code == 0
+    assert "nothing changed since 2026-10-01" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "notify_args",
+    [
+        ["--sitemap", "s.xml"],
+        ["--sitemap", "s.xml", "--since", "last week"],
+        ["--since", "2026-10-01", "https://example.com/a"],
+        ["--sitemap", "s.xml", "https://example.com/a"],
+        ["--sitemap", "s.xml", "--batch", "urls.txt"],
+    ],
+)
+def test_notify_sitemap_config_errors(notify_args: list[str]) -> None:
+    with patch("kliz.cli.read_sitemap", return_value=[]):
+        assert main([*INDEXNOW_ARGS, "notify", *notify_args]) == 2
+
+
+def test_notify_sitemap_errors_exit_1(capsys: pytest.CaptureFixture[str]) -> None:
+    error = SitemapError("s.xml: returned an HTML page, not a sitemap")
+    with patch("kliz.cli.read_sitemap", side_effect=error):
+        assert main([*INDEXNOW_ARGS, "notify", "--sitemap", "s.xml"]) == 1
+    assert "HTML page" in capsys.readouterr().err

@@ -5,11 +5,13 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from datetime import datetime
 from typing import Callable
 
 from kliz import Kliz, __version__
 from kliz.exceptions import KlizError
 from kliz.providers import GoogleProvider, IndexNowProvider
+from kliz.sitemap import read_sitemap
 
 
 class ConfigurationError(ValueError):
@@ -75,6 +77,22 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help="File with one URL per line",
     )
+    p_notify.add_argument(
+        "--sitemap",
+        default=None,
+        help="Sitemap or sitemap index (URL or file, .xml or .xml.gz)",
+    )
+    p_notify.add_argument(
+        "--since",
+        default=None,
+        help="With --sitemap: only URLs whose <lastmod> is on or after this"
+        " ISO date or datetime (e.g. 2026-10-01)",
+    )
+    p_notify.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the URLs that would be notified and send nothing",
+    )
     p_notify.set_defaults(command=_cmd_notify)
     p_providers = sub.add_parser("providers", help="List configured providers")
     p_providers.set_defaults(command=_cmd_providers)
@@ -116,6 +134,14 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def _cmd_notify(args: argparse.Namespace) -> int:
     urls = _resolve_urls(args)
+    if not urls:
+        print(f"nothing changed since {args.since}, nothing to notify", file=sys.stderr)
+        return 0
+    if args.dry_run:
+        for url in urls:
+            print(url)
+        print(f"{len(urls)} URL(s), nothing sent (dry run)", file=sys.stderr)
+        return 0
     indexer = _build_indexer(args)
     all_ok = True
     for name, results in indexer.notify_many_detailed(urls).items():
@@ -191,11 +217,32 @@ def _cmd_indexnow_verify_key(args: argparse.Namespace) -> int:
 
 
 def _resolve_urls(args: argparse.Namespace) -> list[str]:
+    sitemap = getattr(args, "sitemap", None)
+    since = getattr(args, "since", None)
+    sources = [bool(args.url), bool(args.batch), bool(sitemap)]
+    if sum(sources) > 1:
+        raise ConfigurationError("provide only one of a URL, --batch or --sitemap")
+    if since and not sitemap:
+        raise ConfigurationError("--since requires --sitemap")
+    if sitemap:
+        urls = read_sitemap(sitemap, since=_parse_since(since) if since else None)
+        if not urls and not since:
+            raise ConfigurationError(f"no URLs found in {sitemap}")
+        return urls
     if args.batch:
         return _read_urls_from_file(args.batch)
     if args.url:
         return [args.url]
-    raise ConfigurationError("provide a URL or --batch <file>")
+    raise ConfigurationError("provide a URL, --batch <file> or --sitemap <url>")
+
+
+def _parse_since(value: str) -> datetime:
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError as exc:
+        raise ConfigurationError(
+            f"--since must be an ISO date or datetime, got {value!r}"
+        ) from exc
 
 
 def _read_urls_from_file(path: str) -> list[str]:

@@ -327,6 +327,9 @@ export KLIZ_INDEXNOW_KEY_LOCATION="https://example.com/your-key.txt"
 
 kliz notify https://example.com/page  # a single URL
 kliz notify --batch urls.txt          # one URL per line, `#` for comments
+kliz notify --sitemap https://example.com/sitemap.xml   # every page of a sitemap
+kliz notify --sitemap https://example.com/sitemap.xml --since 2026-10-01
+kliz notify --sitemap sitemap.xml --dry-run             # list, send nothing
 kliz providers                        # list configured providers
 kliz --version
 ```
@@ -335,6 +338,26 @@ Credentials can also be passed as options (`--indexnow-api-key`,
 `--indexnow-key-location`, `--google-service-account-file`). The process exits
 with code `0` when everything succeeded, `1` on notification failure and `2` on
 invalid configuration.
+
+### Sitemaps
+
+`--sitemap` (or `read_sitemap()` in Python) reads a sitemap or a sitemap index,
+from a URL or a local file, compressed or not. Only page URLs (`<url><loc>`) are
+kept: image, video and hreflang entries are ignored. With `--since`, only pages
+whose `<lastmod>` is on or after the date are notified (pages without
+`<lastmod>` are kept); when nothing changed the command succeeds without sending
+anything, which suits a deployment pipeline. XML is parsed with `defusedxml`
+(DTDs forbidden) and each file is capped at 50 MB, as in the sitemap protocol.
+
+```python
+from datetime import date
+
+from kliz import IndexNowProvider, Kliz, read_sitemap
+
+urls = read_sitemap("https://example.com/sitemap.xml", since=date(2026, 10, 1))
+if urls:
+    Kliz([IndexNowProvider(api_key="your-key")]).notify_many(urls)
+```
 
 ### Setting up the IndexNow key
 

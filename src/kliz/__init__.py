@@ -11,6 +11,7 @@ from kliz.providers import (
     IndexNowProvider,
 )
 from kliz.results import NotificationResult
+from kliz.sitemap import SitemapError, read_sitemap
 
 __all__ = [
     "BaseProvider",
@@ -21,6 +22,8 @@ __all__ = [
     "KlizError",
     "NotificationResult",
     "ProviderError",
+    "SitemapError",
+    "read_sitemap",
 ]
 
 try:
