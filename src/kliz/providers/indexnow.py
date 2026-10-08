@@ -49,7 +49,6 @@ class IndexNowProvider(BatchProvider):
         if host is None:  # Defensive: parse_http_url already enforces this.
             raise ValueError("url must include a hostname")
 
-        self._validate_key_location(parsed_urls[0])
         payload: dict[str, PayloadValue] = {
             "host": host,
             "key": self.api_key,
@@ -66,6 +65,13 @@ class IndexNowProvider(BatchProvider):
             provider=self.name,
         )
         return raise_for_indexing_status(response, provider=self.name)
+
+    def validate_url(self, url: str) -> SplitResult:
+        """Also reject URLs outside the host and path covered by ``key_location``."""
+
+        parsed_url = super().validate_url(url)
+        self._validate_key_location(parsed_url)
+        return parsed_url
 
     def _validate_key_location(self, submitted_url: SplitResult) -> None:
         if self.key_location is None:

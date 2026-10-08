@@ -85,21 +85,14 @@ def _cmd_notify(args: argparse.Namespace) -> int:
     urls = _resolve_urls(args)
     indexer = _build_indexer(args)
     all_ok = True
-    for url in urls:
-        results = indexer.notify_all_detailed(url)
-        failures = {
-            name: result.error for name, result in results.items() if not result.success
-        }
-        if failures:
-            all_ok = False
-            for name, error in failures.items():
-                print(
-                    f"❌ {url} → {name}: {error}",
-                    file=sys.stderr,
-                )
-        else:
-            names = ", ".join(results)
-            print(f"✅ {url} → {names}: OK")
+    for name, results in indexer.notify_many_detailed(urls).items():
+        for result in results:
+            all_ok = all_ok and result.success
+            for url in result.urls:
+                if result.success:
+                    print(f"✅ {url} → {name}: OK")
+                else:
+                    print(f"❌ {url} → {name}: {result.error}", file=sys.stderr)
     return 0 if all_ok else 1
 
 
@@ -122,11 +115,8 @@ def _resolve_urls(args: argparse.Namespace) -> list[str]:
 def _read_urls_from_file(path: str) -> list[str]:
     try:
         with open(path) as handle:
-            urls = [
-                line.strip()
-                for line in handle
-                if line.strip() and not line.startswith("#")
-            ]
+            lines = (line.strip() for line in handle)
+            urls = [line for line in lines if line and not line.startswith("#")]
     except OSError as exc:
         raise ConfigurationError(f"cannot read {path}: {exc}") from exc
     if not urls:

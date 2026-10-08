@@ -5,6 +5,25 @@ The project follows semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- `NotificationResult.urls`: the URLs each result covers.
+- `BatchProvider.validate_url()`: per-URL validation hook used by the
+  orchestrator.
+
+### Fixed
+
+- `Kliz.notify_many` groups URLs by host before chunking: mixing `a.com` and
+  `www.a.com` no longer fails the whole batch.
+- An invalid URL (query string, bad scheme, outside the IndexNow
+  `key_location` path) is now reported as its own failure instead of
+  discarding the entire batch.
+- IndexNow checked only the first URL of a batch against `key_location`; every
+  URL is now checked.
+- `notify_many` strips and deduplicates URLs.
+- `kliz notify --batch` sends real batches (one request per host and chunk
+  instead of one per URL) and ignores indented `#` comments.
+
 ## [0.2.0] - 2026-09-29
 
 ### Added

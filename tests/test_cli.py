@@ -68,11 +68,14 @@ def test_notify_indexnow_missing_key_location() -> None:
 
 def test_notify_success(capsys: pytest.CaptureFixture[str]) -> None:
     mock_indexer = MagicMock()
-    mock_indexer.notify_all_detailed.return_value = {
-        "IndexNowProvider": NotificationResult(
-            provider="IndexNowProvider",
-            success=True,
-        ),
+    mock_indexer.notify_many_detailed.return_value = {
+        "IndexNowProvider": [
+            NotificationResult(
+                provider="IndexNowProvider",
+                success=True,
+                urls=("https://example.com/page",),
+            ),
+        ],
     }
     with patch("kliz.cli.Kliz", return_value=mock_indexer):
         exit_code = main(
@@ -94,14 +97,17 @@ def test_notify_success(capsys: pytest.CaptureFixture[str]) -> None:
 
 def test_notify_failure(capsys: pytest.CaptureFixture[str]) -> None:
     mock_indexer = MagicMock()
-    mock_indexer.notify_all_detailed.return_value = {
-        "IndexNowProvider": NotificationResult(
-            provider="IndexNowProvider",
-            success=False,
-            retryable=True,
-            error="temporary failure",
-            status_code=429,
-        ),
+    mock_indexer.notify_many_detailed.return_value = {
+        "IndexNowProvider": [
+            NotificationResult(
+                provider="IndexNowProvider",
+                success=False,
+                retryable=True,
+                error="temporary failure",
+                status_code=429,
+                urls=("https://example.com/page",),
+            ),
+        ],
     }
     with patch("kliz.cli.Kliz", return_value=mock_indexer):
         exit_code = main(
@@ -123,11 +129,14 @@ def test_notify_failure(capsys: pytest.CaptureFixture[str]) -> None:
 
 def test_notify_batch(capsys: pytest.CaptureFixture[str]) -> None:
     mock_indexer = MagicMock()
-    mock_indexer.notify_all_detailed.return_value = {
-        "IndexNowProvider": NotificationResult(
-            provider="IndexNowProvider",
-            success=True,
-        ),
+    mock_indexer.notify_many_detailed.return_value = {
+        "IndexNowProvider": [
+            NotificationResult(
+                provider="IndexNowProvider",
+                success=True,
+                urls=("https://example.com/a", "https://example.com/b"),
+            ),
+        ],
     }
     with patch("kliz.cli.Kliz", return_value=mock_indexer):
         with tempfile.NamedTemporaryFile(
@@ -150,6 +159,10 @@ def test_notify_batch(capsys: pytest.CaptureFixture[str]) -> None:
         )
 
     assert exit_code == 0
+    mock_indexer.notify_many_detailed.assert_called_once_with(
+        ["https://example.com/a", "https://example.com/b"]
+    )
+    mock_indexer.notify_all_detailed.assert_not_called()
     output = capsys.readouterr().out
     assert "https://example.com/a" in output
     assert "https://example.com/b" in output
@@ -202,7 +215,9 @@ def test_read_urls_from_file() -> None:
         suffix=".txt",
         delete=False,
     ) as fh:
-        fh.write("# comment\nhttps://example.com/a\n\nhttps://example.com/b\n")
+        fh.write(
+            "# comment\nhttps://example.com/a\n\n  # indented\nhttps://example.com/b\n"
+        )
         path = fh.name
 
     urls = _read_urls_from_file(path)
@@ -290,3 +305,41 @@ def test_build_indexer_no_providers_gives_config_error() -> None:
     )
     with pytest.raises(ConfigurationError, match="no providers configured"):
         _build_indexer(args)
+
+
+def test_notify_batch_reports_partial_failures(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    mock_indexer = MagicMock()
+    mock_indexer.notify_many_detailed.return_value = {
+        "IndexNowProvider": [
+            NotificationResult(
+                provider="IndexNowProvider",
+                success=False,
+                error="url must not contain a query string",
+                urls=("https://example.com/b?x=1",),
+            ),
+            NotificationResult(
+                provider="IndexNowProvider",
+                success=True,
+                urls=("https://example.com/a",),
+            ),
+        ],
+    }
+    with patch("kliz.cli.Kliz", return_value=mock_indexer):
+        exit_code = main(
+            [
+                "--indexnow-api-key",
+                "abcdefgh",
+                "--indexnow-key-location",
+                "https://example.com/key.txt",
+                "notify",
+                "https://example.com/a",
+            ],
+        )
+
+    assert exit_code == 1
+    captured = capsys.readouterr()
+    assert "✅ https://example.com/a → IndexNowProvider: OK" in captured.out
+    assert "❌ https://example.com/b?x=1 → IndexNowProvider" in captured.err
+    assert "query string" in captured.err

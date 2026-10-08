@@ -68,6 +68,11 @@ statuses = indexer.notify_many(
 )
 ```
 
+Les URL sont dédoublonnées et regroupées par hôte. Une URL invalide obtient son
+propre résultat d'échec au lieu de faire échouer tout le lot ;
+`notify_many_detailed` renvoie, par provider, une liste de `NotificationResult`
+dont le champ `urls` indique les URL couvertes par chaque résultat.
+
 Le retry intégré est **désactivé par défaut** (`max_attempts=1`). Pour l'activer
 avec backoff exponentiel et jitter :
 

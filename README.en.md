@@ -67,6 +67,11 @@ statuses = indexer.notify_many(
 )
 ```
 
+URLs are deduplicated and grouped by host. An invalid URL gets its own failed
+result instead of sinking the whole batch; `notify_many_detailed` returns, per
+provider, a list of `NotificationResult` whose `urls` field tells which URLs
+each result covers.
+
 Built-in retry is **off by default** (`max_attempts=1`). Enable it with
 exponential backoff and jitter:
 

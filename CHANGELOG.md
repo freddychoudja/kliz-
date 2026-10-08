@@ -5,6 +5,25 @@ Le projet suit le versionnage sémantique.
 
 ## [Unreleased]
 
+### Ajouté
+
+- `NotificationResult.urls` : les URL couvertes par chaque résultat.
+- `BatchProvider.validate_url()` : point d’extension de validation par URL
+  utilisé par l’orchestrateur.
+
+### Corrigé
+
+- `Kliz.notify_many` regroupe les URL par hôte avant le découpage : mélanger
+  `a.com` et `www.a.com` ne fait plus échouer tout le lot.
+- Une URL invalide (chaîne de requête, schéma incorrect, hors du chemin de
+  `key_location` IndexNow) est signalée comme un échec individuel au lieu de
+  faire rejeter tout le lot.
+- IndexNow ne vérifiait que la première URL d’un lot par rapport à
+  `key_location` ; toutes les URL sont désormais vérifiées.
+- `notify_many` supprime les espaces et les doublons.
+- `kliz notify --batch` envoie de vrais lots (une requête par hôte et par
+  tranche au lieu d’une par URL) et ignore les commentaires `#` indentés.
+
 ## [0.2.0] - 2026-09-29
 
 ### Ajouté
