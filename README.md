@@ -83,15 +83,27 @@ result instead of sinking the whole batch; `notify_many_detailed` returns, per
 provider, a list of `NotificationResult` whose `urls` field tells which URLs
 each result covers.
 
-Built-in retry is **off by default** (`max_attempts=1`). Enable it with
-exponential backoff and jitter:
+Built-in retry is **off by default** (`max_attempts=1`). Enable it for
+temporary failures (HTTP 429, 5xx, network errors):
 
 ```python
 indexer = Kliz(
     [IndexNowProvider(api_key="your-indexnow-key")],
     max_attempts=3,
+    max_delay=60.0,   # never wait longer than this between attempts (default)
+    deadline=120.0,   # optional total budget, in seconds
 )
 ```
+
+When the server sends `Retry-After`, kliz waits exactly that long; otherwise it
+backs off exponentially (1 s, 2 s, 4 s... plus up to 25 % random jitter) up to
+`max_delay`. If the server asks to wait longer than `max_delay`, or the next
+wait would overrun `deadline`, kliz stops and returns the failure with
+`retryable=True`, `retry_after` and `attempts`, so a task queue can reschedule
+it. On the command line, use `--max-attempts` (or `KLIZ_MAX_ATTEMPTS`); the
+GitHub Action defaults to 3 attempts. `GoogleProvider` and
+`GoogleSearchConsoleProvider` also retry internally (`num_retries=2`); set
+`num_retries=0` if you rely on Kliz's retry alone.
 
 `notify_all` keeps calling the other providers when one fails. That provider's
 status is then `False`. A direct call to `provider.notify(url)` lets a
@@ -311,7 +323,8 @@ Inputs: `sitemap` (URL or workspace file) or `urls` (one per line), `since`,
 `indexnow-api-key`, `indexnow-key-location`, `verify-key` (default `true`:
 checks the key file before notifying), `gsc-site`, `gsc-sitemap`,
 `gsc-service-account-json` (the JSON content, from a secret; written to a
-private temporary file deleted at the end), `dry-run`. Providers without
+private temporary file deleted at the end), `max-attempts` (default `3`),
+`dry-run`. Providers without
 credentials are skipped. Linux and macOS runners are supported.
 
 ## Recipes / Async integration

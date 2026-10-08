@@ -1,6 +1,8 @@
 """Shared HTTP helpers for indexing providers."""
 
 from collections.abc import Mapping
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any
 
 import requests
@@ -96,4 +98,27 @@ def raise_for_indexing_status(
         provider=provider,
         retryable=retryable,
         status_code=response.status_code,
+        retry_after=parse_retry_after(response.headers.get("Retry-After")),
     )
+
+
+def parse_retry_after(value: object, *, now: datetime | None = None) -> float | None:
+    """Return the delay in seconds from a ``Retry-After`` header, if valid.
+
+    The header holds either a number of seconds or an HTTP date. Missing or
+    malformed values give ``None``; dates in the past give ``0.0``.
+    """
+
+    if not isinstance(value, str) or not value.strip():
+        return None
+    text = value.strip()
+    if text.isdigit():
+        return float(text)
+    try:
+        moment = parsedate_to_datetime(text)
+    except (TypeError, ValueError):
+        return None
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    current = now if now is not None else datetime.now(timezone.utc)
+    return max(0.0, (moment - current).total_seconds())

@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import SplitResult
 
+from kliz._http import parse_retry_after
 from kliz._validation import parse_http_url
 from kliz.exceptions import MissingDependencyError, ProviderError
 from kliz.providers.base import BaseProvider
@@ -63,11 +64,13 @@ class _GoogleApiProvider(BaseProvider):
         except HttpError as exc:
             status_code = int(exc.resp.status)
             retryable = status_code in {408, 429} or status_code >= 500
+            headers = exc.resp if isinstance(exc.resp, dict) else {}
             raise ProviderError(
                 self._rejection_message(status_code),
                 provider=self.name,
                 retryable=retryable,
                 status_code=status_code,
+                retry_after=parse_retry_after(headers.get("retry-after")),
             ) from exc
         except (TransportError, httplib2.HttpLib2Error, OSError) as exc:
             raise ProviderError(

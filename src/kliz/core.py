@@ -14,19 +14,31 @@ from kliz.providers.base import BaseProvider
 from kliz.results import NotificationResult
 
 _RETRY_BASE_DELAY = 1.0
-_JITTER_RANGE = 0.25
+_JITTER_RATIO = 0.25
 
 
 class Kliz:
-    """Dispatch indexing notifications to a collection of providers."""
+    """Dispatch indexing notifications to a collection of providers.
+
+    Retry is off by default (``max_attempts=1``). When enabled, retryable
+    failures wait for the server's ``Retry-After`` if it sent one, otherwise
+    for an exponential backoff (1 s, 2 s, 4 s... plus up to 25 % jitter)
+    capped at ``max_delay``. A ``Retry-After`` longer than ``max_delay``, or a
+    wait that would overrun ``deadline`` (seconds since the first attempt),
+    stops retrying; the result then carries ``retry_after`` so the caller can
+    schedule a later attempt.
+    """
 
     def __init__(
         self,
         providers: Iterable[BaseProvider],
         *,
         max_attempts: int = 1,
+        max_delay: float = 60.0,
+        deadline: float | None = None,
         sleep: Callable[[float], None] = time.sleep,
         clock: Callable[[], float] = time.monotonic,
+        rng: random.Random | None = None,
     ) -> None:
         if isinstance(providers, (str, bytes)):
             raise TypeError("providers must be an iterable of BaseProvider instances")
@@ -41,11 +53,18 @@ class Kliz:
             or max_attempts < 1
         ):
             raise ValueError("max_attempts must be a positive integer")
+        if not max_delay > 0:
+            raise ValueError("max_delay must be greater than zero")
+        if deadline is not None and not deadline > 0:
+            raise ValueError("deadline must be greater than zero")
 
         self.providers = tuple(provider_list)
         self.max_attempts = max_attempts
+        self.max_delay = max_delay
+        self.deadline = deadline
         self._sleep = sleep
         self._clock = clock
+        self._rng = rng if rng is not None else random.Random()
 
     def close(self) -> None:
         """Close every provider, releasing pooled connections."""
@@ -167,6 +186,7 @@ class Kliz:
         payload: Any,
         urls: tuple[str, ...],
     ) -> NotificationResult:
+        started = self._clock()
         for attempt in range(1, self.max_attempts + 1):
             try:
                 success = bool(func(payload))
@@ -175,10 +195,12 @@ class Kliz:
                     success=success,
                     error=None if success else "provider returned False",
                     urls=urls,
+                    attempts=attempt,
                 )
             except ProviderError as exc:
-                if attempt < self.max_attempts and exc.retryable:
-                    self._sleep_between_attempts(attempt)
+                delay = self._retry_delay(attempt, exc, started)
+                if delay is not None:
+                    self._sleep(delay)
                     continue
                 return NotificationResult(
                     provider=provider.name,
@@ -187,6 +209,8 @@ class Kliz:
                     error=str(exc),
                     status_code=exc.status_code,
                     urls=urls,
+                    retry_after=exc.retry_after,
+                    attempts=attempt,
                 )
             except Exception as exc:
                 return NotificationResult(
@@ -194,6 +218,7 @@ class Kliz:
                     success=False,
                     error=str(exc) or exc.__class__.__name__,
                     urls=urls,
+                    attempts=attempt,
                 )
         raise AssertionError("unreachable")  # pragma: no cover
 
@@ -211,10 +236,25 @@ class Kliz:
             raise TypeError("urls must be a sequence of strings")
         return list(dict.fromkeys(url.strip() for url in url_list))
 
-    def _sleep_between_attempts(self, attempt: int) -> None:
-        delay = _RETRY_BASE_DELAY * (2 ** (attempt - 1))
-        delay += random.Random(self._clock()).uniform(0.0, _JITTER_RANGE)
-        self._sleep(delay)
+    def _retry_delay(
+        self, attempt: int, exc: ProviderError, started: float
+    ) -> float | None:
+        """Return how long to wait before the next attempt, or ``None`` to stop."""
+
+        if not exc.retryable or attempt >= self.max_attempts:
+            return None
+        if exc.retry_after is not None:
+            if exc.retry_after > self.max_delay:
+                return None
+            delay = exc.retry_after
+        else:
+            backoff = _RETRY_BASE_DELAY * (2 ** (attempt - 1))
+            jitter = 1.0 + self._rng.uniform(0.0, _JITTER_RATIO)
+            delay = min(backoff * jitter, self.max_delay)
+        if self.deadline is not None:
+            if self._clock() - started + delay > self.deadline:
+                return None
+        return delay
 
     def _result_names(self) -> list[str]:
         counts: Counter[str] = Counter()

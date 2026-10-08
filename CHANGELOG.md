@@ -33,6 +33,11 @@ The project follows semantic versioning.
   `--gsc-site`, `--gsc-sitemap`, `--gsc-service-account-file` (`KLIZ_GSC_*`).
 - GitHub Action (`action.yml`): notifies after each deployment from a sitemap
   or a URL list, verifies the IndexNow key first; exercised in CI by a dry run.
+- Smarter retry: `Kliz` honors `Retry-After` (seconds or HTTP date), caps
+  waits with `max_delay` (default 60 s), accepts a total `deadline` and an
+  injectable `rng`. `ProviderError` and `NotificationResult` gain
+  `retry_after`; results also report `attempts`. CLI `--max-attempts`
+  (`KLIZ_MAX_ATTEMPTS`) and action input `max-attempts` (default 3).
 - `kliz notify --dry-run` lists the URLs without sending anything.
 
 ### Changed
@@ -40,7 +45,13 @@ The project follows semantic versioning.
 - Package metadata and CLI help are in English; development status is Beta.
 - `GoogleProvider` and `GoogleSearchConsoleProvider` share one client base.
 
+- Retry jitter is proportional (up to 25 % of the delay) instead of a fixed
+  0–0.25 s.
+
 ### Fixed
+
+- Retry jitter came from a generator re-seeded with the clock on every wait;
+  it now uses a real random generator.
 
 - `Kliz.notify_many` groups URLs by host before chunking: mixing `a.com` and
   `www.a.com` no longer fails the whole batch.

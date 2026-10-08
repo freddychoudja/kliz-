@@ -1,6 +1,7 @@
 """Unit tests for the built-in indexing providers."""
 
 from collections.abc import Callable
+from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
 import httplib2
@@ -11,6 +12,7 @@ from google.auth.exceptions import TransportError
 from googleapiclient.errors import HttpError
 
 from kliz import Kliz
+from kliz._http import parse_retry_after
 from kliz.cli import main
 from kliz.exceptions import MissingDependencyError, ProviderError
 from kliz.providers.google import GoogleProvider, GoogleSearchConsoleProvider
@@ -768,3 +770,52 @@ def test_cli_missing_extra_is_a_configuration_error(
 
     assert exit_code == 2
     assert "kliz[google]" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("120", 120.0),
+        (" 0 ", 0.0),
+        ("Thu, 08 Oct 2026 12:01:30 GMT", 90.0),
+        ("Thu, 08 Oct 2026 11:00:00 GMT", 0.0),
+        ("soon", None),
+        ("-5", None),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_parse_retry_after(value: object, expected: float | None) -> None:
+    now = datetime(2026, 10, 8, 12, 0, 0, tzinfo=timezone.utc)
+
+    assert parse_retry_after(value, now=now) == expected
+
+
+def test_indexnow_reports_retry_after_header() -> None:
+    session = make_mock_session()
+    session.post.return_value = Mock(status_code=429, headers={"Retry-After": "30"})
+    provider = IndexNowProvider(api_key="indexnow-key", session=session)
+
+    with pytest.raises(ProviderError) as captured:
+        provider.notify("https://example.com/page")
+
+    assert captured.value.retryable is True
+    assert captured.value.retry_after == 30.0
+
+
+def test_google_reports_retry_after_header(
+    google_client_mocks: dict[str, Mock],
+) -> None:
+    response = httplib2.Response({"status": "429", "retry-after": "12"})
+    error = HttpError(response, b"{}")
+    service = google_client_mocks["build"].return_value
+    service.urlNotifications.return_value.publish.return_value.execute.side_effect = (
+        error
+    )
+    provider = GoogleProvider("sa.json")
+
+    with pytest.raises(ProviderError) as captured:
+        provider.notify("https://example.com/job")
+
+    assert captured.value.status_code == 429
+    assert captured.value.retry_after == 12.0

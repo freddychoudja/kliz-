@@ -93,6 +93,13 @@ def _build_parser() -> argparse.ArgumentParser:
         default=os.environ.get("KLIZ_GSC_SERVICE_ACCOUNT_FILE"),
         help="Service account JSON file allowed on the Search Console property",
     )
+    parser.add_argument(
+        "--max-attempts",
+        type=int,
+        default=os.environ.get("KLIZ_MAX_ATTEMPTS") or "1",
+        help="Attempts per notification for temporary failures (429, 5xx,"
+        " network), honoring Retry-After; default 1 (KLIZ_MAX_ATTEMPTS env var)",
+    )
     sub = parser.add_subparsers(dest="command", required=True)
     p_notify = sub.add_parser("notify", help="Notify providers of a URL")
     p_notify.add_argument("url", nargs="?", default=None, help="URL to notify")
@@ -310,7 +317,10 @@ def _build_indexer(args: argparse.Namespace) -> Kliz:
             "--indexnow-key-location, --gsc-site + --gsc-service-account-file "
             "or --google-service-account-file (or the KLIZ_* env vars)",
         )
-    return Kliz(providers)
+    try:
+        return Kliz(providers, max_attempts=args.max_attempts)
+    except ValueError as exc:
+        raise ConfigurationError(f"--max-attempts: {exc}") from exc
 
 
 def _build_search_console(args: argparse.Namespace) -> GoogleSearchConsoleProvider:

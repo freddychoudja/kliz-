@@ -44,6 +44,10 @@ inputs:
     description: Content of the Search Console service account JSON key (a secret).
     required: false
     default: ""
+  max-attempts:
+    description: Attempts per notification for temporary failures (honors Retry-After).
+    required: false
+    default: "3"
   dry-run:
     description: List the URLs without notifying anything.
     required: false
@@ -79,6 +83,7 @@ runs:
         KLIZ_INDEXNOW_KEY_LOCATION: ${{ inputs.indexnow-key-location }}
         KLIZ_GSC_SITE: ${{ inputs.gsc-site }}
         KLIZ_GSC_SITEMAP: ${{ inputs.gsc-sitemap }}
+        KLIZ_MAX_ATTEMPTS: ${{ inputs.max-attempts }}
       run: |
         set -euo pipefail
         kliz="$RUNNER_TEMP/kliz-venv/bin/kliz"

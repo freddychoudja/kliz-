@@ -13,3 +13,5 @@ class NotificationResult:
     error: str | None = None
     status_code: int | None = None
     urls: tuple[str, ...] = ()
+    retry_after: float | None = None
+    attempts: int = 1

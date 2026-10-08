@@ -82,15 +82,28 @@ propre résultat d'échec au lieu de faire échouer tout le lot ;
 `notify_many_detailed` renvoie, par provider, une liste de `NotificationResult`
 dont le champ `urls` indique les URL couvertes par chaque résultat.
 
-Le retry intégré est **désactivé par défaut** (`max_attempts=1`). Pour l'activer
-avec backoff exponentiel et jitter :
+Le retry intégré est **désactivé par défaut** (`max_attempts=1`). Activez-le
+pour les échecs temporaires (HTTP 429, 5xx, erreurs réseau) :
 
 ```python
 indexer = Kliz(
     [IndexNowProvider(api_key="votre-cle-indexnow")],
     max_attempts=3,
+    max_delay=60.0,   # attente maximale entre deux tentatives (défaut)
+    deadline=120.0,   # budget total optionnel, en secondes
 )
 ```
+
+Si le serveur envoie `Retry-After`, kliz attend exactement ce délai ; sinon il
+applique un backoff exponentiel (1 s, 2 s, 4 s... plus jusqu'à 25 % de jitter
+aléatoire) plafonné à `max_delay`. Si le serveur demande d'attendre plus que
+`max_delay`, ou si la prochaine attente dépasserait `deadline`, kliz s'arrête et
+renvoie l'échec avec `retryable=True`, `retry_after` et `attempts`, pour qu'une
+file de tâches puisse le replanifier. En ligne de commande, utilisez
+`--max-attempts` (ou `KLIZ_MAX_ATTEMPTS`) ; la GitHub Action fait 3 tentatives
+par défaut. `GoogleProvider` et `GoogleSearchConsoleProvider` réessaient aussi
+en interne (`num_retries=2`) ; passez `num_retries=0` pour ne compter que sur le
+retry de Kliz.
 
 `notify_all` continue d'appeler les autres fournisseurs lorsqu'un fournisseur
 échoue. Son statut vaut alors `False`. Un appel direct à `provider.notify(url)`
@@ -316,7 +329,8 @@ Entrées : `sitemap` (URL ou fichier du dépôt) ou `urls` (une par ligne),
 `since`, `indexnow-api-key`, `indexnow-key-location`, `verify-key` (`true` par
 défaut : vérifie le fichier clé avant de notifier), `gsc-site`, `gsc-sitemap`,
 `gsc-service-account-json` (le contenu JSON, depuis un secret ; écrit dans un
-fichier temporaire privé supprimé à la fin), `dry-run`. Les providers sans
+fichier temporaire privé supprimé à la fin), `max-attempts` (`3` par défaut),
+`dry-run`. Les providers sans
 identifiants sont ignorés. Runners Linux et macOS pris en charge.
 
 ## Recettes / Intégration Asynchrone

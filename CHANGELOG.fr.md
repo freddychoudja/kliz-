@@ -36,6 +36,12 @@ Le projet suit le versionnage sémantique.
 - GitHub Action (`action.yml`) : notifie après chaque déploiement depuis un
   sitemap ou une liste d'URL, vérifie d'abord la clé IndexNow ; testée en CI
   par une exécution à blanc.
+- Retry plus intelligent : `Kliz` respecte `Retry-After` (secondes ou date
+  HTTP), plafonne les attentes avec `max_delay` (60 s par défaut), accepte un
+  budget total `deadline` et un `rng` injectable. `ProviderError` et
+  `NotificationResult` gagnent `retry_after` ; les résultats indiquent aussi
+  `attempts`. Option CLI `--max-attempts` (`KLIZ_MAX_ATTEMPTS`) et entrée
+  d'action `max-attempts` (3 par défaut).
 - `kliz notify --dry-run` liste les URL sans rien envoyer.
 
 ### Modifié
@@ -43,7 +49,13 @@ Le projet suit le versionnage sémantique.
 - Métadonnées du paquet et aide de la CLI en anglais ; statut Beta.
 - `GoogleProvider` et `GoogleSearchConsoleProvider` partagent une base commune.
 
+- Le jitter du retry est proportionnel (jusqu'à 25 % du délai) au lieu d'un
+  fixe de 0 à 0,25 s.
+
 ### Corrigé
+
+- Le jitter du retry venait d'un générateur réensemencé avec l'horloge à chaque
+  attente ; il utilise désormais un vrai générateur aléatoire.
 
 - `Kliz.notify_many` regroupe les URL par hôte avant le découpage : mélanger
   `a.com` et `www.a.com` ne fait plus échouer tout le lot.

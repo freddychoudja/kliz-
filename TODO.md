@@ -188,7 +188,7 @@
 | # | Palier | Phase | Objectif | Statut |
 | :-: | :-: | :---- | :------- | :----: |
 | 8 | 🔴 v0.2.1 | Lots robustes | Corriger les 2 bugs de `notify_many` + CLI vraiment par lots | ✅ |
-| 9 | 🔴 v0.2.1 | Retry intelligent | `Retry-After`, plafond, vrai jitter, échéance globale | ⬜ |
+| 9 | 🔴 v0.2.1 | Retry intelligent | `Retry-After`, plafond, vrai jitter, échéance globale | ✅ |
 | 10 | 🔴 v0.2.1 | Normalisation des URL | `allow_query`, IDN, ports par défaut, dédoublonnage | ⬜ |
 | 11 | 🟠 v0.3 | Packaging mondial | Anglais d’abord, extra `[google]`, fin de Python 3.9 | ✅ |
 | 12 | 🟠 v0.3 | Observabilité | `logging`, hooks d’événements, zéro fuite de secret | ⬜ |
@@ -233,7 +233,7 @@
 
 ---
 
-## **Phase 9 — Retry intelligent** 🔴
+## **Phase 9 — Retry intelligent** ✅
 
 > **Expliqué simplement :** quand le serveur répond « 429 — revenez dans 120 s », le facteur
 > l’ignore et revient dans 1 s. Et sa « secousse aléatoire » est calculée à partir de
@@ -241,10 +241,13 @@
 
 ### Travail demandé
 
-- [ ] Lire l’en-tête `Retry-After` (secondes ou date HTTP) et le porter dans `ProviderError`
-- [ ] Plafond de délai (`max_delay`) et échéance totale (`deadline`) optionnels
-- [ ] Jitter via un `random.Random` injectable (« full jitter » recommandé par AWS)
-- [ ] Documenter la différence avec `GoogleProvider(num_retries=…)` (double retry possible)
+- [x] Lire l’en-tête `Retry-After` (secondes ou date HTTP) et le porter dans `ProviderError`
+- [x] Plafond de délai (`max_delay`) et échéance totale (`deadline`) optionnels
+- [x] Jitter via un `random.Random` injectable (proportionnel, ≤ 25 % — choix : garder un
+      délai minimal garanti plutôt que le « full jitter »)
+- [x] Bonus : `attempts` et `retry_after` dans les résultats ; `--max-attempts` CLI ;
+      entrée `max-attempts` de l’Action (3 par défaut)
+- [x] Documenter la différence avec `GoogleProvider(num_retries=…)` (double retry possible)
 
 ---
 
@@ -302,7 +305,8 @@
 
 - [ ] `--json` (sortie machine pour CI/scripts), lecture depuis stdin (`-`)
 - [x] `--dry-run`
-- [ ] `--max-attempts`, `--timeout`
+- [x] `--max-attempts`
+- [ ] `--timeout`
 - [x] `kliz indexnow keygen` (génère une clé + le fichier à publier)
 - [x] `kliz indexnow verify-key` (vérifie que le fichier clé est bien servi en ligne,
       y compris le piège « 200 + page HTML » des SPA, testé sur almight.me)
