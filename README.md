@@ -1,13 +1,16 @@
-<p align="center">
+<h1 align="center">
   <a href="https://github.com/freddychoudja/kliz-">
-    <img src="https://raw.githubusercontent.com/freddychoudja/kliz-/main/docs/assets/kliz-mark.svg" alt="kliz" width="96" height="96">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/freddychoudja/kliz-/main/docs/brand/lockup-horizontal-light.svg">
+      <img src="https://raw.githubusercontent.com/freddychoudja/kliz-/main/docs/brand/lockup-horizontal-dark.svg" alt="kliz" width="270" height="90">
+    </picture>
   </a>
-</p>
+</h1>
 
-<h1 align="center">kliz</h1>
+<h3 align="center">One publish. Every engine, notified.</h3>
 
 <p align="center">
-  <strong>Tell search engines about your new and updated pages, the moment you publish.</strong>
+  Tell search engines about your new and updated pages, the moment you publish.
 </p>
 
 <p align="center">

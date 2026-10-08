@@ -5,6 +5,13 @@ Le projet suit le versionnage sémantique.
 
 ## [Unreleased]
 
+### Ajouté
+
+- Identité visuelle « Signal » dans `docs/brand/` : symbole, logos horizontaux et
+  empilés (sombres et clairs), avatar GitHub, aperçu social et règles d'usage.
+  L'en-tête du README change de logo selon le thème clair ou sombre de GitHub, et
+  le site de documentation reçoit les nouvelles favicons et l'icône Apple.
+
 ### Modifié
 
 - README repensé : en-tête centré avec logo et badges, tableau de couverture des
