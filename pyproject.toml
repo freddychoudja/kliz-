@@ -44,7 +44,7 @@ dependencies = [
 Homepage = "https://github.com/freddychoudja/kliz-"
 Repository = "https://github.com/freddychoudja/kliz-.git"
 Issues = "https://github.com/freddychoudja/kliz-/issues"
-Documentation = "https://github.com/freddychoudja/kliz-#readme"
+Documentation = "https://freddychoudja.github.io/kliz-/"
 
 [project.scripts]
 kliz = "kliz.cli:main"

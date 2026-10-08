@@ -27,11 +27,14 @@
           <a href="#installation">Installation</a>
           <a href="#quickstart">Démarrage</a>
           <a href="#providers">Providers</a>
+          <a href="#cli">CLI</a>
           <a href="#async">Async</a>
           <a href="#production">Production</a>
         </nav>
         <p class="sidebar-footer">
           Package Python synchrone pour notifier les moteurs de recherche.
+          <br />
+          <a href="https://github.com/freddychoudja/kliz-">GitHub</a>
         </p>
       </aside>
 
@@ -46,7 +49,11 @@
           <div class="hero-actions">
             <a class="button primary" href="#quickstart">Voir l'exemple</a>
             <a class="button secondary" href="#providers">Comparer les providers</a>
-            <a class="button secondary" href="../README.md">README</a>
+            <a
+              class="button secondary"
+              href="https://github.com/freddychoudja/kliz-"
+              >GitHub</a
+            >
           </div>
         </section>
 
@@ -197,6 +204,34 @@ provider.notify("https://example.com/jobs/backend-python")</code></pre>
           </div>
         </section>
 
+        <section id="cli" class="section">
+          <h2>CLI</h2>
+          <p>
+            Après installation, la commande <code>kliz</code> permet de notifier
+            une URL ou un lot, et de lister les providers configurés. Les
+            credentials passent par des variables d'environnement
+            <code>KLIZ_*</code> ou des options CLI.
+          </p>
+          <div class="code-block">
+            <div class="code-head">
+              <span>Terminal</span>
+              <button class="copy" type="button" data-copy>Copier</button>
+            </div>
+            <pre><code>export KLIZ_INDEXNOW_API_KEY="votre-cle"
+export KLIZ_INDEXNOW_KEY_LOCATION="https://example.com/votre-cle.txt"
+
+kliz notify https://example.com/page
+kliz notify --batch urls.txt
+kliz providers
+kliz --version</code></pre>
+          </div>
+          <div class="callout">
+            Code de sortie : <code>0</code> succès,
+            <code>1</code> échec de notification,
+            <code>2</code> configuration invalide.
+          </div>
+        </section>
+
         <section id="async" class="section">
           <h2>Intégration asynchrone</h2>
           <p>
@@ -258,7 +293,10 @@ def notify_search_engines(self, url: str):
         </section>
 
         <footer class="footer">
-          Copyright © 2026 Freddy Choudja.
+          Copyright © 2026 Freddy Choudja ·
+          <a href="https://github.com/freddychoudja/kliz-">Code source</a>
+          ·
+          <a href="https://freddychoudja.github.io/kliz-/">Documentation</a>
         </footer>
       </main>
     </div>

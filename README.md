@@ -32,9 +32,11 @@ pip install kliz            # IndexNow, sitemaps, CLI (~4 MB, 7 packages)
 pip install 'kliz[google]'  # + Google Search Console and Indexing API providers
 ```
 
-A static web documentation is available at
-[`docs/index.html`](https://github.com/freddychoudja/kliz-/blob/main/docs/index.html). It can also be published through GitHub
-Pages with the provided workflow.
+Web documentation is available at
+[freddychoudja.github.io/kliz-](https://freddychoudja.github.io/kliz-/).
+The HTML sources live in
+[`docs/`](https://github.com/freddychoudja/kliz-/tree/main/docs) and are
+published via GitHub Pages.
 
 To contribute and run the tests:
 
