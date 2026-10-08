@@ -1,5 +1,6 @@
 """Unit tests for the built-in indexing providers."""
 
+from typing import Optional
 from unittest.mock import Mock, patch
 
 import httplib2
@@ -397,3 +398,130 @@ def test_google_provider_requires_clean_urls(
 
     with pytest.raises(ValueError, match="query|fragment"):
         provider.notify(url)
+
+
+def _verifying_provider(
+    *,
+    status_code: int = 200,
+    text: str = "indexnow-key",
+    headers: Optional[dict[str, str]] = None,
+    key_location: Optional[str] = None,
+) -> tuple[IndexNowProvider, Mock]:
+    session = make_mock_session()
+    session.get.return_value = Mock(
+        status_code=status_code,
+        text=text,
+        headers=headers if headers is not None else {"Content-Type": "text/plain"},
+    )
+    provider = IndexNowProvider(
+        api_key="indexnow-key", key_location=key_location, session=session
+    )
+    return provider, session
+
+
+def test_indexnow_generate_key_is_valid_and_random() -> None:
+    key = IndexNowProvider.generate_key()
+
+    assert len(key) == 32
+    assert key.isalnum()
+    assert IndexNowProvider(api_key=key).api_key == key
+    assert IndexNowProvider.generate_key() != key
+    assert len(IndexNowProvider.generate_key(8)) == 8
+
+
+@pytest.mark.parametrize("length", [7, 129, 0])
+def test_indexnow_generate_key_rejects_out_of_range_lengths(length: int) -> None:
+    with pytest.raises(ValueError, match="between 8 and 128"):
+        IndexNowProvider.generate_key(length)
+
+
+@pytest.mark.parametrize("length", [True, 32.0, "32"])
+def test_indexnow_generate_key_rejects_non_integer_lengths(length: object) -> None:
+    with pytest.raises(TypeError):
+        IndexNowProvider.generate_key(length)  # type: ignore[arg-type]
+
+
+def test_indexnow_key_file_url_defaults_to_site_root() -> None:
+    provider = IndexNowProvider(api_key="indexnow-key")
+
+    assert (
+        provider.key_file_url("HTTPS://example.com:8443/some/page")
+        == "https://example.com:8443/indexnow-key.txt"
+    )
+    with pytest.raises(ValueError, match="site_url is required"):
+        provider.key_file_url()
+
+
+def test_indexnow_key_file_url_prefers_key_location() -> None:
+    provider = IndexNowProvider(
+        api_key="indexnow-key", key_location="https://example.com/k/key.txt"
+    )
+
+    assert provider.key_file_url("https://other.example") == (
+        "https://example.com/k/key.txt"
+    )
+
+
+def test_indexnow_verify_key_accepts_matching_file() -> None:
+    provider, session = _verifying_provider(text="indexnow-key\n")
+
+    assert provider.verify_key("https://example.com") == (
+        "https://example.com/indexnow-key.txt"
+    )
+    session.get.assert_called_once_with(
+        "https://example.com/indexnow-key.txt",
+        timeout=10.0,
+        allow_redirects=False,
+    )
+
+
+def test_indexnow_verify_key_detects_html_soft_404() -> None:
+    provider, _ = _verifying_provider(
+        text="<!DOCTYPE html><html>...</html>",
+        headers={"Content-Type": "text/html; charset=utf-8"},
+    )
+
+    with pytest.raises(ProviderError, match="HTML page") as excinfo:
+        provider.verify_key("https://example.com")
+    assert excinfo.value.retryable is False
+
+
+def test_indexnow_verify_key_detects_wrong_content() -> None:
+    provider, _ = _verifying_provider(text="another-key")
+
+    with pytest.raises(ProviderError, match="does not contain the API key"):
+        provider.verify_key("https://example.com")
+
+
+def test_indexnow_verify_key_rejects_redirects() -> None:
+    provider, _ = _verifying_provider(
+        status_code=308,
+        text="",
+        headers={"Location": "https://www.example.com/indexnow-key.txt"},
+    )
+
+    with pytest.raises(ProviderError, match=r"redirects \(HTTP 308\) to https://www"):
+        provider.verify_key("https://example.com")
+
+
+@pytest.mark.parametrize(
+    ("status_code", "retryable"), [(404, False), (429, True), (503, True)]
+)
+def test_indexnow_verify_key_reports_http_errors(
+    status_code: int, retryable: bool
+) -> None:
+    provider, _ = _verifying_provider(status_code=status_code, text="")
+
+    with pytest.raises(ProviderError, match=f"HTTP {status_code}") as excinfo:
+        provider.verify_key("https://example.com")
+    assert excinfo.value.retryable is retryable
+    assert excinfo.value.status_code == status_code
+
+
+def test_indexnow_verify_key_wraps_network_errors() -> None:
+    provider, session = _verifying_provider()
+    session.get.side_effect = requests.ConnectionError("down")
+
+    with pytest.raises(ProviderError, match="could not be reached") as excinfo:
+        provider.verify_key("https://example.com")
+    assert excinfo.value.retryable is True

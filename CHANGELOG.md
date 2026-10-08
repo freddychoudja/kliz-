@@ -10,6 +10,11 @@ Le projet suit le versionnage sémantique.
 - `NotificationResult.urls` : les URL couvertes par chaque résultat.
 - `BatchProvider.validate_url()` : point d’extension de validation par URL
   utilisé par l’orchestrateur.
+- `kliz indexnow keygen` (`--write DIR`, `--site URL`) et
+  `kliz indexnow verify-key`, appuyés sur `IndexNowProvider.generate_key()`,
+  `key_file_url()` et `verify_key()`. La vérification détecte les fichiers
+  absents, les redirections, les mauvaises clés et les pages HTML servies en
+  `200` pour les chemins inconnus.
 
 ### Corrigé
 

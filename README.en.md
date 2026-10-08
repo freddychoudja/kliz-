@@ -336,6 +336,24 @@ Credentials can also be passed as options (`--indexnow-api-key`,
 with code `0` when everything succeeded, `1` on notification failure and `2` on
 invalid configuration.
 
+### Setting up the IndexNow key
+
+```bash
+# Generate a key and drop <key>.txt into the folder your site serves
+KEY=$(kliz indexnow keygen --write public/ --site https://example.com)
+# ...deploy the site, then check what search engines will actually see:
+kliz --indexnow-api-key "$KEY" indexnow verify-key --site https://example.com
+```
+
+`keygen` prints only the key on stdout, so it can be captured in a variable;
+the next steps go to stderr. `verify-key` fetches the key file
+(`--indexnow-key-location`, or `<site>/<key>.txt` by default) without following
+redirects and fails with an explicit message when the file is missing, redirects,
+holds another key, or when the site answers `200` with an HTML page for unknown
+paths (a common trap with single-page apps on Vercel or Netlify). The same
+checks are available from Python through `IndexNowProvider.generate_key()` and
+`provider.verify_key(site_url)`.
+
 ## Tests
 
 The tests mock the `requests` calls and the Google client. They require no

@@ -172,12 +172,13 @@ def _cmd_indexnow_verify_key(args: argparse.Namespace) -> int:
         raise ConfigurationError(
             "--indexnow-api-key (or KLIZ_INDEXNOW_API_KEY) is required"
         )
+    if not args.indexnow_key_location and not args.site:
+        raise ConfigurationError("provide --site or --indexnow-key-location")
     try:
         provider = IndexNowProvider(
             api_key=args.indexnow_api_key,
             key_location=args.indexnow_key_location,
         )
-        provider.key_file_url(args.site)
     except ValueError as exc:
         raise ConfigurationError(str(exc)) from exc
 

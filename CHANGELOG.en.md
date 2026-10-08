@@ -10,6 +10,10 @@ The project follows semantic versioning.
 - `NotificationResult.urls`: the URLs each result covers.
 - `BatchProvider.validate_url()`: per-URL validation hook used by the
   orchestrator.
+- `kliz indexnow keygen` (`--write DIR`, `--site URL`) and
+  `kliz indexnow verify-key`, backed by `IndexNowProvider.generate_key()`,
+  `key_file_url()` and `verify_key()`. Verification detects missing files,
+  redirects, wrong keys and HTML pages served with `200` for unknown paths.
 
 ### Fixed
 

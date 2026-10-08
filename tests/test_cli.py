@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import argparse
 import tempfile
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kliz import NotificationResult
+from kliz import IndexNowProvider, NotificationResult, ProviderError
 from kliz.cli import ConfigurationError, main
 
 
@@ -343,3 +344,97 @@ def test_notify_batch_reports_partial_failures(
     assert "✅ https://example.com/a → IndexNowProvider: OK" in captured.out
     assert "❌ https://example.com/b?x=1 → IndexNowProvider" in captured.err
     assert "query string" in captured.err
+
+
+def test_indexnow_keygen_prints_only_the_key_on_stdout(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    exit_code = main(["indexnow", "keygen", "--length", "16"])
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    key = captured.out.strip()
+    assert len(key) == 16 and key.isalnum()
+    assert captured.err == ""
+
+
+def test_indexnow_keygen_writes_key_file_and_prints_next_steps(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    exit_code = main(
+        ["indexnow", "keygen", "--write", str(tmp_path), "--site", "https://a.example"]
+    )
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    key = captured.out.strip()
+    assert (tmp_path / f"{key}.txt").read_text(encoding="utf-8") == key
+    assert f"https://a.example/{key}.txt" in captured.err
+    assert f"KLIZ_INDEXNOW_API_KEY={key}" in captured.err
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [["--length", "4"], ["--site", "ftp://a.example"], ["--write", "/nonexistent/dir"]],
+)
+def test_indexnow_keygen_invalid_options_give_config_error(extra: list[str]) -> None:
+    assert main(["indexnow", "keygen", *extra]) == 2
+
+
+def test_indexnow_verify_key_success(capsys: pytest.CaptureFixture[str]) -> None:
+    with patch.object(
+        IndexNowProvider,
+        "verify_key",
+        return_value="https://a.example/abcdefgh.txt",
+    ) as verify:
+        exit_code = main(
+            [
+                "--indexnow-api-key",
+                "abcdefgh",
+                "indexnow",
+                "verify-key",
+                "--site",
+                "https://a.example",
+            ]
+        )
+
+    assert exit_code == 0
+    verify.assert_called_once_with("https://a.example")
+    assert "✅ https://a.example/abcdefgh.txt" in capsys.readouterr().out
+
+
+def test_indexnow_verify_key_failure_exits_1(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    error = ProviderError("returned an HTML page", provider="IndexNowProvider")
+    with patch.object(IndexNowProvider, "verify_key", side_effect=error):
+        exit_code = main(
+            [
+                "--indexnow-api-key",
+                "abcdefgh",
+                "--indexnow-key-location",
+                "https://a.example/abcdefgh.txt",
+                "indexnow",
+                "verify-key",
+            ]
+        )
+
+    assert exit_code == 1
+    assert "HTML page" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["indexnow", "verify-key", "--site", "https://a.example"],
+        ["--indexnow-api-key", "abcdefgh", "indexnow", "verify-key"],
+        ["--indexnow-api-key", "bad", "indexnow", "verify-key", "--site", "https://a"],
+    ],
+)
+def test_indexnow_verify_key_config_errors(
+    argv: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("KLIZ_INDEXNOW_API_KEY", raising=False)
+    monkeypatch.delenv("KLIZ_INDEXNOW_KEY_LOCATION", raising=False)
+
+    assert main(argv) == 2

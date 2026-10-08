@@ -300,10 +300,11 @@
 
 - [ ] `--json` (sortie machine pour CI/scripts), `--dry-run`, lecture depuis stdin (`-`)
 - [ ] `--max-attempts`, `--timeout`
-- [ ] `kliz indexnow keygen` (génère une clé + le fichier à publier)
-- [ ] `kliz indexnow verify-key` (vérifie que le fichier clé est bien servi en ligne)
+- [x] `kliz indexnow keygen` (génère une clé + le fichier à publier)
+- [x] `kliz indexnow verify-key` (vérifie que le fichier clé est bien servi en ligne,
+      y compris le piège « 200 + page HTML » des SPA, testé sur almight.me)
 - [ ] Configuration par fichier : `[tool.kliz]` dans `pyproject.toml` ou `kliz.toml`
-- [ ] Ignorer les lignes `#` même indentées (bug mineur : `line.startswith("#")` sans `strip`)
+- [x] Ignorer les lignes `#` même indentées (bug mineur : `line.startswith("#")` sans `strip`)
 
 ---
 
