@@ -1,6 +1,6 @@
 """Unit tests for the built-in indexing providers."""
 
-from typing import Optional
+from typing import Callable, Optional
 from unittest.mock import Mock, patch
 
 import httplib2
@@ -11,7 +11,8 @@ from google.auth.exceptions import TransportError
 from googleapiclient.errors import HttpError
 
 from kliz import Kliz
-from kliz.exceptions import ProviderError
+from kliz.cli import main
+from kliz.exceptions import MissingDependencyError, ProviderError
 from kliz.providers.google import GoogleProvider, GoogleSearchConsoleProvider
 from kliz.providers.indexnow import IndexNowProvider
 
@@ -720,3 +721,50 @@ def test_kliz_rejects_outside_urls_individually_for_search_console(
         (True, ("https://a.example/1", "https://a.example/3")),
     ]
     sitemaps.submit.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("factory", "name"),
+    [
+        (lambda: GoogleProvider("sa.json"), "GoogleProvider"),
+        (
+            lambda: GoogleSearchConsoleProvider("sa.json", "https://a.example/"),
+            "GoogleSearchConsoleProvider",
+        ),
+    ],
+)
+def test_google_providers_explain_missing_extra(
+    monkeypatch: pytest.MonkeyPatch, factory: Callable[[], object], name: str
+) -> None:
+    monkeypatch.setattr(
+        "kliz.providers.google._GOOGLE_IMPORT_ERROR", ImportError("no google")
+    )
+
+    with pytest.raises(
+        MissingDependencyError, match=r"pip install 'kliz\[google\]'"
+    ) as exc:
+        factory()
+
+    assert name in str(exc.value)
+    assert isinstance(exc.value, ImportError)
+
+
+def test_cli_missing_extra_is_a_configuration_error(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(
+        "kliz.providers.google._GOOGLE_IMPORT_ERROR", ImportError("no google")
+    )
+
+    exit_code = main(
+        [
+            "--gsc-site",
+            "https://a.example/",
+            "--gsc-service-account-file",
+            "/dev/null",
+            "providers",
+        ]
+    )
+
+    assert exit_code == 2
+    assert "kliz[google]" in capsys.readouterr().err

@@ -16,7 +16,8 @@ encapsuler dans le système de tâches de son choix.
 ## Installation
 
 ```bash
-pip install kliz
+pip install kliz            # IndexNow, sitemaps, CLI (~4 Mo, 7 paquets)
+pip install 'kliz[google]'  # + providers Google Search Console et Indexing API
 ```
 
 Une documentation web statique est disponible dans

@@ -64,7 +64,7 @@ runs:
         fi
         python3 -m venv "$RUNNER_TEMP/kliz-venv"
         "$RUNNER_TEMP/kliz-venv/bin/python" -m pip install --quiet \
-          --disable-pip-version-check "$ACTION_PATH"
+          --disable-pip-version-check "$ACTION_PATH[google]"
 
     - name: Notify search engines
       shell: bash

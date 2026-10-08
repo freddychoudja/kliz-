@@ -7,6 +7,10 @@ class KlizError(Exception):
     """Base class for all kliz-specific errors."""
 
 
+class MissingDependencyError(KlizError, ImportError):
+    """An optional dependency (``pip install 'kliz[extra]'``) is not installed."""
+
+
 class ProviderError(KlizError):
     """An indexing provider could not complete a notification."""
 

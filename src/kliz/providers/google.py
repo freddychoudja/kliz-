@@ -5,16 +5,21 @@ from pathlib import Path
 from typing import Any, Optional, Union
 from urllib.parse import SplitResult
 
-import google_auth_httplib2
-import httplib2
-from google.auth.exceptions import GoogleAuthError, TransportError
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
-
 from kliz._validation import parse_http_url
-from kliz.exceptions import ProviderError
+from kliz.exceptions import MissingDependencyError, ProviderError
 from kliz.providers.base import BaseProvider
+
+try:
+    import google_auth_httplib2
+    import httplib2
+    from google.auth.exceptions import GoogleAuthError, TransportError
+    from google.oauth2 import service_account
+    from googleapiclient.discovery import build
+    from googleapiclient.errors import HttpError
+except ImportError as exc:  # pragma: no cover - covered by the wheel CI job
+    _GOOGLE_IMPORT_ERROR: Optional[ImportError] = exc
+else:
+    _GOOGLE_IMPORT_ERROR = None
 
 _DOMAIN_PROPERTY_PREFIX = "sc-domain:"
 
@@ -33,6 +38,11 @@ class _GoogleApiProvider(BaseProvider):
         timeout: float,
         num_retries: int,
     ) -> None:
+        if _GOOGLE_IMPORT_ERROR is not None:
+            raise MissingDependencyError(
+                f"{type(self).__name__} needs the Google client libraries:"
+                " pip install 'kliz[google]'"
+            ) from _GOOGLE_IMPORT_ERROR
         if not str(service_account_file):
             raise ValueError("service_account_file must not be empty")
         if timeout <= 0:

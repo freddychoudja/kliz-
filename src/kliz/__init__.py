@@ -3,7 +3,7 @@
 from importlib.metadata import PackageNotFoundError, version
 
 from kliz.core import Kliz
-from kliz.exceptions import KlizError, ProviderError
+from kliz.exceptions import KlizError, MissingDependencyError, ProviderError
 from kliz.providers import (
     BaseProvider,
     BatchProvider,
@@ -22,6 +22,7 @@ __all__ = [
     "IndexNowProvider",
     "Kliz",
     "KlizError",
+    "MissingDependencyError",
     "NotificationResult",
     "ProviderError",
     "SitemapError",

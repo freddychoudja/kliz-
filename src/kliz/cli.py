@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Callable
 
 from kliz import Kliz, __version__
-from kliz.exceptions import KlizError
+from kliz.exceptions import KlizError, MissingDependencyError
 from kliz.providers import (
     BaseProvider,
     GoogleProvider,
@@ -33,7 +33,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         command: Callable[[argparse.Namespace], int] = args.command
         return command(args)
-    except ConfigurationError as exc:
+    except (ConfigurationError, MissingDependencyError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     except KlizError as exc:
@@ -51,7 +51,8 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="kliz",
         description=(
-            "Bot d'indexation SEO agnostique pour notifier les moteurs de recherche."
+            "Notify search engines (IndexNow, Google Search Console) that pages"
+            " were created or updated."
         ),
     )
     parser.add_argument(

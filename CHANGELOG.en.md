@@ -5,6 +5,14 @@ The project follows semantic versioning.
 
 ## [Unreleased]
 
+### Breaking changes
+
+- The Google client libraries moved to the `google` extra: install
+  `kliz[google]` to use `GoogleProvider` or `GoogleSearchConsoleProvider`.
+  Without it, they raise `MissingDependencyError` (an `ImportError`) and the CLI
+  exits with code `2`. A plain `pip install kliz` drops from about 144 MB and
+  24 packages to about 4 MB and 7.
+
 ### Added
 
 - `NotificationResult.urls`: the URLs each result covers.
@@ -14,7 +22,6 @@ The project follows semantic versioning.
   `kliz indexnow verify-key`, backed by `IndexNowProvider.generate_key()`,
   `key_file_url()` and `verify_key()`. Verification detects missing files,
   redirects, wrong keys and HTML pages served with `200` for unknown paths.
-
 - Sitemap reading: `read_sitemap()` and `kliz notify --sitemap` (URL or file,
   gzip, sitemap indexes, `--since` filtering on `<lastmod>`), with `defusedxml`
   parsing, 50 MB cap and clear errors for HTML pages served instead of a sitemap.
@@ -25,6 +32,11 @@ The project follows semantic versioning.
 - GitHub Action (`action.yml`): notifies after each deployment from a sitemap
   or a URL list, verifies the IndexNow key first; exercised in CI by a dry run.
 - `kliz notify --dry-run` lists the URLs without sending anything.
+
+### Changed
+
+- Package metadata and CLI help are in English; development status is Beta.
+- `GoogleProvider` and `GoogleSearchConsoleProvider` share one client base.
 
 ### Fixed
 

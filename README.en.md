@@ -18,7 +18,8 @@ A French version of this document is available in
 ## Installation
 
 ```bash
-pip install kliz
+pip install kliz            # IndexNow, sitemaps, CLI (~4 MB, 7 packages)
+pip install 'kliz[google]'  # + Google Search Console and Indexing API providers
 ```
 
 A static web documentation is available at

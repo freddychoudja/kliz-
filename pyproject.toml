@@ -5,16 +5,25 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "kliz"
 version = "0.2.0"
-description = "Bot d'indexation SEO agnostique pour notifier les moteurs de recherche."
+description = "Tell search engines about new and updated pages: IndexNow (Bing, Yandex, Naver, Seznam, Yep), Google Search Console, sitemaps, CLI and GitHub Action."
 readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
 authors = [
     { name = "Freddy Choudja" },
 ]
-keywords = ["seo", "indexing", "indexnow", "google", "bing", "sitemap"]
+keywords = [
+    "seo",
+    "indexing",
+    "indexnow",
+    "bing",
+    "yandex",
+    "google-search-console",
+    "sitemap",
+    "github-action",
+]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
@@ -29,10 +38,6 @@ classifiers = [
 dependencies = [
     "defusedxml>=0.7.1",
     "requests>=2.28.0",
-    "google-auth>=2.0.0",
-    "google-auth-httplib2>=0.1.0",
-    "google-api-python-client>=2.0.0",
-    "httplib2>=0.19.0,<1.0.0",
 ]
 
 [project.urls]
@@ -45,11 +50,19 @@ Documentation = "https://github.com/freddychoudja/kliz-#readme"
 kliz = "kliz.cli:main"
 
 [project.optional-dependencies]
+google = [
+    "google-auth>=2.0.0",
+    "google-auth-httplib2>=0.1.0",
+    "google-api-python-client>=2.0.0",
+    "httplib2>=0.19.0,<1.0.0",
+]
 test = [
+    "kliz[google]",
     "pytest>=8.0,<10.0",
     "pytest-cov>=5.0,<8.0",
 ]
 dev = [
+    "kliz[google]",
     "build>=1.2,<2.0",
     "mypy>=1.11,<3.0",
     "pip-audit>=2.7,<3.0",

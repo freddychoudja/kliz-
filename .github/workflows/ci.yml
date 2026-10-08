@@ -82,13 +82,26 @@ jobs:
         run: python -m build
       - name: Validate package metadata and README
         run: python -m twine check --strict dist/*
-      - name: Install and import the built wheel
+      - name: Install and import the built wheel (without extras)
         run: |
           python -m venv wheel-venv
           wheel-venv/bin/python -m pip install dist/*.whl
           cd /tmp
-          "$GITHUB_WORKSPACE/wheel-venv/bin/python" -c \
-            "import kliz; print(kliz.__version__)"
+          "$GITHUB_WORKSPACE/wheel-venv/bin/python" - <<'EOF'
+          import importlib.util
+          import kliz
+          from kliz import GoogleProvider, IndexNowProvider, MissingDependencyError
+
+          print(kliz.__version__)
+          assert importlib.util.find_spec("googleapiclient") is None
+          IndexNowProvider(api_key=IndexNowProvider.generate_key())
+          try:
+              GoogleProvider("sa.json")
+          except MissingDependencyError as exc:
+              assert "kliz[google]" in str(exc)
+          else:
+              raise AssertionError("GoogleProvider must require the google extra")
+          EOF
       - uses: actions/upload-artifact@v7
         with:
           name: python-package-distributions

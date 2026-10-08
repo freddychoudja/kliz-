@@ -5,6 +5,14 @@ Le projet suit le versionnage sémantique.
 
 ## [Unreleased]
 
+### Changements incompatibles
+
+- Les bibliothèques Google passent dans l'extra `google` : installez
+  `kliz[google]` pour utiliser `GoogleProvider` ou `GoogleSearchConsoleProvider`.
+  Sans lui, ils lèvent `MissingDependencyError` (une `ImportError`) et la CLI
+  termine avec le code `2`. Un simple `pip install kliz` passe d'environ 144 Mo
+  et 24 paquets à environ 4 Mo et 7.
+
 ### Ajouté
 
 - `NotificationResult.urls` : les URL couvertes par chaque résultat.
@@ -15,7 +23,6 @@ Le projet suit le versionnage sémantique.
   `key_file_url()` et `verify_key()`. La vérification détecte les fichiers
   absents, les redirections, les mauvaises clés et les pages HTML servies en
   `200` pour les chemins inconnus.
-
 - Lecture de sitemaps : `read_sitemap()` et `kliz notify --sitemap` (URL ou
   fichier, gzip, index de sitemaps, filtre `--since` sur `<lastmod>`), analyse
   via `defusedxml`, plafond de 50 Mo et erreurs claires quand une page HTML est
@@ -28,6 +35,11 @@ Le projet suit le versionnage sémantique.
   sitemap ou une liste d'URL, vérifie d'abord la clé IndexNow ; testée en CI
   par une exécution à blanc.
 - `kliz notify --dry-run` liste les URL sans rien envoyer.
+
+### Modifié
+
+- Métadonnées du paquet et aide de la CLI en anglais ; statut Beta.
+- `GoogleProvider` et `GoogleSearchConsoleProvider` partagent une base commune.
 
 ### Corrigé
 
