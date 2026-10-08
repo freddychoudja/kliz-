@@ -5,6 +5,8 @@ Le projet suit le versionnage sémantique.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-08
+
 ### Changements incompatibles
 
 - Les bibliothèques Google passent dans l'extra `google` : installez

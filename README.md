@@ -318,7 +318,7 @@ jobs:
       github.event.deployment_status.environment == 'Production'
     runs-on: ubuntu-latest
     steps:
-      - uses: freddychoudja/kliz-@main   # pin a release tag or commit SHA
+      - uses: freddychoudja/kliz-@v0.3.0
         with:
           sitemap: https://example.com/sitemap.xml
           indexnow-api-key: ${{ secrets.INDEXNOW_KEY }}
