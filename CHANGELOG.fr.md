@@ -5,6 +5,13 @@ Le projet suit le versionnage sémantique.
 
 ## [Unreleased]
 
+### Modifié
+
+- README repensé : en-tête centré avec logo et badges, tableau de couverture des
+  moteurs, installation via `pipx` (corrige `externally-managed-environment` sur
+  les distributions Linux récentes), entrées de l'Action et options CLI en
+  tableaux, recettes repliables.
+
 ## [0.3.0] - 2026-10-08
 
 ### Changements incompatibles
