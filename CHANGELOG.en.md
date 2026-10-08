@@ -15,6 +15,15 @@ The project follows semantic versioning.
   `key_file_url()` and `verify_key()`. Verification detects missing files,
   redirects, wrong keys and HTML pages served with `200` for unknown paths.
 
+- Sitemap reading: `read_sitemap()` and `kliz notify --sitemap` (URL or file,
+  gzip, sitemap indexes, `--since` filtering on `<lastmod>`), with `defusedxml`
+  parsing, 50 MB cap and clear errors for HTML pages served instead of a sitemap.
+  New runtime dependency: `defusedxml`.
+- `GoogleSearchConsoleProvider`: resubmits a sitemap through the Search Console
+  API, the supported way to signal changes to Google for any page. CLI options
+  `--gsc-site`, `--gsc-sitemap`, `--gsc-service-account-file` (`KLIZ_GSC_*`).
+- `kliz notify --dry-run` lists the URLs without sending anything.
+
 ### Fixed
 
 - `Kliz.notify_many` groups URLs by host before chunking: mixing `a.com` and

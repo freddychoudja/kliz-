@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import argparse
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kliz import IndexNowProvider, NotificationResult, ProviderError
+from kliz import IndexNowProvider, NotificationResult, ProviderError, SitemapError
 from kliz.cli import ConfigurationError, main
+from kliz.providers import GoogleSearchConsoleProvider
 
 
 def test_main_version(capsys: pytest.CaptureFixture[str]) -> None:
@@ -265,6 +267,7 @@ def test_build_indexer_creates_indexnow() -> None:
         indexnow_api_key="abcdefgh",
         indexnow_key_location="https://example.com/key.txt",
         google_service_account_file=None,
+        gsc_site=None,
     )
     indexer = _build_indexer(args)
     assert len(indexer.providers) == 1
@@ -278,6 +281,7 @@ def test_build_indexer_requires_key_location() -> None:
         indexnow_api_key="abcdefgh",
         indexnow_key_location=None,
         google_service_account_file=None,
+        gsc_site=None,
     )
     with pytest.raises(ConfigurationError, match="key-location"):
         _build_indexer(args)
@@ -290,6 +294,7 @@ def test_build_indexer_creates_google() -> None:
         indexnow_api_key=None,
         indexnow_key_location=None,
         google_service_account_file="/dev/null",
+        gsc_site=None,
     )
     indexer = _build_indexer(args)
     assert len(indexer.providers) == 1
@@ -303,6 +308,7 @@ def test_build_indexer_no_providers_gives_config_error() -> None:
         indexnow_api_key=None,
         indexnow_key_location=None,
         google_service_account_file=None,
+        gsc_site=None,
     )
     with pytest.raises(ConfigurationError, match="no providers configured"):
         _build_indexer(args)
@@ -438,3 +444,162 @@ def test_indexnow_verify_key_config_errors(
     monkeypatch.delenv("KLIZ_INDEXNOW_KEY_LOCATION", raising=False)
 
     assert main(argv) == 2
+
+
+INDEXNOW_ARGS = [
+    "--indexnow-api-key",
+    "abcdefgh",
+    "--indexnow-key-location",
+    "https://example.com/key.txt",
+]
+
+
+def test_notify_sitemap_sends_its_urls() -> None:
+    urls = ["https://example.com/a", "https://example.com/b"]
+    mock_indexer = MagicMock()
+    mock_indexer.notify_many_detailed.return_value = {}
+    with (
+        patch("kliz.cli.read_sitemap", return_value=urls) as read,
+        patch("kliz.cli.Kliz", return_value=mock_indexer),
+    ):
+        exit_code = main(
+            [
+                *INDEXNOW_ARGS,
+                "notify",
+                "--sitemap",
+                "https://example.com/sitemap.xml",
+                "--since",
+                "2026-10-01",
+            ]
+        )
+
+    assert exit_code == 0
+    read.assert_called_once_with(
+        "https://example.com/sitemap.xml", since=datetime(2026, 10, 1)
+    )
+    mock_indexer.notify_many_detailed.assert_called_once_with(urls)
+
+
+def test_notify_dry_run_prints_urls_without_providers(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with (
+        patch("kliz.cli.read_sitemap", return_value=["https://example.com/a"]),
+        patch("kliz.cli.Kliz") as kliz,
+    ):
+        exit_code = main(
+            ["notify", "--sitemap", "https://example.com/sitemap.xml", "--dry-run"]
+        )
+
+    assert exit_code == 0
+    kliz.assert_not_called()
+    captured = capsys.readouterr()
+    assert captured.out == "https://example.com/a\n"
+    assert "1 URL(s), nothing sent" in captured.err
+
+
+def test_notify_sitemap_with_nothing_new_succeeds(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with patch("kliz.cli.read_sitemap", return_value=[]):
+        exit_code = main(
+            [*INDEXNOW_ARGS, "notify", "--sitemap", "s.xml", "--since", "2026-10-01"]
+        )
+
+    assert exit_code == 0
+    assert "nothing changed since 2026-10-01" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "notify_args",
+    [
+        ["--sitemap", "s.xml"],
+        ["--sitemap", "s.xml", "--since", "last week"],
+        ["--since", "2026-10-01", "https://example.com/a"],
+        ["--sitemap", "s.xml", "https://example.com/a"],
+        ["--sitemap", "s.xml", "--batch", "urls.txt"],
+    ],
+)
+def test_notify_sitemap_config_errors(notify_args: list[str]) -> None:
+    with patch("kliz.cli.read_sitemap", return_value=[]):
+        assert main([*INDEXNOW_ARGS, "notify", *notify_args]) == 2
+
+
+def test_notify_sitemap_errors_exit_1(capsys: pytest.CaptureFixture[str]) -> None:
+    error = SitemapError("s.xml: returned an HTML page, not a sitemap")
+    with patch("kliz.cli.read_sitemap", side_effect=error):
+        assert main([*INDEXNOW_ARGS, "notify", "--sitemap", "s.xml"]) == 1
+    assert "HTML page" in capsys.readouterr().err
+
+
+def _gsc_args(**overrides: object) -> argparse.Namespace:
+    values: dict[str, object] = {
+        "indexnow_api_key": None,
+        "indexnow_key_location": None,
+        "google_service_account_file": None,
+        "gsc_site": "https://example.com/",
+        "gsc_sitemap": None,
+        "gsc_service_account_file": "/dev/null",
+    }
+    values.update(overrides)
+    return argparse.Namespace(**values)
+
+
+@pytest.mark.parametrize(
+    ("overrides", "expected_sitemap"),
+    [
+        ({}, "https://example.com/sitemap.xml"),
+        ({"sitemap": "https://example.com/s.xml"}, "https://example.com/s.xml"),
+        ({"sitemap": "local-sitemap.xml"}, "https://example.com/sitemap.xml"),
+        (
+            {
+                "sitemap": "https://example.com/s.xml",
+                "gsc_sitemap": "https://example.com/g.xml",
+            },
+            "https://example.com/g.xml",
+        ),
+    ],
+)
+def test_build_indexer_creates_search_console(
+    overrides: dict[str, object], expected_sitemap: str
+) -> None:
+    from kliz.cli import _build_indexer
+
+    indexer = _build_indexer(_gsc_args(**overrides))
+
+    (provider,) = indexer.providers
+    assert isinstance(provider, GoogleSearchConsoleProvider)
+    assert provider.site_url == "https://example.com/"
+    assert provider.sitemap_url == expected_sitemap
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"gsc_service_account_file": None}, "--gsc-service-account-file is required"),
+        ({"gsc_service_account_file": "/nonexistent/sa.json"}, "not found"),
+        ({"gsc_site": "ftp://example.com"}, "Search Console: "),
+        ({"gsc_sitemap": "https://other.example/s.xml"}, "sitemap_url is invalid"),
+    ],
+)
+def test_build_indexer_search_console_config_errors(
+    overrides: dict[str, object], message: str
+) -> None:
+    from kliz.cli import _build_indexer
+
+    with pytest.raises(ConfigurationError, match=message):
+        _build_indexer(_gsc_args(**overrides))
+
+
+def test_gsc_options_read_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    from kliz.cli import _build_parser
+
+    monkeypatch.setenv("KLIZ_GSC_SITE", "sc-domain:example.com")
+    monkeypatch.setenv("KLIZ_GSC_SITEMAP", "https://example.com/s.xml")
+    monkeypatch.setenv("KLIZ_GSC_SERVICE_ACCOUNT_FILE", "/secrets/sa.json")
+
+    args = _build_parser().parse_args(["providers"])
+
+    assert args.gsc_site == "sc-domain:example.com"
+    assert args.gsc_sitemap == "https://example.com/s.xml"
+    assert args.gsc_service_account_file == "/secrets/sa.json"

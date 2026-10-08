@@ -245,6 +245,36 @@ fichier. Les erreurs de configuration (fichier absent, JSON invalide)
 remontent au moment de la notification, sont marquées comme non retentables, et
 le provider se rétablit dès que le fichier est corrigé.
 
+### Google Search Console (tous les sites)
+
+Google ne propose pas d'API générale « indexe cette URL ». La méthode prise en
+charge pour signaler des pages modifiées est de soumettre à nouveau leur
+sitemap, ce que fait `GoogleSearchConsoleProvider` via l'API Search Console.
+Elle fonctionne pour tout type de page, contrairement à l'API Indexing
+ci-dessus.
+
+1. Validez le site dans [Search Console](https://search.google.com/search-console).
+2. Dans Google Cloud, activez la *Google Search Console API*, créez un compte de
+   service et téléchargez sa clé JSON.
+3. Dans Search Console, *Paramètres → Utilisateurs et autorisations*, ajoutez
+   l'e-mail du compte de service comme **Propriétaire** ou utilisateur **total**.
+
+```python
+from kliz import GoogleSearchConsoleProvider
+
+provider = GoogleSearchConsoleProvider(
+    "/run/secrets/search-console.json",
+    site_url="https://example.com/",  # ou "sc-domain:example.com"
+    sitemap_url="https://example.com/sitemap.xml",  # défaut : <propriété>/sitemap.xml
+)
+provider.notify_many(urls)  # vérifie que les URL appartiennent à la propriété, soumet une fois
+```
+
+Les URL hors de la propriété sont rejetées individuellement ; elles ne sont
+jamais envoyées. Une nouvelle soumission demande à Google de relire le sitemap,
+sans garantir l'indexation. Un HTTP 403 signifie que le compte de service n'est
+pas utilisateur de la propriété.
+
 ## Recettes / Intégration Asynchrone
 
 `kliz` reste volontairement synchrone. Pour une exécution asynchrone, placez
@@ -333,14 +363,42 @@ export KLIZ_INDEXNOW_KEY_LOCATION="https://example.com/votre-cle.txt"
 
 kliz notify https://example.com/page  # une URL
 kliz notify --batch urls.txt          # une URL par ligne, `#` pour un commentaire
+kliz notify --sitemap https://example.com/sitemap.xml   # toutes les pages d'un sitemap
+kliz notify --sitemap https://example.com/sitemap.xml --since 2026-10-01
+kliz notify --sitemap sitemap.xml --dry-run             # lister sans rien envoyer
 kliz providers                        # liste des providers configurés
 kliz --version
 ```
 
 Les crédits se passent aussi en options (`--indexnow-api-key`,
-`--indexnow-key-location`, `--google-service-account-file`). Le processus
+`--indexnow-key-location`, `--google-service-account-file`). Pour Search
+Console, renseignez `--gsc-site` et `--gsc-service-account-file`
+(`KLIZ_GSC_SITE`, `KLIZ_GSC_SERVICE_ACCOUNT_FILE`) ; le sitemap soumis est
+`--gsc-sitemap`, sinon l'URL de `--sitemap`, sinon `<propriété>/sitemap.xml`. Le processus
 termine avec le code `0` si tout a réussi, `1` en cas d'échec de notification
 et `2` en cas de configuration invalide.
+
+### Sitemaps
+
+`--sitemap` (ou `read_sitemap()` en Python) lit un sitemap ou un index de
+sitemaps, depuis une URL ou un fichier local, compressé ou non. Seules les URL de
+pages (`<url><loc>`) sont retenues : les entrées image, vidéo et hreflang sont
+ignorées. Avec `--since`, seules les pages dont le `<lastmod>` est postérieur ou
+égal à la date sont notifiées (les pages sans `<lastmod>` sont conservées) ;
+s'il n'y a rien de nouveau, la commande réussit sans rien envoyer, ce qui
+convient à un pipeline de déploiement. Le XML est analysé avec `defusedxml`
+(DTD interdites) et chaque fichier est limité à 50 Mo, comme le prévoit le
+protocole sitemap.
+
+```python
+from datetime import date
+
+from kliz import IndexNowProvider, Kliz, read_sitemap
+
+urls = read_sitemap("https://example.com/sitemap.xml", since=date(2026, 10, 1))
+if urls:
+    Kliz([IndexNowProvider(api_key="votre-cle")]).notify_many(urls)
+```
 
 ### Mettre en place la clé IndexNow
 

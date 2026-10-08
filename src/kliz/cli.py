@@ -5,11 +5,18 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from datetime import datetime
 from typing import Callable
 
 from kliz import Kliz, __version__
 from kliz.exceptions import KlizError
-from kliz.providers import GoogleProvider, IndexNowProvider
+from kliz.providers import (
+    BaseProvider,
+    GoogleProvider,
+    GoogleSearchConsoleProvider,
+    IndexNowProvider,
+)
+from kliz.sitemap import read_sitemap
 
 
 class ConfigurationError(ValueError):
@@ -65,7 +72,25 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--google-service-account-file",
         default=os.environ.get("KLIZ_GOOGLE_SERVICE_ACCOUNT_FILE"),
-        help="Path to the Google service account JSON file",
+        help="Path to the Google service account JSON file (Indexing API: job"
+        " posting and livestream pages only)",
+    )
+    parser.add_argument(
+        "--gsc-site",
+        default=os.environ.get("KLIZ_GSC_SITE"),
+        help="Search Console property, e.g. https://example.com/ or"
+        " sc-domain:example.com (KLIZ_GSC_SITE env var)",
+    )
+    parser.add_argument(
+        "--gsc-sitemap",
+        default=os.environ.get("KLIZ_GSC_SITEMAP"),
+        help="Sitemap URL to resubmit to Search Console (default: the --sitemap"
+        " URL, else <property>/sitemap.xml)",
+    )
+    parser.add_argument(
+        "--gsc-service-account-file",
+        default=os.environ.get("KLIZ_GSC_SERVICE_ACCOUNT_FILE"),
+        help="Service account JSON file allowed on the Search Console property",
     )
     sub = parser.add_subparsers(dest="command", required=True)
     p_notify = sub.add_parser("notify", help="Notify providers of a URL")
@@ -74,6 +99,22 @@ def _build_parser() -> argparse.ArgumentParser:
         "--batch",
         default=None,
         help="File with one URL per line",
+    )
+    p_notify.add_argument(
+        "--sitemap",
+        default=None,
+        help="Sitemap or sitemap index (URL or file, .xml or .xml.gz)",
+    )
+    p_notify.add_argument(
+        "--since",
+        default=None,
+        help="With --sitemap: only URLs whose <lastmod> is on or after this"
+        " ISO date or datetime (e.g. 2026-10-01)",
+    )
+    p_notify.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the URLs that would be notified and send nothing",
     )
     p_notify.set_defaults(command=_cmd_notify)
     p_providers = sub.add_parser("providers", help="List configured providers")
@@ -116,6 +157,14 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def _cmd_notify(args: argparse.Namespace) -> int:
     urls = _resolve_urls(args)
+    if not urls:
+        print(f"nothing changed since {args.since}, nothing to notify", file=sys.stderr)
+        return 0
+    if args.dry_run:
+        for url in urls:
+            print(url)
+        print(f"{len(urls)} URL(s), nothing sent (dry run)", file=sys.stderr)
+        return 0
     indexer = _build_indexer(args)
     all_ok = True
     for name, results in indexer.notify_many_detailed(urls).items():
@@ -191,11 +240,32 @@ def _cmd_indexnow_verify_key(args: argparse.Namespace) -> int:
 
 
 def _resolve_urls(args: argparse.Namespace) -> list[str]:
+    sitemap = getattr(args, "sitemap", None)
+    since = getattr(args, "since", None)
+    sources = [bool(args.url), bool(args.batch), bool(sitemap)]
+    if sum(sources) > 1:
+        raise ConfigurationError("provide only one of a URL, --batch or --sitemap")
+    if since and not sitemap:
+        raise ConfigurationError("--since requires --sitemap")
+    if sitemap:
+        urls = read_sitemap(sitemap, since=_parse_since(since) if since else None)
+        if not urls and not since:
+            raise ConfigurationError(f"no URLs found in {sitemap}")
+        return urls
     if args.batch:
         return _read_urls_from_file(args.batch)
     if args.url:
         return [args.url]
-    raise ConfigurationError("provide a URL or --batch <file>")
+    raise ConfigurationError("provide a URL, --batch <file> or --sitemap <url>")
+
+
+def _parse_since(value: str) -> datetime:
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError as exc:
+        raise ConfigurationError(
+            f"--since must be an ISO date or datetime, got {value!r}"
+        ) from exc
 
 
 def _read_urls_from_file(path: str) -> list[str]:
@@ -211,7 +281,7 @@ def _read_urls_from_file(path: str) -> list[str]:
 
 
 def _build_indexer(args: argparse.Namespace) -> Kliz:
-    providers: list[IndexNowProvider | GoogleProvider] = []
+    providers: list[BaseProvider] = []
     if args.indexnow_api_key:
         if not args.indexnow_key_location:
             raise ConfigurationError(
@@ -231,10 +301,30 @@ def _build_indexer(args: argparse.Namespace) -> Kliz:
         providers.append(
             GoogleProvider(args.google_service_account_file),
         )
+    if args.gsc_site:
+        providers.append(_build_search_console(args))
     if not providers:
         raise ConfigurationError(
             "no providers configured: set --indexnow-api-key + "
-            "--indexnow-key-location or --google-service-account-file "
-            "(or the KLIZ_* env vars)",
+            "--indexnow-key-location, --gsc-site + --gsc-service-account-file "
+            "or --google-service-account-file (or the KLIZ_* env vars)",
         )
     return Kliz(providers)
+
+
+def _build_search_console(args: argparse.Namespace) -> GoogleSearchConsoleProvider:
+    account_file = args.gsc_service_account_file
+    if not account_file:
+        raise ConfigurationError(
+            "--gsc-service-account-file is required when --gsc-site is set"
+        )
+    if not os.path.exists(account_file):
+        raise ConfigurationError(f"service account file not found: {account_file}")
+    sitemap_url = args.gsc_sitemap
+    sitemap = getattr(args, "sitemap", None)
+    if not sitemap_url and sitemap and sitemap.lower().startswith("http"):
+        sitemap_url = sitemap
+    try:
+        return GoogleSearchConsoleProvider(account_file, args.gsc_site, sitemap_url)
+    except ValueError as exc:
+        raise ConfigurationError(f"Search Console: {exc}") from exc

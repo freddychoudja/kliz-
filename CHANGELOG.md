@@ -16,6 +16,16 @@ Le projet suit le versionnage sémantique.
   absents, les redirections, les mauvaises clés et les pages HTML servies en
   `200` pour les chemins inconnus.
 
+- Lecture de sitemaps : `read_sitemap()` et `kliz notify --sitemap` (URL ou
+  fichier, gzip, index de sitemaps, filtre `--since` sur `<lastmod>`), analyse
+  via `defusedxml`, plafond de 50 Mo et erreurs claires quand une page HTML est
+  servie à la place du sitemap. Nouvelle dépendance : `defusedxml`.
+- `GoogleSearchConsoleProvider` : soumet à nouveau un sitemap via l'API Search
+  Console, la méthode prise en charge pour signaler des changements à Google
+  pour toute page. Options CLI `--gsc-site`, `--gsc-sitemap`,
+  `--gsc-service-account-file` (`KLIZ_GSC_*`).
+- `kliz notify --dry-run` liste les URL sans rien envoyer.
+
 ### Corrigé
 
 - `Kliz.notify_many` regroupe les URL par hôte avant le découpage : mélanger
