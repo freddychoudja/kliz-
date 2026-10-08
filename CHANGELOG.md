@@ -5,6 +5,13 @@ The project follows semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- "Signal" visual identity in `docs/brand/`: symbol, horizontal and stacked lockups
+  (dark and light), GitHub avatar, social preview and usage guidelines. The README
+  header switches lockup with GitHub's light or dark theme, and the docs site gets
+  the new favicons and Apple touch icon.
+
 ### Changed
 
 - Redesigned README: centered header with logo and badges, engine coverage table,
