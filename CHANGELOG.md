@@ -5,6 +5,21 @@ The project follows semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- Community health files: `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1),
+  `SUPPORT.md`, `GOVERNANCE.md` and a **Question** issue form.
+- README **Community** section: ways to contribute, first pull request, roadmap,
+  getting help, governance and contributors.
+
+### Changed
+
+- New documentation site in `docs/`, in English and the "Signal" identity: a live
+  run of `kliz notify`, an in-browser URL checker that mirrors
+  `kliz.normalize_url()` and shows the IndexNow request body, setup for the command
+  line, GitHub Action and Python, a reference of commands, options, Action inputs
+  and exit codes, an FAQ and a setup generator. It replaces the French v0.2.0 page.
+
 ## [0.3.1] - 2026-10-08
 
 ### Added

@@ -593,14 +593,27 @@ Publishing PyPI et ne nécessite aucun token PyPI permanent dans GitHub.
 Avant la première release, configurez sur PyPI un publisher avec le dépôt
 `freddychoudja/kliz-`, le workflow `release.yml` et l'environnement `pypi`.
 
-## Contribuer
+## Communauté
 
-Les contributions sont les bienvenues. Consultez
-[CONTRIBUTING.fr.md](CONTRIBUTING.fr.md) avant d'ouvrir une issue ou une pull
-request.
+`kliz` se construit en public, et toute aide compte : un bug rencontré sur votre
+hébergeur, un correctif, un nouveau moteur, une phrase plus claire dans la doc.
 
-Le code source et le suivi du projet sont disponibles sur
-[GitHub](https://github.com/freddychoudja/kliz-).
+- **Premiers pas :** choisissez une
+  [good first issue](https://github.com/freddychoudja/kliz-/issues?q=is%3Aopen+label%3A%22good+first+issue%22) ;
+  chacune indique les fichiers concernés et comment tester le correctif.
+- **Nouveau moteur :** héritez de `BatchProvider`, qui gère validation, lots et HTTP.
+- **Traduction :** aidez à garder ce README aligné sur la
+  [version anglaise](README.md), qui fait référence.
+- **Contribuer du code :** lisez [CONTRIBUTING.fr.md](CONTRIBUTING.fr.md) ; les tests
+  simulent tous les appels réseau, aucune clé n'est nécessaire.
+- **Obtenir de l'aide :** le [site de documentation](https://freddychoudja.github.io/kliz-/)
+  et [SUPPORT.md](SUPPORT.md) ; les questions en français sont les bienvenues.
+- **Sécurité :** signalez les vulnérabilités en privé, comme décrit dans
+  [SECURITY.fr.md](SECURITY.fr.md).
+
+Toute participation suit le [code de conduite](CODE_OF_CONDUCT.md) (Contributor
+Covenant 2.1). Le fonctionnement du projet est décrit dans
+[GOVERNANCE.md](GOVERNANCE.md).
 
 ## Licence
 
