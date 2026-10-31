@@ -194,6 +194,26 @@ def test_urls_can_come_from_stdin(
     assert "no URLs found in stdin" in capsys.readouterr().err
 
 
+def test_urls_can_come_from_stdin_with_a_bom(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """
+    Regression: a BOM at the head of stdin must not end up in the first URL
+
+    stdin is a real ``TextIOWrapper`` opened with the locale encoding (cp1252
+    on Windows), so the BOM is decoded as ``ï»¿`` and glued to the first URL.
+    """
+
+    stream = io.TextIOWrapper(
+        io.BytesIO("https://a/1\nhttps://a/2\n".encode("utf-8-sig")),
+        encoding="cp1252",
+    )
+    monkeypatch.setattr("sys.stdin", stream)
+
+    assert main(["notify", "-", "--dry-run"]) == 0
+    assert capsys.readouterr().out == "https://a/1\nhttps://a/2\n"
+
+
 def test_json_report_for_a_real_run(capsys: pytest.CaptureFixture[str]) -> None:
     indexer = MagicMock()
     indexer.notify_many_detailed.return_value = {

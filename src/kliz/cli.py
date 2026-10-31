@@ -406,13 +406,41 @@ def _parse_since(value: str) -> datetime:
         ) from exc
 
 
+def _stdin_lines() -> list[str]:
+    """
+    Read stdin as UTF-8, dropping a byte order mark if the producer added one
+
+    ``reconfigure`` is only available on a real ``TextIOWrapper``: tests and
+    other embedders replace ``sys.stdin`` with objects that do not have it
+    (``io.StringIO`` for instance), in which case the stream is already
+    decoded and is read as-is.
+
+    Reconfiguring a stream that has already been read raises
+    ``io.UnsupportedOperation`` (a subclass of both ``OSError`` and
+    ``ValueError``); there is nothing left to fix at that point either.
+    """
+
+    reconfigure = getattr(sys.stdin, "reconfigure", None)
+    if reconfigure is not None:
+        try:
+            reconfigure(encoding="utf-8-sig")
+        except (OSError, ValueError):
+            pass
+    return [line.strip() for line in sys.stdin]
+
+
 def _read_urls_from_file(path: str) -> list[str]:
     source = "stdin" if path == "-" else path
     try:
         if path == "-":
-            lines = [line.strip() for line in sys.stdin]
+            lines = _stdin_lines()
         else:
-            with open(path) as handle:
+            # utf-8-sig decodes UTF-8 and strips a leading BOM. The default
+            # encoding is locale dependent (cp1252 on Windows), so without it
+            # a BOM turns the first URL into "\ufeffhttps://…" — listed by
+            # --dry-run and rejected by validation — and non-ASCII bytes are
+            # decoded differently from machine to machine.
+            with open(path, encoding="utf-8-sig") as handle:
                 lines = [line.strip() for line in handle]
     except OSError as exc:
         raise ConfigurationError(f"cannot read {source}: {exc}") from exc

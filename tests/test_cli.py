@@ -193,6 +193,25 @@ def test_notify_batch_empty_file_gives_config_error() -> None:
     assert exit_code == 2
 
 
+def test_notify_batch_file_with_a_bom(capsys: pytest.CaptureFixture[str]) -> None:
+    """
+    Regression: a batch file saved with a BOM must not yield an invalid first URL
+
+    ``open(path)`` used the locale default encoding, so the BOM survived
+    decoding and came out as ``\\ufeffhttps://example.com/a``: listed by
+    ``--dry-run``, and rejected by validation when actually sent.
+    """
+
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".txt", delete=False, encoding="utf-8-sig"
+    ) as fh:
+        fh.write("https://example.com/a\nhttps://example.com/b\n")
+        path = fh.name
+
+    assert main(["notify", "--batch", path, "--dry-run"]) == 0
+    assert capsys.readouterr().out == "https://example.com/a\nhttps://example.com/b\n"
+
+
 def test_providers_list(capsys: pytest.CaptureFixture[str]) -> None:
     from kliz.providers import IndexNowProvider
 
