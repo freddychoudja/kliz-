@@ -18,6 +18,11 @@
   <a href="https://pypi.org/project/kliz/"><img src="https://img.shields.io/pypi/pyversions/kliz?color=101820" alt="Python versions"></a>
   <a href="https://github.com/freddychoudja/kliz-/actions/workflows/ci.yml"><img src="https://github.com/freddychoudja/kliz-/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/freddychoudja/kliz-/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-FFB703" alt="MIT license"></a>
+  <br>
+  <a href="https://pypi.org/project/kliz/"><img src="https://img.shields.io/pypi/dm/kliz?color=101820&label=downloads" alt="Monthly downloads"></a>
+  <a href="https://github.com/freddychoudja/kliz-/issues?q=is%3Aopen+label%3A%22good+first+issue%22"><img src="https://img.shields.io/github/issues/freddychoudja/kliz-/good%20first%20issue?color=2FBF71&label=good%20first%20issues" alt="Good first issues"></a>
+  <a href="https://github.com/freddychoudja/kliz-/blob/main/CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-2FBF71" alt="Pull requests welcome"></a>
+  <a href="https://github.com/freddychoudja/kliz-/blob/main/CODE_OF_CONDUCT.md"><img src="https://img.shields.io/badge/Contributor%20Covenant-2.1-101820" alt="Contributor Covenant 2.1"></a>
 </p>
 
 <p align="center">
@@ -27,6 +32,7 @@
   <a href="#command-line">CLI</a> ·
   <a href="#python-api">Python API</a> ·
   <a href="https://freddychoudja.github.io/kliz-/">Docs</a> ·
+  <a href="#community">Community</a> ·
   <a href="https://github.com/freddychoudja/kliz-/blob/main/README.fr.md">Français</a>
 </p>
 
@@ -477,10 +483,26 @@ class ContentIndexingJob:
 - Track success rate, HTTP codes and quotas per provider with `on_result`.
 - Keep your sitemap and its `<lastmod>` dates accurate.
 
-## Contributing
+## Community
 
-Contributions are welcome; see [CONTRIBUTING.md](https://github.com/freddychoudja/kliz-/blob/main/CONTRIBUTING.md).
-Tests mock every network call, so no key or account is needed:
+kliz is built in the open, and every kind of help counts: a bug report from your
+host, a fix, a new engine, a clearer sentence in the docs. You don't need to know
+the codebase to start.
+
+### Ways to contribute
+
+| If you have… | You can |
+| :--- | :--- |
+| 15 minutes | Try kliz on your site and [tell us what broke](https://github.com/freddychoudja/kliz-/issues/new/choose), or improve a sentence in the docs |
+| An evening | Pick a [good first issue](https://github.com/freddychoudja/kliz-/issues?q=is%3Aopen+label%3A%22good+first+issue%22): each one names the files involved and how to test the fix |
+| A search engine you care about | [Add a provider](#your-own-provider): `BatchProvider` handles validation, batching and HTTP for you |
+| A framework you use | Write a recipe for Django, Flask, FastAPI, Hugo, Astro or MkDocs (see [Integrations](#integrations)) |
+| A second language | Keep [README.fr.md](https://github.com/freddychoudja/kliz-/blob/main/README.fr.md) in step with this README, or start a new translation |
+| Review experience | Review [open pull requests](https://github.com/freddychoudja/kliz-/pulls); a second pair of eyes is always welcome |
+
+### Your first pull request
+
+Tests mock every network call, so you need no API key or account:
 
 ```bash
 git clone https://github.com/freddychoudja/kliz-.git && cd kliz-
@@ -489,10 +511,61 @@ pip install -e ".[dev]"
 ruff format --check src tests && ruff check src tests && mypy src && pytest --cov=kliz
 ```
 
-Releases are published to PyPI from `vX.Y.Z` tags through Trusted Publishing. Report
+Then branch from `main`, add a test for your change, update `CHANGELOG.md` under
+**Unreleased**, and open a pull request; the template lists the checks.
+[CONTRIBUTING.md](https://github.com/freddychoudja/kliz-/blob/main/CONTRIBUTING.md)
+explains the design rules every change keeps: a framework-agnostic core, heavy SDKs
+in optional extras, mockable network calls and no committed secrets.
+
+### Roadmap
+
+Planned next, in rough order. Each item has, or will get, its own issue where the
+design is discussed before the code.
+
+- **Send only what changed.** Remember what was already notified, and stop cleanly
+  at each provider's daily quota.
+- **More engines.** Bing Webmaster URL submission, Baidu push, `URL_DELETED` and
+  batched requests for Google, and third-party providers discovered through
+  `kliz.providers` entry points.
+- **Async.** An `AsyncKliz` on `httpx` that notifies providers in parallel.
+- **Action and integrations.** A "changed in this commit" mode, a GitHub Marketplace
+  listing, a Docker image, and a `kliz-django` package.
+- **Supply chain.** Actions pinned by commit, OpenSSF Scorecard, CodeQL and signed
+  release attestations.
+- **1.0.** A frozen public API and a written deprecation policy.
+
+### Getting help
+
+Read the [docs site](https://freddychoudja.github.io/kliz-/) and
+[SUPPORT.md](https://github.com/freddychoudja/kliz-/blob/main/SUPPORT.md), then
+[open a question](https://github.com/freddychoudja/kliz-/issues/new/choose). Report
 vulnerabilities privately as described in
-[SECURITY.md](https://github.com/freddychoudja/kliz-/blob/main/SECURITY.md).
+[SECURITY.md](https://github.com/freddychoudja/kliz-/blob/main/SECURITY.md), never in
+a public issue.
+
+### Code of conduct and governance
+
+Everyone taking part in kliz follows the
+[Code of Conduct](https://github.com/freddychoudja/kliz-/blob/main/CODE_OF_CONDUCT.md)
+(Contributor Covenant 2.1). How decisions are made, and how contributors become
+maintainers, is written in
+[GOVERNANCE.md](https://github.com/freddychoudja/kliz-/blob/main/GOVERNANCE.md).
+
+### Contributors
+
+Thanks to everyone who has helped build kliz.
+
+<a href="https://github.com/freddychoudja/kliz-/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=freddychoudja/kliz-" alt="kliz contributors">
+</a>
+
+### Releases
+
+Releases follow semantic versioning and are published to PyPI from `vX.Y.Z` tags
+through Trusted Publishing. Every change is listed in the
+[changelog](https://github.com/freddychoudja/kliz-/blob/main/CHANGELOG.md).
 
 ## License
 
 [MIT](https://github.com/freddychoudja/kliz-/blob/main/LICENSE) © 2026 Freddy Choudja
+and contributors

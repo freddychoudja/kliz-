@@ -5,6 +5,22 @@ Le projet suit le versionnage sémantique.
 
 ## [Unreleased]
 
+### Ajouté
+
+- Fichiers communautaires : `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1),
+  `SUPPORT.md`, `GOVERNANCE.md` et un formulaire d'issue **Question**.
+- Section **Communauté** dans le README : façons de contribuer, première pull
+  request, feuille de route, aide, gouvernance et contributeurs.
+
+### Modifié
+
+- Nouveau site de documentation dans `docs/`, en anglais et à l'identité « Signal » :
+  exécution animée de `kliz notify`, vérificateur d'URL dans le navigateur qui
+  reproduit `kliz.normalize_url()` et affiche la requête IndexNow, mise en place via
+  la CLI, la GitHub Action et Python, référence des commandes, options, entrées de
+  l'Action et codes de sortie, FAQ et générateur de configuration. Il remplace la
+  page française v0.2.0.
+
 ## [0.3.1] - 2026-10-08
 
 ### Ajouté

@@ -3,3 +3,6 @@ contact_links:
   - name: Report a vulnerability
     url: https://github.com/freddychoudja/kliz-/security/advisories/new
     about: Use the private channel only for security issues.
+  - name: Documentation
+    url: https://freddychoudja.github.io/kliz-/
+    about: Setup, reference and answers to common questions.
