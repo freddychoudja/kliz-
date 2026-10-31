@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import math
 import os
 import sys
 from collections.abc import Callable, Mapping
@@ -429,7 +430,13 @@ class _TimeoutKwargs(TypedDict, total=False):
 def _timeout(args: argparse.Namespace) -> _TimeoutKwargs:
     """Return ``{"timeout": ...}`` when --timeout is set, for provider kwargs."""
 
-    return {} if args.timeout is None else {"timeout": args.timeout}
+    if args.timeout is None:
+        return {}
+    if not math.isfinite(args.timeout) or args.timeout <= 0:
+        raise ConfigurationError(
+            f"--timeout must be a positive number of seconds, got {args.timeout!r}",
+        )
+    return {"timeout": args.timeout}
 
 
 def _build_indexer(args: argparse.Namespace) -> Kliz:
