@@ -780,6 +780,10 @@ def test_cli_missing_extra_is_a_configuration_error(
         ("Thu, 08 Oct 2026 12:01:30 GMT", 90.0),
         ("Thu, 08 Oct 2026 11:00:00 GMT", 0.0),
         ("soon", None),
+        ("²", None),
+        ("①", None),
+        ("١٢", None),
+        ("1.5", None),
         ("-5", None),
         ("", None),
         (None, None),
@@ -801,6 +805,57 @@ def test_indexnow_reports_retry_after_header() -> None:
 
     assert captured.value.retryable is True
     assert captured.value.retry_after == 30.0
+
+
+@pytest.mark.parametrize("header", ["²", "①", "١٢", "1.5", "soon"])
+def test_indexnow_preserves_status_with_malformed_retry_after(header: str) -> None:
+    session = make_mock_session()
+    session.post.return_value = Mock(status_code=503, headers={"Retry-After": header})
+    provider = IndexNowProvider(api_key="indexnow-key", session=session)
+
+    with pytest.raises(ProviderError) as captured:
+        provider.notify("https://example.com/page")
+
+    assert captured.value.status_code == 503
+    assert captured.value.retryable is True
+    assert captured.value.retry_after is None
+
+
+def test_indexnow_retries_after_a_malformed_retry_after() -> None:
+    session = make_mock_session()
+    session.post.side_effect = [
+        Mock(status_code=503, headers={"Retry-After": "²"}),
+        Mock(status_code=200),
+    ]
+    sleep = Mock()
+    provider = IndexNowProvider(api_key="indexnow-key", session=session)
+
+    result = Kliz([provider], max_attempts=2, sleep=sleep).notify_all_detailed(
+        "https://example.com/page"
+    )["IndexNowProvider"]
+
+    assert result.success is True
+    assert result.attempts == 2
+    assert session.post.call_count == 2
+    sleep.assert_called_once()
+
+
+@pytest.mark.parametrize("header", ["²", "①", "١٢"])
+def test_google_preserves_status_with_malformed_retry_after(
+    header: str, google_client_mocks: dict[str, Mock]
+) -> None:
+    response = httplib2.Response({"status": "503", "retry-after": header})
+    service = google_client_mocks["build"].return_value
+    service.urlNotifications.return_value.publish.return_value.execute.side_effect = (
+        HttpError(response, b"{}")
+    )
+
+    with pytest.raises(ProviderError) as captured:
+        GoogleProvider("sa.json").notify("https://example.com/job")
+
+    assert captured.value.status_code == 503
+    assert captured.value.retryable is True
+    assert captured.value.retry_after is None
 
 
 def test_google_reports_retry_after_header(

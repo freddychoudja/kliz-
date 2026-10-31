@@ -5,6 +5,11 @@ Le projet suit le versionnage sémantique.
 
 ## [Unreleased]
 
+### Corrigé
+
+- Ignorer les valeurs `Retry-After` non ASCII mal formées sans perdre le statut
+  HTTP du provider ni la possibilité de réessayer.
+
 ### Ajouté
 
 - Fichiers communautaires : `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1),
