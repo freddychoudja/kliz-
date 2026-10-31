@@ -5,6 +5,10 @@ The project follows semantic versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- Packaging metadata now requires setuptools 77 or newer for the PEP 639 license expression, declares `LICENSE` as a license file, and advertises typed-package support. The redundant `wheel` build requirement is removed.
+
 ### Added
 
 - Community health files: `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1),
