@@ -1,309 +1,632 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Kliz Documentation</title>
+    <title>kliz · Notify search engines the moment you publish</title>
     <meta
       name="description"
-      content="Documentation statique de Kliz, bot d'indexation SEO agnostique pour Python."
+      content="kliz tells Bing, Yandex, Naver, Seznam, Yep and Google about new and updated pages the moment you publish. A command-line tool, a GitHub Action and a Python library. Open source, MIT."
     />
+    <link rel="canonical" href="https://freddychoudja.github.io/kliz-/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="kliz · One publish. Every engine, notified." />
+    <meta
+      property="og:description"
+      content="Tell search engines about your new and updated pages, the moment you publish."
+    />
+    <meta property="og:url" content="https://freddychoudja.github.io/kliz-/" />
+    <meta property="og:image" content="https://freddychoudja.github.io/kliz-/brand/social-preview.png" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png" />
     <link rel="icon" href="assets/favicon-16.png" sizes="16x16" type="image/png" />
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
     <meta name="theme-color" content="#101820" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap"
+    />
     <link rel="stylesheet" href="styles.css" />
+    <script>
+      document.documentElement.classList.add("js");
+    </script>
   </head>
   <body>
-    <a class="skip-link button secondary" href="#contenu">Aller au contenu</a>
-    <div class="shell">
-      <aside class="sidebar" aria-label="Navigation de la documentation">
-        <div class="brand">
-          <img src="brand/symbol-color-light.svg" alt="" />
-          <div>
-            <strong>kliz</strong>
-            <span>Documentation v0.2.0</span>
-          </div>
-        </div>
-        <nav class="nav">
-          <a class="is-active" href="#intro">Intro</a>
-          <a href="#installation">Installation</a>
-          <a href="#quickstart">Démarrage</a>
-          <a href="#providers">Providers</a>
-          <a href="#cli">CLI</a>
-          <a href="#async">Async</a>
-          <a href="#production">Production</a>
-        </nav>
-        <p class="sidebar-footer">
-          Package Python synchrone pour notifier les moteurs de recherche.
-          <br />
-          <a href="https://github.com/freddychoudja/kliz-">GitHub</a>
-        </p>
-      </aside>
+    <a class="skip-link" href="#main">Skip to content</a>
 
-      <main id="contenu" class="content">
-        <section id="intro" class="hero">
-          <p class="eyebrow">SEO indexing bot</p>
-          <h1>kliz</h1>
+    <header class="nav wrap">
+      <a class="wordmark" href="#top" aria-label="kliz home">
+        <img src="brand/lockup-horizontal-dark.svg" alt="kliz" width="96" height="32" />
+      </a>
+      <nav aria-label="Primary">
+        <a href="#start">Install</a>
+        <a href="#reference">Reference</a>
+        <a href="#faq">FAQ</a>
+        <a href="#community">Community</a>
+        <a href="https://github.com/freddychoudja/kliz-">GitHub</a>
+      </nav>
+    </header>
+
+    <main id="main">
+      <!-- Hero: a kliz run, at real size -->
+      <section class="hero" id="top" aria-labelledby="hero-title">
+        <div class="wrap hero-head" data-reveal>
+          <h1 id="hero-title">One publish. Every engine, notified.</h1>
+        </div>
+        <div class="hero-body">
+        <div class="hero-copy" data-reveal>
           <p class="lead">
-            Une API Python agnostique pour notifier IndexNow et Google Indexing
-            quand une URL est créée, mise à jour ou prête à être redécouverte.
+            kliz tells Bing, Yandex, Naver, Seznam, Yep and Google about your new and updated
+            pages the moment you publish, from one URL, a list or a whole sitemap.
           </p>
           <div class="hero-actions">
-            <a class="button primary" href="#quickstart">Voir l'exemple</a>
-            <a class="button secondary" href="#providers">Comparer les providers</a>
-            <a
-              class="button secondary"
-              href="https://github.com/freddychoudja/kliz-"
-              >GitHub</a
-            >
+            <a class="button" href="#start">Set up in two minutes</a>
+            <button class="install" type="button" data-copy-text="pipx install kliz">
+              <code>pipx install kliz</code>
+              <span class="install-state" aria-live="polite">Copy</span>
+            </button>
           </div>
-        </section>
+        </div>
 
-        <section id="installation" class="section">
-          <h2>Installation</h2>
-          <p>
-            Kliz reste volontairement léger côté intégration : pas de Django, pas
-            de Celery, pas de Redis imposé par le package.
-          </p>
-          <div class="code-block">
-            <div class="code-head">
-              <span>Terminal</span>
-              <button class="copy" type="button" data-copy>Copier</button>
+        <div class="stage" data-shutter>
+          <div class="run" data-ui data-run>
+            <div class="run-head">
+              <code>kliz notify --sitemap https://example.com/sitemap.xml --since 2026-10-30</code>
+              <button class="run-replay" type="button" data-run-replay>Run again</button>
             </div>
-            <pre><code>pip install kliz</code></pre>
+            <ul class="run-urls" aria-label="Pages changed since 30 October">
+              <li><code>https://example.com/</code><time datetime="2026-10-31">Oct 31</time></li>
+              <li><code>https://example.com/blog/indexnow-explained</code><time datetime="2026-10-31">Oct 31</time></li>
+              <li><code>https://example.com/pricing</code><time datetime="2026-10-30">Oct 30</time></li>
+            </ul>
+            <ul class="run-providers" aria-label="Providers" aria-live="polite">
+              <li data-step>
+                <span class="dot" aria-hidden="true"></span>
+                <strong>IndexNow</strong>
+                <span class="run-detail">Bing, Yandex, Naver, Seznam, Yep</span>
+                <span class="run-status" data-done="HTTP 202 · 3 URLs sent">sent</span>
+              </li>
+              <li data-step>
+                <span class="dot" aria-hidden="true"></span>
+                <strong>Search Console</strong>
+                <span class="run-detail">Google, sitemap resubmitted</span>
+                <span class="run-status" data-done="HTTP 200 · sent">sent</span>
+              </li>
+            </ul>
+            <p class="run-foot">exit 0 · 2 providers · 0 failures</p>
           </div>
-          <div class="quick-grid" aria-label="Points clefs">
-            <article class="tile">
-              <h3>Synchrone</h3>
-              <p>Tu appelles l'API depuis ton service, worker ou cron existant.</p>
-            </article>
-            <article class="tile">
-              <h3>Agnostique</h3>
-              <p>Le package ne force aucun framework web ni file d'attente.</p>
-            </article>
-            <article class="tile">
-              <h3>Typed</h3>
-              <p>Le package expose `py.typed` et passe en typage strict.</p>
-            </article>
-          </div>
-        </section>
+        </div>
+        </div>
+      </section>
 
-        <section id="quickstart" class="section">
-          <h2>Démarrage rapide</h2>
-          <p>
-            Injecte les providers dans l'orchestrateur, puis notifie une URL.
-            Les erreurs d'un provider n'arrêtent pas les autres providers.
-          </p>
-          <div class="code-block">
-            <div class="code-head">
-              <span>Python</span>
-              <button class="copy" type="button" data-copy>Copier</button>
+      <!-- Proof modules -->
+      <section class="section proofs wrap" aria-labelledby="proofs-title">
+        <h2 id="proofs-title" class="h-section" data-reveal>Precise, light, dependable</h2>
+
+        <article class="proof" data-reveal>
+          <div class="proof-panel" data-ui>
+            <pre><code><span class="c-dim">&lt;url&gt;</span>
+  <span class="c-dim">&lt;loc&gt;</span>https://example.com/pricing<span class="c-dim">&lt;/loc&gt;</span>
+  <span class="c-dim">&lt;lastmod&gt;</span><mark>2026-10-30</mark><span class="c-dim">&lt;/lastmod&gt;</span>
+<span class="c-dim">&lt;/url&gt;</span></code></pre>
+          </div>
+          <div class="proof-text">
+            <h3>Reads your sitemap</h3>
+            <p>
+              Sitemaps, sitemap indexes and <code>.gz</code> files, from a URL or the build
+              folder. With <code>--since</code>, only pages whose <code>&lt;lastmod&gt;</code>
+              moved are sent.
+            </p>
+          </div>
+        </article>
+
+        <article class="proof" data-reveal>
+          <div class="proof-panel" data-ui>
+            <ul class="mini-rows">
+              <li><span class="dot is-sent"></span><code>https://example.com/a</code><em>sent</em></li>
+              <li><span class="dot is-fail"></span><code>https://example.com/b#top</code><em>fragment</em></li>
+              <li><span class="dot is-sent"></span><code>https://example.com/c</code><em>sent</em></li>
+            </ul>
+          </div>
+          <div class="proof-text">
+            <h3>One bad URL never sinks a batch</h3>
+            <p>
+              Every URL is validated and normalized before it leaves. A rejected one gets its own
+              failed result; the rest of the batch goes out.
+            </p>
+          </div>
+        </article>
+
+        <article class="proof" data-reveal>
+          <div class="proof-panel" data-ui>
+            <ul class="mini-rows">
+              <li><span class="dot is-wait"></span><code>attempt 1</code><em>HTTP 429 · Retry-After 30</em></li>
+              <li><span class="dot is-wait"></span><code>waiting</code><em>30 s</em></li>
+              <li><span class="dot is-sent"></span><code>attempt 2</code><em>HTTP 202</em></li>
+            </ul>
+          </div>
+          <div class="proof-text">
+            <h3>Retries the way servers ask</h3>
+            <p>
+              Opt-in retries honor <code>Retry-After</code>, back off with jitter and stop inside
+              your time budget, handing back <code>retryable=True</code> for your queue.
+            </p>
+          </div>
+        </article>
+
+        <article class="proof" data-reveal>
+          <div class="proof-panel" data-ui>
+            <pre><code><span class="c-dim">INFO</span> key file https://example.com/<mark>&lt;key&gt;</mark>.txt OK
+<span class="c-dim">INFO</span> IndexNowProvider sent 3 URLs</code></pre>
+          </div>
+          <div class="proof-text">
+            <h3>Keys stay out of your logs</h3>
+            <p>
+              API keys are never logged and key file URLs show <code>&lt;key&gt;</code>. XML goes
+              through <code>defusedxml</code>, and each file is capped at 50 MB.
+            </p>
+          </div>
+        </article>
+
+        <article class="proof" data-reveal>
+          <div class="proof-panel" data-ui>
+            <pre><code>$ pipx install kliz
+  installed package kliz 0.3.1
+  <mark>7 small packages</mark>, Google is an extra</code></pre>
+          </div>
+          <div class="proof-text">
+            <h3>Light enough for any CI</h3>
+            <p>
+              No framework, no daemon. Google support lives in the optional
+              <code>kliz[google]</code> extra, so IndexNow-only sites never install it.
+            </p>
+          </div>
+        </article>
+      </section>
+
+      <!-- Band: the oldest version of the idea -->
+      <figure class="band" aria-labelledby="band-caption">
+        <img
+          src="media/semaphore-line.webp"
+          alt="Two men on a stone tower work the arms of a semaphore mast above a harbour; another tower stands on the far hill."
+          width="1600"
+          height="1357"
+          loading="lazy"
+          decoding="async"
+        />
+        <figcaption id="band-caption" class="band-caption">
+          <p class="band-line">One signal, relayed to every tower in sight.</p>
+          <p class="band-note">Optical semaphore line, about 1800. Drawing by Keith Thomas.</p>
+        </figcaption>
+      </figure>
+
+      <!-- How it works: one notice, four fields -->
+      <section class="flow" aria-labelledby="flow-title">
+        <div class="field f1" data-reveal>
+          <h2 id="flow-title" class="flow-title">After every deploy</h2>
+          <div class="notice" data-ui>
+            <p class="notice-head"><code>deployment_status</code></p>
+            <p class="notice-main">Production, success</p>
+          </div>
+          <p class="flow-line">First, your host finishes deploying.</p>
+        </div>
+        <div class="field f2" data-reveal>
+          <div class="notice" data-ui>
+            <p class="notice-head"><code>sitemap.xml</code></p>
+            <p class="notice-main">128 pages, 3 changed</p>
+          </div>
+          <p class="flow-line">Then kliz reads what changed.</p>
+        </div>
+        <div class="field f3" data-reveal>
+          <div class="notice" data-ui>
+            <p class="notice-head"><code>validated</code></p>
+            <p class="notice-main">3 clean, 0 rejected</p>
+          </div>
+          <p class="flow-line">It checks every URL first.</p>
+        </div>
+        <div class="field f4" data-reveal>
+          <div class="notice" data-ui>
+            <p class="notice-head"><code>sent</code></p>
+            <p class="notice-main">IndexNow 202, Google 200</p>
+          </div>
+          <p class="flow-line">Finally, every engine hears.</p>
+        </div>
+      </section>
+
+      <!-- Showcase: a URL you can type -->
+      <section class="section showcase wrap" id="try" aria-labelledby="try-title">
+        <h2 id="try-title" class="h-section" data-reveal>Try the URL rules</h2>
+        <div class="try" data-ui>
+          <label class="visually-hidden" for="try-url">URL to check</label>
+          <input
+            id="try-url"
+            class="try-input"
+            type="text"
+            inputmode="url"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            value="HTTPS://Bücher.Example:443/neu"
+          />
+          <div class="try-answer" aria-live="polite">
+            <p class="try-verdict" data-verdict>
+              Accepted as <code>https://xn--bcher-kva.example/neu</code>
+            </p>
+            <div class="code-block">
+              <div class="code-head"><span data-payload-label>IndexNow request body</span></div>
+              <pre><code data-payload>{
+  "host": "xn--bcher-kva.example",
+  "key": "your-indexnow-key",
+  "keyLocation": "https://xn--bcher-kva.example/your-indexnow-key.txt",
+  "urlList": ["https://xn--bcher-kva.example/neu"]
+}</code></pre>
             </div>
-            <pre><code>from kliz import GoogleProvider, IndexNowProvider, Kliz
+          </div>
+        </div>
+        <div class="try-examples" role="group" aria-label="Example URLs">
+          <button type="button" data-example="https://example.com/?p=123">A WordPress short link</button>
+          <button type="button" data-example="https://editor:hunter2@example.com/draft">A URL with a password</button>
+          <button type="button" data-example="https://example.com/docs#install">A link to a heading</button>
+          <button type="button" data-example="HTTPS://Bücher.Example:443/neu">An international domain</button>
+        </div>
+        <p class="try-note">
+          The same checks as <code>kliz.normalize_url()</code>, run in your browser. Nothing is sent.
+        </p>
+      </section>
+
+      <!-- Coverage list -->
+      <section class="section coverage wrap" id="engines" aria-labelledby="engines-title">
+        <div class="coverage-text">
+          <h2 id="engines-title" class="h-section" data-reveal>Who hears it</h2>
+          <p data-reveal>
+            A notification asks an engine to crawl; it never guarantees indexing. Keep your
+            sitemap and its <code>&lt;lastmod&gt;</code> dates honest.
+          </p>
+          <figure class="coverage-figure" data-reveal>
+            <img
+              src="media/chappe-telegraph-model.webp"
+              alt="A brass and marble model of a Chappe optical telegraph mast with its two signal arms raised."
+              width="900"
+              height="900"
+              loading="lazy"
+              decoding="async"
+            />
+            <figcaption>Chappe telegraph model, Musée des Arts et Métiers, Paris.</figcaption>
+          </figure>
+        </div>
+        <div class="coverage-list" data-reveal>
+          <p class="group">Through IndexNow, in one request</p>
+          <ul class="rows">
+            <li><span class="dot is-sent"></span><span>Bing</span><small>also Yahoo, DuckDuckGo, Ecosia</small></li>
+            <li><span class="dot is-sent"></span><span>Yandex</span><small>IndexNowProvider</small></li>
+            <li><span class="dot is-sent"></span><span>Naver</span><small>IndexNowProvider</small></li>
+            <li><span class="dot is-sent"></span><span>Seznam</span><small>IndexNowProvider</small></li>
+            <li><span class="dot is-sent"></span><span>Yep</span><small>IndexNowProvider</small></li>
+          </ul>
+          <p class="group">Google</p>
+          <ul class="rows">
+            <li><span class="dot is-sent"></span><span>Any page, by sitemap resubmission</span><small>GoogleSearchConsoleProvider</small></li>
+            <li><span class="dot is-wait"></span><span>Job postings and livestreams only</span><small>GoogleProvider</small></li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Get started: three ways -->
+      <section class="section start wrap" id="start" aria-labelledby="start-title">
+        <h2 id="start-title" class="h-section" data-reveal>Run it your way</h2>
+
+        <div class="tabs" data-tabs>
+          <div class="tab-list" role="tablist" aria-label="Ways to run kliz">
+            <button type="button" role="tab" id="tab-cli" aria-controls="panel-cli" aria-selected="true">Command line</button>
+            <button type="button" role="tab" id="tab-action" aria-controls="panel-action" aria-selected="false" tabindex="-1">GitHub Action</button>
+            <button type="button" role="tab" id="tab-python" aria-controls="panel-python" aria-selected="false" tabindex="-1">Python</button>
+          </div>
+
+          <div class="tab-panel" role="tabpanel" id="panel-cli" aria-labelledby="tab-cli">
+            <div class="tab-text">
+              <p>Create a key, publish its file with your site, check it, then notify the whole sitemap.</p>
+              <ol class="steps">
+                <li>Generate the key into your public folder.</li>
+                <li>Deploy, then verify what engines will see.</li>
+                <li>Notify every page of the sitemap.</li>
+              </ol>
+            </div>
+            <div class="code-block">
+              <div class="code-head"><span>Terminal</span><button class="copy" type="button" data-copy>Copy</button></div>
+              <pre><code>KEY=$(kliz indexnow keygen --write public/ --site https://example.com)
+
+kliz --indexnow-api-key "$KEY" indexnow verify-key --site https://example.com
+
+export KLIZ_INDEXNOW_API_KEY="$KEY"
+export KLIZ_INDEXNOW_KEY_LOCATION="https://example.com/$KEY.txt"
+kliz notify --sitemap https://example.com/sitemap.xml</code></pre>
+            </div>
+          </div>
+
+          <div class="tab-panel" role="tabpanel" id="panel-action" aria-labelledby="tab-action" hidden>
+            <div class="tab-text">
+              <p>
+                Add this to your site's repository. It runs after each successful production
+                deployment from Vercel, Netlify, Cloudflare Pages or any host that sends
+                <code>deployment_status</code>.
+              </p>
+              <p>Providers without credentials are skipped.</p>
+            </div>
+            <div class="code-block">
+              <div class="code-head"><span>.github/workflows/indexing.yml</span><button class="copy" type="button" data-copy>Copy</button></div>
+              <pre><code>name: Search engine indexing
+on:
+  deployment_status:
+
+jobs:
+  index:
+    if: >-
+      github.event.deployment_status.state == 'success' &amp;&amp;
+      github.event.deployment_status.environment == 'Production'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: freddychoudja/kliz-@v0.3.1
+        with:
+          sitemap: https://example.com/sitemap.xml
+          indexnow-api-key: ${{ secrets.INDEXNOW_KEY }}
+          indexnow-key-location: https://example.com/${{ secrets.INDEXNOW_KEY }}.txt
+          gsc-site: https://example.com/
+          gsc-service-account-json: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}</code></pre>
+            </div>
+          </div>
+
+          <div class="tab-panel" role="tabpanel" id="panel-python" aria-labelledby="tab-python" hidden>
+            <div class="tab-text">
+              <p>
+                Synchronous and framework-agnostic. Call it from a view, a Celery task, a cron
+                job or a serverless function.
+              </p>
+              <p>
+                <code>notify_many</code> deduplicates, groups by host and splits by each
+                provider's batch limit.
+              </p>
+            </div>
+            <div class="code-block">
+              <div class="code-head"><span>Python</span><button class="copy" type="button" data-copy>Copy</button></div>
+              <pre><code>from kliz import IndexNowProvider, Kliz, read_sitemap
 
 indexer = Kliz(
     [
         IndexNowProvider(
-            api_key="votre-cle-indexnow",
-            key_location="https://example.com/votre-cle-indexnow.txt",
+            api_key="your-indexnow-key",
+            key_location="https://example.com/your-indexnow-key.txt",
         ),
-        GoogleProvider("/run/secrets/google-service-account.json"),
-    ]
-)
-
-statuses = indexer.notify_all("https://example.com/articles/nouvel-article")</code></pre>
-          </div>
-          <div class="code-block">
-            <div class="code-head">
-              <span>Lots + retry opt-in</span>
-              <button class="copy" type="button" data-copy>Copier</button>
-            </div>
-            <pre><code>indexer = Kliz(
-    [IndexNowProvider(api_key="votre-cle-indexnow")],
+    ],
     max_attempts=3,
 )
 
-statuses = indexer.notify_many([
-    "https://example.com/articles/a",
-    "https://example.com/articles/b",
-])</code></pre>
-          </div>
-          <div class="code-block">
-            <div class="code-head">
-              <span>Résultats détaillés</span>
-              <button class="copy" type="button" data-copy>Copier</button>
+with indexer:
+    indexer.notify_all("https://example.com/articles/new")
+    indexer.notify_many(read_sitemap("https://example.com/sitemap.xml"))</code></pre>
             </div>
-            <pre><code>results = indexer.notify_all_detailed(
-    "https://example.com/articles/nouvel-article"
-)
-
-for name, result in results.items():
-    print(name, result.success, result.retryable, result.error)</code></pre>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section id="providers" class="section">
-          <h2>Providers</h2>
-          <p>
-            Chaque provider respecte le même contrat : `notify(url) -> bool`.
-            L'orchestrateur reste stable quand un moteur est ajouté.
+      <!-- Reference -->
+      <section class="section reference wrap" id="reference" aria-labelledby="reference-title">
+        <div class="reference-intro">
+          <h2 id="reference-title" class="h-section" data-reveal>Reference</h2>
+          <p data-reveal>
+            The essentials on one page. The
+            <a href="https://github.com/freddychoudja/kliz-#readme">README</a> has the full
+            Python API, providers and integration recipes.
           </p>
-          <div class="provider-grid">
-            <article class="tile">
-              <h3>IndexNow</h3>
-              <p>
-                Envoie une ou plusieurs URL du même hôte. Les réponses `429` et
-                `5xx` sont classées comme retentables.
-              </p>
-              <div class="code-block">
-                <div class="code-head">
-                  <span>Python</span>
-                  <button class="copy" type="button" data-copy>Copier</button>
-                </div>
-                <pre><code>provider = IndexNowProvider(
-    api_key="votre-cle-valide",
-    key_location="https://example.com/votre-cle-valide.txt",
-)
+        </div>
 
-provider.notify_many([
-    "https://example.com/page-1",
-    "https://example.com/page-2",
-])</code></pre>
+        <div class="reference-body">
+          <details open>
+            <summary>Commands</summary>
+            <div class="code-block">
+              <pre><code>kliz notify https://example.com/page                      # one URL
+kliz notify --batch urls.txt                              # one URL per line
+cat urls.txt | kliz notify -                              # from stdin
+kliz notify --sitemap https://example.com/sitemap.xml     # every page of a sitemap
+kliz notify --sitemap sitemap.xml.gz --since 2026-10-01   # only recent changes
+kliz notify --sitemap sitemap.xml --dry-run               # list, send nothing
+kliz notify --sitemap sitemap.xml --json                  # machine-readable report
+kliz providers                                            # list configured providers
+kliz indexnow keygen --write public/ --site https://example.com
+kliz indexnow verify-key --site https://example.com</code></pre>
+            </div>
+          </details>
+
+          <details>
+            <summary>Options and environment variables</summary>
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th scope="col">Option</th><th scope="col">Variable</th><th scope="col">Purpose</th></tr></thead>
+                <tbody>
+                  <tr><td><code>--indexnow-api-key</code></td><td><code>KLIZ_INDEXNOW_API_KEY</code></td><td>IndexNow key</td></tr>
+                  <tr><td><code>--indexnow-key-location</code></td><td><code>KLIZ_INDEXNOW_KEY_LOCATION</code></td><td>URL of the key file</td></tr>
+                  <tr><td><code>--gsc-site</code></td><td><code>KLIZ_GSC_SITE</code></td><td>Search Console property</td></tr>
+                  <tr><td><code>--gsc-service-account-file</code></td><td><code>KLIZ_GSC_SERVICE_ACCOUNT_FILE</code></td><td>Service account JSON file</td></tr>
+                  <tr><td><code>--gsc-sitemap</code></td><td><code>KLIZ_GSC_SITEMAP</code></td><td>Sitemap to resubmit</td></tr>
+                  <tr><td><code>--google-service-account-file</code></td><td><code>KLIZ_GOOGLE_SERVICE_ACCOUNT_FILE</code></td><td>Indexing API (jobs and livestreams)</td></tr>
+                  <tr><td><code>--max-attempts</code></td><td><code>KLIZ_MAX_ATTEMPTS</code></td><td>Attempts for temporary failures (default 1)</td></tr>
+                  <tr><td><code>--timeout</code></td><td><code>KLIZ_TIMEOUT</code></td><td>Network timeout in seconds</td></tr>
+                  <tr><td><code>--allow-query</code></td><td><code>KLIZ_ALLOW_QUERY</code></td><td>Accept URLs with a query string</td></tr>
+                  <tr><td><code>--config</code></td><td></td><td>Settings file (<code>kliz.toml</code> or <code>[tool.kliz]</code>)</td></tr>
+                  <tr><td><code>-v</code>, <code>-vv</code></td><td></td><td>Log progress or HTTP details to stderr</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>Precedence: command-line option, then <code>KLIZ_*</code> variable, then the settings file.</p>
+          </details>
+
+          <details>
+            <summary>GitHub Action inputs</summary>
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th scope="col">Input</th><th scope="col">Default</th><th scope="col">Description</th></tr></thead>
+                <tbody>
+                  <tr><td><code>sitemap</code></td><td></td><td>Sitemap URL or workspace file</td></tr>
+                  <tr><td><code>urls</code></td><td></td><td>URLs, one per line, when <code>sitemap</code> is empty</td></tr>
+                  <tr><td><code>since</code></td><td></td><td>Only pages whose <code>&lt;lastmod&gt;</code> is on or after this ISO date</td></tr>
+                  <tr><td><code>indexnow-api-key</code></td><td></td><td>IndexNow key, from a secret</td></tr>
+                  <tr><td><code>indexnow-key-location</code></td><td></td><td>URL of the published key file</td></tr>
+                  <tr><td><code>verify-key</code></td><td><code>true</code></td><td>Check the key file before notifying</td></tr>
+                  <tr><td><code>gsc-site</code></td><td></td><td>Search Console property</td></tr>
+                  <tr><td><code>gsc-sitemap</code></td><td><code>sitemap</code></td><td>Sitemap URL to resubmit to Search Console</td></tr>
+                  <tr><td><code>gsc-service-account-json</code></td><td></td><td>Service account JSON content, from a secret</td></tr>
+                  <tr><td><code>max-attempts</code></td><td><code>3</code></td><td>Attempts per notification for temporary failures</td></tr>
+                  <tr><td><code>allow-query</code></td><td><code>false</code></td><td>Accept URLs with a query string</td></tr>
+                  <tr><td><code>dry-run</code></td><td><code>false</code></td><td>List the URLs without notifying</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </details>
+
+          <details>
+            <summary>Exit codes and JSON report</summary>
+            <p>
+              <code>0</code> success or nothing changed, <code>1</code> a notification failed,
+              <code>2</code> invalid configuration. <code>--json</code> prints one document on
+              stdout; the exit code is unchanged.
+            </p>
+            <div class="code-block">
+              <pre><code>{
+  "ok": false,
+  "dry_run": false,
+  "urls": ["https://example.com/a"],
+  "results": {
+    "IndexNowProvider": [
+      {
+        "provider": "IndexNowProvider",
+        "success": false,
+        "retryable": true,
+        "error": "IndexNowProvider rejected the notification with HTTP 429",
+        "status_code": 429,
+        "urls": ["https://example.com/a"],
+        "retry_after": 30.0,
+        "attempts": 3
+      }
+    ]
+  }
+}</code></pre>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section class="section faq wrap" id="faq" aria-labelledby="faq-title">
+        <div class="faq-list">
+          <h2 id="faq-title" class="h-section">Common questions</h2>
+          <ul data-faq>
+            <li>
+              <button type="button" aria-expanded="true" aria-controls="a1" id="q1">Does a notification get my page indexed?</button>
+              <div class="faq-answer" id="a1" role="region" aria-labelledby="q1">
+                <p>No. It asks the engine to crawl the page soon; whether and when it is indexed stays the engine's decision. Accurate sitemaps and honest <code>&lt;lastmod&gt;</code> dates help most.</p>
               </div>
-            </article>
-            <article class="tile">
-              <h3>Google Indexing</h3>
-              <p>
-                Publie une notification `URL_UPDATED` pour les pages
-                officiellement éligibles selon Google.
-              </p>
-              <div class="code-block">
-                <div class="code-head">
-                  <span>Python</span>
-                  <button class="copy" type="button" data-copy>Copier</button>
-                </div>
-                <pre><code>provider = GoogleProvider(
-    "/run/secrets/google-service-account.json",
-    timeout=60.0,
-    num_retries=2,
-)
-
-provider.notify("https://example.com/jobs/backend-python")</code></pre>
+            </li>
+            <li>
+              <button type="button" aria-expanded="false" aria-controls="a2" id="q2">Why not use Google's Indexing API for every page?</button>
+              <div class="faq-answer" id="a2" role="region" aria-labelledby="q2" hidden>
+                <p>Google reserves it for job postings and livestreams. For every other page, kliz resubmits your sitemap through the Search Console API, which is the supported route.</p>
               </div>
-            </article>
-          </div>
-          <div class="callout">
-            Google Indexing est réservé aux pages contenant un `JobPosting` ou
-            un `BroadcastEvent` intégré dans un `VideoObject`. Pour les autres
-            contenus, garde un sitemap propre.
-          </div>
-          <div class="callout">
-            `BatchProvider` (exporté publiquement) est la base commune de tous
-            les moteurs par lots : elle gère le découpage selon
-            `max_urls_per_request` et le repli en boucle `notify`. Pour ajouter
-            un moteur, implémentez `_notify_many(urls)` ; les helpers HTTP
-            partagés (`_http.py`) sont fournis.
-          </div>
-        </section>
+            </li>
+            <li>
+              <button type="button" aria-expanded="false" aria-controls="a3" id="q3">Where does the IndexNow key file go?</button>
+              <div class="faq-answer" id="a3" role="region" aria-labelledby="q3" hidden>
+                <p>At the root of your site as <code>&lt;key&gt;.txt</code>, served with HTTP 200 and no redirect. <code>kliz indexnow keygen --write public/</code> creates it, and <code>verify-key</code> checks it after you deploy.</p>
+              </div>
+            </li>
+            <li>
+              <button type="button" aria-expanded="false" aria-controls="a4" id="q4">Will it spend my quota on every deploy?</button>
+              <div class="faq-answer" id="a4" role="region" aria-labelledby="q4" hidden>
+                <p>Use <code>--since</code>, or the Action's <code>since</code> input, to send only pages whose <code>&lt;lastmod&gt;</code> moved. Remembering what was already sent is on the roadmap.</p>
+              </div>
+            </li>
+            <li>
+              <button type="button" aria-expanded="false" aria-controls="a5" id="q5">Can I add another search engine?</button>
+              <div class="faq-answer" id="a5" role="region" aria-labelledby="q5" hidden>
+                <p>Yes. Inherit from <code>BaseProvider</code>, or from <code>BatchProvider</code> for engines that take batches. Validation, normalization and the shared HTTP session come for free.</p>
+              </div>
+            </li>
+            <li>
+              <button type="button" aria-expanded="false" aria-controls="a6" id="q6">Does it work outside GitHub?</button>
+              <div class="faq-answer" id="a6" role="region" aria-labelledby="q6" hidden>
+                <p>Yes. The command line runs in GitLab CI, a cron job or a container, and the library runs inside any Python 3.10+ application.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="faq-pane" aria-hidden="true" data-faq-pane></div>
+      </section>
 
-        <section id="cli" class="section">
-          <h2>CLI</h2>
-          <p>
-            Après installation, la commande <code>kliz</code> permet de notifier
-            une URL ou un lot, et de lister les providers configurés. Les
-            credentials passent par des variables d'environnement
-            <code>KLIZ_*</code> ou des options CLI.
+      <!-- Community -->
+      <section class="section community wrap" id="community" aria-labelledby="community-title">
+        <div class="community-text">
+          <h2 id="community-title" class="h-section" data-reveal>Built in the open</h2>
+          <p data-reveal>
+            kliz is MIT-licensed and shaped by the people who use it. Fix a bug, add an engine,
+            improve a translation, or tell us what broke on your host.
           </p>
-          <div class="code-block">
-            <div class="code-head">
-              <span>Terminal</span>
-              <button class="copy" type="button" data-copy>Copier</button>
-            </div>
-            <pre><code>export KLIZ_INDEXNOW_API_KEY="votre-cle"
-export KLIZ_INDEXNOW_KEY_LOCATION="https://example.com/votre-cle.txt"
+        </div>
+        <ul class="rows community-rows" data-reveal>
+          <li><span class="dot is-sent"></span><a href="https://github.com/freddychoudja/kliz-/issues?q=is%3Aopen+label%3A%22good+first+issue%22">Good first issues</a><small>start here</small></li>
+          <li><span class="dot is-sent"></span><a href="https://github.com/freddychoudja/kliz-/issues">Open issues</a><small>bugs and ideas</small></li>
+          <li><span class="dot is-sent"></span><a href="https://github.com/freddychoudja/kliz-/blob/main/CONTRIBUTING.md">Contributing guide</a><small>set up in four commands</small></li>
+          <li><span class="dot is-sent"></span><a href="https://github.com/freddychoudja/kliz-/blob/main/CODE_OF_CONDUCT.md">Code of conduct</a><small>Contributor Covenant</small></li>
+          <li><span class="dot is-sent"></span><a href="https://github.com/freddychoudja/kliz-/blob/main/SUPPORT.md">Getting help</a><small>where to ask</small></li>
+          <li><span class="dot is-wait"></span><a href="https://github.com/freddychoudja/kliz-/blob/main/SECURITY.md">Security policy</a><small>report privately</small></li>
+          <li><span class="dot is-sent"></span><a href="https://github.com/freddychoudja/kliz-/blob/main/CHANGELOG.md">Changelog</a><small>v0.3.1</small></li>
+        </ul>
+      </section>
 
-kliz notify https://example.com/page
-kliz notify --batch urls.txt
-kliz providers
-kliz --version</code></pre>
+      <!-- CTA: the setup, already open -->
+      <section class="cta" aria-labelledby="cta-title">
+        <div class="wrap cta-grid">
+          <div class="cta-copy">
+            <h2 id="cta-title" class="cta-title">Notify on your next deploy.</h2>
+            <p>Type your site, pick where kliz runs, and copy a setup that works as written.</p>
           </div>
-          <div class="callout">
-            Code de sortie : <code>0</code> succès,
-            <code>1</code> échec de notification,
-            <code>2</code> configuration invalide.
-          </div>
-        </section>
+          <form class="setup" data-ui data-setup>
+            <p class="setup-title">Set up kliz</p>
+            <label for="setup-site">Your site</label>
+            <input id="setup-site" name="site" type="url" value="https://example.com" autocomplete="url" required aria-describedby="setup-error" />
+            <p class="setup-error" id="setup-error" data-setup-error></p>
+            <fieldset>
+              <legend>Runs in</legend>
+              <div class="segmented">
+                <label><input type="radio" name="mode" value="action" checked /><span>GitHub Action</span></label>
+                <label><input type="radio" name="mode" value="cli" /><span>Command line</span></label>
+              </div>
+            </fieldset>
+            <pre class="setup-out"><code data-setup-out></code></pre>
+            <button class="button button-block" type="submit"><span data-setup-label>Copy setup</span></button>
+          </form>
+        </div>
+      </section>
+    </main>
 
-        <section id="async" class="section">
-          <h2>Intégration asynchrone</h2>
-          <p>
-            Kliz ne transporte pas de système de jobs. Place simplement l'appel
-            dans le worker déjà utilisé par ton application.
-          </p>
-          <div class="code-block">
-            <div class="code-head">
-              <span>Celery</span>
-              <button class="copy" type="button" data-copy>Copier</button>
-            </div>
-            <pre><code>from dataclasses import asdict
+    <footer class="footer wrap">
+      <p>Search engine notifications for Python</p>
+      <p class="footer-links">
+        <a href="https://github.com/freddychoudja/kliz-">GitHub</a>
+        <a href="https://pypi.org/project/kliz/">PyPI</a>
+        <a href="https://github.com/freddychoudja/kliz-/blob/main/README.fr.md">Français</a>
+        <a href="https://github.com/freddychoudja/kliz-/blob/main/LICENSE">MIT license</a>
+      </p>
+      <p class="footer-end">© 2026 Freddy Choudja and contributors</p>
+      <p class="credits">
+        Pictures:
+        <a href="https://commons.wikimedia.org/wiki/File:Signaling_by_Napoleonic_semaphore_line.jpg">“Signaling by Napoleonic semaphore line”</a>
+        by Keith Thomas, public domain, via Wikimedia Commons;
+        <a href="https://commons.wikimedia.org/wiki/File:Chappe_telegraph-CnAM_14583-IMG_5213-black.jpg">“Chappe telegraph, CnAM 14583”</a>
+        by Rama, <a href="https://creativecommons.org/licenses/by-sa/3.0/fr/deed.en">CC BY-SA 3.0 FR</a>, via Wikimedia Commons.
+      </p>
+    </footer>
 
-from celery import shared_task
-from django.conf import settings
-from kliz import IndexNowProvider, Kliz
-
-
-@shared_task(bind=True, max_retries=5)
-def notify_search_engines(self, url: str):
-    indexer = Kliz([
-        IndexNowProvider(
-            api_key=settings.INDEXNOW_API_KEY,
-            key_location=settings.INDEXNOW_KEY_LOCATION,
-        )
-    ])
-    results = indexer.notify_all_detailed(url)
-    retryable = [result for result in results.values() if result.retryable]
-
-    if retryable:
-        raise self.retry(countdown=60)
-
-    return {name: asdict(result) for name, result in results.items()}</code></pre>
-          </div>
-        </section>
-
-        <section id="production" class="section">
-          <h2>Production</h2>
-          <p>
-            Une notification accélère la découverte, mais ne garantit jamais
-            l'indexation. Le monitoring et les retries restent côté application.
-          </p>
-          <ol class="steps">
-            <li>Injecter les secrets depuis un gestionnaire prévu pour ça.</li>
-            <li>Appliquer un backoff avec jitter aux erreurs retentables.</li>
-            <li>Suivre les statuts HTTP, quotas, latences et taux de succès.</li>
-            <li>Garder un sitemap à jour pour la couverture générale.</li>
-          </ol>
-          <div class="meta-grid">
-            <article class="tile">
-              <h3>Validation locale</h3>
-              <p>`pytest`, `ruff`, `mypy`, `build`, `twine` et `pip-audit`.</p>
-            </article>
-            <article class="tile">
-              <h3>Licence</h3>
-              <p>MIT, avec contribution et politique de sécurité documentées.</p>
-            </article>
-          </div>
-        </section>
-
-        <footer class="footer">
-          Copyright © 2026 Freddy Choudja ·
-          <a href="https://github.com/freddychoudja/kliz-">Code source</a>
-          ·
-          <a href="https://freddychoudja.github.io/kliz-/">Documentation</a>
-        </footer>
-      </main>
-    </div>
-    <script src="app.js"></script>
+    <script src="app.js" defer></script>
   </body>
 </html>
