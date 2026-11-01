@@ -5,6 +5,11 @@ The project follows semantic versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- Ignore malformed non-ASCII `Retry-After` values without losing the provider's
+  HTTP status or retryability.
+
 ### Added
 
 - Community health files: `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1),
