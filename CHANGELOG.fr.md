@@ -7,6 +7,9 @@ Le projet suit le versionnage sémantique.
 
 ### Corrigé
 
+- Afficher l'aide et la version avant de charger la configuration, même si
+  le fichier est mal formé ou introuvable.
+
 - Ignorer les valeurs `Retry-After` non ASCII mal formées sans perdre le statut
   HTTP du provider ni la possibilité de réessayer.
 
