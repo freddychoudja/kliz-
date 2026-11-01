@@ -25,6 +25,13 @@ The project follows semantic versioning.
   line, GitHub Action and Python, a reference of commands, options, Action inputs
   and exit codes, an FAQ and a setup generator. It replaces the French v0.2.0 page.
 
+### Fixed
+
+- `--batch` files and stdin are read as UTF-8 with a leading byte order mark
+  stripped: a file saved by a Windows editor no longer yields
+  `\ufeffhttps://…` as its first URL, and reading no longer depends on the
+  locale encoding.
+
 ## [0.3.1] - 2026-10-08
 
 ### Added

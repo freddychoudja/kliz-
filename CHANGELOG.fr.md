@@ -26,6 +26,13 @@ Le projet suit le versionnage sémantique.
   l'Action et codes de sortie, FAQ et générateur de configuration. Il remplace la
   page française v0.2.0.
 
+### Corrigé
+
+- Les fichiers `--batch` et l'entrée standard sont lus en UTF-8 en supprimant
+  l'indicateur d'ordre des octets (BOM) : un fichier enregistré par un éditeur
+  Windows ne produit plus `\ufeffhttps://…` comme première URL, et la lecture ne
+  dépend plus de l'encodage de la locale.
+
 ## [0.3.1] - 2026-10-08
 
 ### Ajouté
