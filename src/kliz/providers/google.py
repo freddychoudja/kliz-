@@ -81,6 +81,11 @@ class _GoogleApiProvider(BaseProvider):
                 provider=self.name,
                 retryable=True,
             ) from exc
+        except GoogleAuthError as exc:
+            raise ProviderError(
+                "Google authentication failed; check the service account",
+                provider=self.name,
+            ) from exc
 
     def _rejection_message(self, status_code: int) -> str:
         return f"Google rejected the notification with HTTP {status_code}"
