@@ -661,3 +661,52 @@ def test_allow_query_flag_reaches_providers(monkeypatch: pytest.MonkeyPatch) -> 
     assert _build_parser().parse_args(["providers"]).allow_query is True
     monkeypatch.setenv("KLIZ_ALLOW_QUERY", "false")
     assert _build_parser().parse_args(["providers"]).allow_query is False
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["--help"],
+        ["-h"],
+        ["--version"],
+        ["notify", "--help"],
+        ["indexnow", "keygen", "--help"],
+    ],
+)
+@pytest.mark.parametrize(
+    ("filename", "contents"),
+    [("pyproject.toml", "[broken"), ("kliz.toml", "unknown_setting = true")],
+)
+def test_help_and_version_ignore_broken_configuration(
+    arguments: list[str],
+    filename: str,
+    contents: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / filename).write_text(contents, encoding="utf-8")
+
+    assert main(arguments) == 0
+    captured = capsys.readouterr()
+    assert captured.out
+    assert captured.err == ""
+
+
+@pytest.mark.parametrize("argument", ["--help", "--version"])
+def test_help_and_version_ignore_missing_explicit_config(
+    argument: str, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert main(["--config", str(tmp_path / "missing.toml"), argument]) == 0
+    assert capsys.readouterr().err == ""
+
+
+def test_help_token_as_url_still_loads_configuration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[broken", encoding="utf-8")
+
+    assert main(["notify", "--", "--help"]) == 2
+    assert "cannot read" in capsys.readouterr().err

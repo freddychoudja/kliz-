@@ -32,16 +32,18 @@ _TRUE_VALUES = {"1", "true", "yes", "on"}
 def main(argv: list[str] | None = None) -> int:
     arguments = sys.argv[1:] if argv is None else list(argv)
     try:
-        config = _load_cli_config(arguments)
-    except ConfigurationError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 2
-    parser = _build_parser(config)
-    try:
+        # Let argparse handle help, version and syntax errors before reading files.
+        parser = _build_parser()
         args = parser.parse_args(arguments)
+        config = _load_cli_config(arguments)
+        if config:
+            args = _build_parser(config).parse_args(arguments)
     except SystemExit as exc:
         code: int = exc.code if isinstance(exc.code, int) else 0
         return code
+    except ConfigurationError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     _configure_logging(args.verbose)
     try:
         command: Callable[[argparse.Namespace], int] = args.command
