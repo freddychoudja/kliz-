@@ -90,10 +90,16 @@ def _load_cli_config(arguments: list[str]) -> dict[str, Any]:
 
 
 def _setting(config: Mapping[str, Any], key: str, env: str) -> Any:
-    """Return the environment value for *key* if set, else the config value."""
+    """Return the environment value for *key* if set, else the config value.
+
+    A set environment variable (including the empty string) takes precedence.
+    Falsy config values such as ``0`` or ``False`` are preserved.
+    """
 
     value = os.environ.get(env)
-    return value if value else config.get(key)
+    if value is not None:
+        return value
+    return config.get(key)
 
 
 def _build_parser(config: Mapping[str, Any] | None = None) -> argparse.ArgumentParser:
@@ -164,7 +170,12 @@ def _build_parser(config: Mapping[str, Any] | None = None) -> argparse.ArgumentP
     parser.add_argument(
         "--max-attempts",
         type=int,
-        default=_setting(config, "max_attempts", "KLIZ_MAX_ATTEMPTS") or "1",
+        default=(
+            1
+            if (max_attempts := _setting(config, "max_attempts", "KLIZ_MAX_ATTEMPTS"))
+            is None
+            else max_attempts
+        ),
         help="Attempts per notification for temporary failures (429, 5xx,"
         " network), honoring Retry-After; default 1 (KLIZ_MAX_ATTEMPTS env var)",
     )
