@@ -12,6 +12,9 @@ The project follows semantic versioning.
   "unexpected error" (exit code 1) when reading a sitemap. `--timeout inf`, which
   was accepted before, is now refused as well.
 
+- Show CLI help and version information before loading configuration, even when
+  the settings file is malformed or missing.
+
 - Ignore malformed non-ASCII `Retry-After` values without losing the provider's
   HTTP status or retryability.
 
