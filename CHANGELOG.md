@@ -5,6 +5,10 @@ The project follows semantic versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- Packaging metadata now requires `setuptools>=77` for PEP 639 license metadata, declares `LICENSE` as a license file, and advertises typed-package support. The redundant `wheel` build requirement is removed.
+
 ### Fixed
 
 - Ignore malformed non-ASCII `Retry-After` values without losing the provider's
