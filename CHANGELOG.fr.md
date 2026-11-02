@@ -7,6 +7,11 @@ Le projet suit le versionnage sémantique.
 
 ### Corrigé
 
+- Un `--timeout` (ou `KLIZ_TIMEOUT`) nul, négatif ou non fini est désormais une
+  erreur de configuration (code de sortie 2) sur toutes les commandes, au lieu
+  d'une « erreur inattendue » (code de sortie 1) lors de la lecture d'un sitemap.
+  `--timeout inf`, accepté jusqu'ici, est désormais refusé lui aussi.
+
 - Afficher l'aide et la version avant de charger la configuration, même si
   le fichier est mal formé ou introuvable.
 
