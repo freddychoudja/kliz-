@@ -350,11 +350,12 @@ def _cmd_indexnow_verify_key(args: argparse.Namespace) -> int:
         )
     if not args.indexnow_key_location and not args.site:
         raise ConfigurationError("provide --site or --indexnow-key-location")
+    timeout = _timeout(args)
     try:
         provider = IndexNowProvider(
             api_key=args.indexnow_api_key,
             key_location=args.indexnow_key_location,
-            **_timeout(args),
+            **timeout,
         )
     except ValueError as exc:
         raise ConfigurationError(str(exc)) from exc
@@ -440,6 +441,9 @@ def _timeout(args: argparse.Namespace) -> _TimeoutKwargs:
 
 
 def _build_indexer(args: argparse.Namespace) -> Kliz:
+    # Validate --timeout before the provider blocks below: their ``except
+    # ValueError`` would otherwise prefix a provider name to a global option.
+    timeout = _timeout(args)
     providers: list[BaseProvider] = []
     if args.indexnow_api_key:
         if not args.indexnow_key_location:
@@ -452,7 +456,7 @@ def _build_indexer(args: argparse.Namespace) -> Kliz:
                     api_key=args.indexnow_api_key,
                     key_location=args.indexnow_key_location,
                     allow_query=args.allow_query,
-                    **_timeout(args),
+                    **timeout,
                 ),
             )
         except ValueError as exc:
@@ -467,13 +471,13 @@ def _build_indexer(args: argparse.Namespace) -> Kliz:
                 GoogleProvider(
                     args.google_service_account_file,
                     allow_query=args.allow_query,
-                    **_timeout(args),
+                    **timeout,
                 ),
             )
         except ValueError as exc:
             raise ConfigurationError(f"Google: {exc}") from exc
     if args.gsc_site:
-        providers.append(_build_search_console(args))
+        providers.append(_build_search_console(args, timeout))
     if not providers:
         raise ConfigurationError(
             "no providers configured: set --indexnow-api-key + "
@@ -486,7 +490,9 @@ def _build_indexer(args: argparse.Namespace) -> Kliz:
         raise ConfigurationError(f"--max-attempts: {exc}") from exc
 
 
-def _build_search_console(args: argparse.Namespace) -> GoogleSearchConsoleProvider:
+def _build_search_console(
+    args: argparse.Namespace, timeout: _TimeoutKwargs
+) -> GoogleSearchConsoleProvider:
     account_file = args.gsc_service_account_file
     if not account_file:
         raise ConfigurationError(
@@ -500,7 +506,7 @@ def _build_search_console(args: argparse.Namespace) -> GoogleSearchConsoleProvid
         sitemap_url = sitemap
     try:
         return GoogleSearchConsoleProvider(
-            account_file, args.gsc_site, sitemap_url, **_timeout(args)
+            account_file, args.gsc_site, sitemap_url, **timeout
         )
     except ValueError as exc:
         raise ConfigurationError(f"Search Console: {exc}") from exc

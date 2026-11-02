@@ -7,6 +7,11 @@ The project follows semantic versioning.
 
 ### Fixed
 
+- A zero, negative or non-finite `--timeout` (or `KLIZ_TIMEOUT`) is now a
+  configuration error (exit code 2) on every command, instead of an
+  "unexpected error" (exit code 1) when reading a sitemap. `--timeout inf`, which
+  was accepted before, is now refused as well.
+
 - Ignore malformed non-ASCII `Retry-After` values without losing the provider's
   HTTP status or retryability.
 

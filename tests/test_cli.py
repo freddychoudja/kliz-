@@ -650,12 +650,16 @@ def test_non_numeric_max_attempts_env_is_a_usage_error(
     assert main([*INDEXNOW_ARGS, "providers"]) == 2
 
 
-@pytest.mark.parametrize("value", ["0", "-1", "nan"])
+@pytest.mark.parametrize("value", ["0", "-1", "nan", "inf"])
+@pytest.mark.parametrize("command", [["providers"], ["indexnow", "verify-key"]])
 def test_invalid_timeout_is_a_configuration_error(
-    value: str, capsys: pytest.CaptureFixture[str]
+    value: str, command: list[str], capsys: pytest.CaptureFixture[str]
 ) -> None:
-    assert main([*INDEXNOW_ARGS, "--timeout", value, "providers"]) == 2
-    assert "--timeout must be a positive" in capsys.readouterr().err
+    assert main([*INDEXNOW_ARGS, f"--timeout={value}", *command]) == 2
+    # A global option: the message must not carry a provider prefix.
+    assert capsys.readouterr().err.startswith(
+        "error: --timeout must be a positive number of seconds"
+    )
 
 
 def test_invalid_timeout_env_is_a_configuration_error(

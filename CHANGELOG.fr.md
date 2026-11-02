@@ -7,6 +7,11 @@ Le projet suit le versionnage sémantique.
 
 ### Corrigé
 
+- Un `--timeout` (ou `KLIZ_TIMEOUT`) nul, négatif ou non fini est désormais une
+  erreur de configuration (code de sortie 2) sur toutes les commandes, au lieu
+  d'une « erreur inattendue » (code de sortie 1) lors de la lecture d'un sitemap.
+  `--timeout inf`, accepté jusqu'ici, est désormais refusé lui aussi.
+
 - Ignorer les valeurs `Retry-After` non ASCII mal formées sans perdre le statut
   HTTP du provider ni la possibilité de réessayer.
 
