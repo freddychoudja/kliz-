@@ -8,7 +8,7 @@ import httplib2
 import pytest
 import requests
 from conftest import make_mock_session
-from google.auth.exceptions import TransportError
+from google.auth.exceptions import GoogleAuthError, RefreshError, TransportError
 from googleapiclient.errors import HttpError
 
 from kliz import Kliz
@@ -904,3 +904,51 @@ def test_search_console_matches_international_domains() -> None:
     )
     with pytest.raises(ValueError, match="outside"):
         provider.validate_url("https://buecher.example/")
+
+
+@pytest.mark.parametrize("search_console", [False, True])
+@pytest.mark.parametrize(
+    "exception",
+    [GoogleAuthError("private auth detail"), RefreshError("invalid_grant")],
+)
+def test_google_providers_wrap_authentication_errors(
+    google_client_mocks: dict[str, Mock],
+    search_console: bool,
+    exception: GoogleAuthError,
+) -> None:
+    service = google_client_mocks["build"].return_value
+    if search_console:
+        provider = GoogleSearchConsoleProvider("sa.json", "https://example.com/")
+        request = service.sitemaps.return_value.submit.return_value
+    else:
+        provider = GoogleProvider("sa.json")
+        request = service.urlNotifications.return_value.publish.return_value
+    request.execute.side_effect = exception
+
+    with pytest.raises(ProviderError, match="check the service account") as captured:
+        provider.notify("https://example.com/job")
+
+    assert captured.value.provider == provider.name
+    assert captured.value.retryable is False
+    assert captured.value.status_code is None
+    assert captured.value.retry_after is None
+    assert captured.value.__cause__ is exception
+    assert str(exception) not in str(captured.value)
+    request.execute.assert_called_once_with(num_retries=2)
+
+
+def test_search_console_keeps_transport_errors_retryable(
+    google_client_mocks: dict[str, Mock],
+) -> None:
+    service = google_client_mocks["build"].return_value
+    request = service.sitemaps.return_value.submit.return_value
+    request.execute.side_effect = TransportError("offline")
+    provider = GoogleSearchConsoleProvider("sa.json", "https://example.com/")
+
+    with pytest.raises(ProviderError) as captured:
+        provider.notify_many(
+            ["https://example.com/first", "https://example.com/second"]
+        )
+
+    assert captured.value.retryable is True
+    assert captured.value.provider == "GoogleSearchConsoleProvider"
