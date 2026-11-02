@@ -5,6 +5,10 @@ Le projet suit le versionnage sémantique.
 
 ## [Unreleased]
 
+### Modifié
+
+- Les métadonnées de packaging requièrent désormais `setuptools>=77` pour PEP 639, déclarent `LICENSE` comme fichier de licence et indiquent la prise en charge du typage. La dépendance de build redondante `wheel` est supprimée.
+
 ### Corrigé
 
 - Ignorer les valeurs `Retry-After` non ASCII mal formées sans perdre le statut
