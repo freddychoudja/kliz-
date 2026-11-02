@@ -650,6 +650,34 @@ def test_non_numeric_max_attempts_env_is_a_usage_error(
     assert main([*INDEXNOW_ARGS, "providers"]) == 2
 
 
+@pytest.mark.parametrize("value", ["0", "-1", "nan", "inf"])
+@pytest.mark.parametrize("command", [["providers"], ["indexnow", "verify-key"]])
+def test_invalid_timeout_is_a_configuration_error(
+    value: str, command: list[str], capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert main([*INDEXNOW_ARGS, f"--timeout={value}", *command]) == 2
+    # A global option: the message must not carry a provider prefix.
+    assert capsys.readouterr().err.startswith(
+        "error: --timeout must be a positive number of seconds"
+    )
+
+
+def test_invalid_timeout_env_is_a_configuration_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("KLIZ_TIMEOUT", "0")
+
+    assert main([*INDEXNOW_ARGS, "providers"]) == 2
+
+
+def test_valid_timeout_still_reaches_providers() -> None:
+    from kliz.cli import _build_indexer, _build_parser
+
+    args = _build_parser().parse_args([*INDEXNOW_ARGS, "--timeout", "2.5", "providers"])
+
+    assert _build_indexer(args).providers
+
+
 def test_allow_query_flag_reaches_providers(monkeypatch: pytest.MonkeyPatch) -> None:
     from kliz.cli import _build_indexer, _build_parser
 
