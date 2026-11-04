@@ -90,16 +90,10 @@ def _load_cli_config(arguments: list[str]) -> dict[str, Any]:
 
 
 def _setting(config: Mapping[str, Any], key: str, env: str) -> Any:
-    """Return the environment value for *key* if set, else the config value.
-
-    A set environment variable (including the empty string) takes precedence.
-    Falsy config values such as ``0`` or ``False`` are preserved.
-    """
+    """Return the environment value for *key* if set, else the config value."""
 
     value = os.environ.get(env)
-    if value is not None:
-        return value
-    return config.get(key)
+    return value if value else config.get(key)
 
 
 def _build_parser(config: Mapping[str, Any] | None = None) -> argparse.ArgumentParser:
