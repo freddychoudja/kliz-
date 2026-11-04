@@ -662,6 +662,22 @@ def test_max_attempts_zero_in_config_is_rejected(
     assert main([*INDEXNOW_ARGS, "providers"]) == 2
 
 
+
+def test_empty_env_var_falls_back_to_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An empty environment variable must not override a config file value."""
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("KLIZ_INDEXNOW_API_KEY", "")
+    (tmp_path / "kliz.toml").write_text(
+        'indexnow-api-key = "from-config"
+'
+    )
+
+    # providers should succeed because the key comes from config
+    assert main(["providers"]) == 0
+
 def test_non_numeric_max_attempts_env_is_a_usage_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
