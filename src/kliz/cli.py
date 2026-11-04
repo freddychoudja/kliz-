@@ -400,8 +400,14 @@ def _resolve_urls(args: argparse.Namespace) -> list[str]:
 
 
 def _parse_since(value: str) -> datetime:
+    has_utc_suffix = value.endswith("Z")
+    text = value[:-1] + "+00:00" if has_utc_suffix else value
     try:
-        return datetime.fromisoformat(value)
+        parsed = datetime.fromisoformat(text)
+        # A date followed by +00:00 can parse as a naive datetime.
+        if has_utc_suffix and parsed.tzinfo is None:
+            raise ValueError("UTC suffix requires a datetime")
+        return parsed
     except ValueError as exc:
         raise ConfigurationError(
             f"--since must be an ISO date or datetime, got {value!r}"
