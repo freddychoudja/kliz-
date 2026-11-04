@@ -642,6 +642,42 @@ def test_invalid_max_attempts_is_a_configuration_error() -> None:
     assert main([*INDEXNOW_ARGS, "--max-attempts", "0", "providers"]) == 2
 
 
+def test_max_attempts_zero_in_config_is_rejected(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A settings file value of 0 must be rejected, not silently treated as 1."""
+
+    monkeypatch.chdir(tmp_path)
+    for name in (
+        "KLIZ_INDEXNOW_API_KEY",
+        "KLIZ_INDEXNOW_KEY_LOCATION",
+        "KLIZ_MAX_ATTEMPTS",
+        "KLIZ_TIMEOUT",
+        "KLIZ_ALLOW_QUERY",
+        "KLIZ_GSC_SITE",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    (tmp_path / "kliz.toml").write_text("max-attempts = 0\n")
+
+    assert main([*INDEXNOW_ARGS, "providers"]) == 2
+
+
+
+def test_empty_env_var_falls_back_to_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An empty environment variable must not override a config file value."""
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("KLIZ_INDEXNOW_API_KEY", "")
+    (tmp_path / "kliz.toml").write_text(
+        'indexnow-api-key = "from-config"
+'
+    )
+
+    # providers should succeed because the key comes from config
+    assert main(["providers"]) == 0
+
 def test_non_numeric_max_attempts_env_is_a_usage_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
