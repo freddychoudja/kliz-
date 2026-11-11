@@ -22,6 +22,16 @@ def validate_timeout(timeout: float) -> None:
         raise ValueError("timeout must be a finite number greater than zero")
 
 
+def utc_suffix_to_offset(text: str) -> str:
+    """Rewrite a trailing ``Z`` (or ``z``) as ``+00:00``.
+
+    ``datetime.fromisoformat()`` only accepts the UTC designator from
+    Python 3.11 on, and never in lowercase.
+    """
+
+    return text[:-1] + "+00:00" if text.endswith(("Z", "z")) else text
+
+
 def parse_http_url(url: str, *, require_clean: bool = False) -> SplitResult:
     """Return a parsed absolute HTTP(S) URL or raise ``ValueError``.
 

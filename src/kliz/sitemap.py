@@ -12,7 +12,7 @@ import requests
 from defusedxml import DefusedXmlException
 from defusedxml.ElementTree import ParseError, fromstring
 
-from kliz._validation import validate_timeout
+from kliz._validation import utc_suffix_to_offset, validate_timeout
 from kliz.exceptions import KlizError
 
 logger = logging.getLogger(__name__)
@@ -200,9 +200,7 @@ def _parse_lastmod(value: str) -> datetime | None:
             return datetime(int(text), 1, 1, tzinfo=timezone.utc)
         if len(text) == 7:
             return datetime(int(text[:4]), int(text[5:7]), 1, tzinfo=timezone.utc)
-        if text.endswith(("Z", "z")):
-            text = text[:-1] + "+00:00"
-        return _to_utc(datetime.fromisoformat(text))
+        return _to_utc(datetime.fromisoformat(utc_suffix_to_offset(text)))
     except ValueError:
         return None
 
