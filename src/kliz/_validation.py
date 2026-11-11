@@ -59,7 +59,9 @@ def _normalize_hostname(host: str) -> str:
     try:
         host = host.encode("idna").decode("ascii").lower().removesuffix(".")
     except UnicodeError as exc:
-        raise ValueError("url has an invalid internationalized hostname") from exc
+        # The codec also refuses empty or overlong labels in plain ASCII names.
+        kind = "hostname" if host.isascii() else "internationalized hostname"
+        raise ValueError(f"url has an invalid {kind}") from exc
     if (
         not host
         or len(host) > 253
