@@ -586,7 +586,38 @@ def _gsc_args(**overrides: object) -> argparse.Namespace:
         ({}, "https://example.com/sitemap.xml"),
         ({"sitemap": "https://example.com/s.xml"}, "https://example.com/s.xml"),
         ({"sitemap": "local-sitemap.xml"}, "https://example.com/sitemap.xml"),
+        ({"sitemap": "http-sitemap.xml"}, "https://example.com/sitemap.xml"),
         ({"gsc_sitemap": ""}, "https://example.com/sitemap.xml"),
+        (
+            {"config_sitemap": "https://example.com/config.xml"},
+            "https://example.com/config.xml",
+        ),
+        ({"config_sitemap": "http-sitemap.xml"}, "https://example.com/sitemap.xml"),
+        (
+            {"config_sitemap": "https://cdn.example.net/sitemap.xml"},
+            "https://example.com/sitemap.xml",
+        ),
+        (
+            {
+                "sitemap": "https://example.com/flag.xml",
+                "config_sitemap": "https://example.com/config.xml",
+            },
+            "https://example.com/flag.xml",
+        ),
+        (
+            {
+                "sitemap": "http-sitemap.xml",
+                "config_sitemap": "https://example.com/config.xml",
+            },
+            "https://example.com/sitemap.xml",
+        ),
+        (
+            {
+                "config_sitemap": "https://example.com/config.xml",
+                "gsc_sitemap": "https://example.com/explicit.xml",
+            },
+            "https://example.com/explicit.xml",
+        ),
         (
             {
                 "sitemap": "https://example.com/s.xml",
@@ -616,6 +647,14 @@ def test_build_indexer_creates_search_console(
         ({"gsc_service_account_file": "/nonexistent/sa.json"}, "not found"),
         ({"gsc_site": "ftp://example.com"}, "Search Console: "),
         ({"gsc_sitemap": "https://other.example/s.xml"}, "sitemap_url is invalid"),
+        ({"sitemap": "https://other.example/s.xml"}, "sitemap_url is invalid"),
+        (
+            {
+                "gsc_site": "ftp://example.com",
+                "config_sitemap": "https://example.com/config.xml",
+            },
+            "Search Console: ",
+        ),
     ],
 )
 def test_build_indexer_search_console_config_errors(
@@ -625,6 +664,24 @@ def test_build_indexer_search_console_config_errors(
 
     with pytest.raises(ConfigurationError, match=message):
         _build_indexer(_gsc_args(**overrides))
+
+
+def test_search_console_uses_the_sitemap_setting(tmp_path: Path) -> None:
+    from kliz.cli import _build_indexer, _build_parser
+
+    account = tmp_path / "account.json"
+    account.write_text("{}", encoding="utf-8")
+    config = {
+        "gsc_site": "https://example.com/",
+        "gsc_service_account_file": str(account),
+        "sitemap": "https://example.com/config.xml",
+    }
+
+    args = _build_parser(config).parse_args(["notify", "https://example.com/page"])
+    (provider,) = _build_indexer(args).providers
+
+    assert isinstance(provider, GoogleSearchConsoleProvider)
+    assert provider.sitemap_url == "https://example.com/config.xml"
 
 
 def test_gsc_options_read_environment(monkeypatch: pytest.MonkeyPatch) -> None:

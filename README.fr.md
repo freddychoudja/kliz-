@@ -447,7 +447,8 @@ Les crédits se passent aussi en options (`--indexnow-api-key`,
 `--indexnow-key-location`, `--google-service-account-file`). Pour Search
 Console, renseignez `--gsc-site` et `--gsc-service-account-file`
 (`KLIZ_GSC_SITE`, `KLIZ_GSC_SERVICE_ACCOUNT_FILE`) ; le sitemap soumis est
-`--gsc-sitemap`, sinon l'URL de `--sitemap`, sinon `<propriété>/sitemap.xml`. Le processus
+`--gsc-sitemap`, sinon l'URL de `--sitemap`, sinon le réglage `sitemap` s'il
+s'agit d'une URL située dans la propriété, sinon `<propriété>/sitemap.xml`. Le processus
 termine avec le code `0` si tout a réussi, `1` en cas d'échec de notification
 et `2` en cas de configuration invalide.
 

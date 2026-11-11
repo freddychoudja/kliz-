@@ -12,6 +12,7 @@ import requests
 from defusedxml import DefusedXmlException
 from defusedxml.ElementTree import ParseError, fromstring
 
+from kliz._validation import validate_timeout
 from kliz.exceptions import KlizError
 
 logger = logging.getLogger(__name__)
@@ -47,8 +48,7 @@ def read_sitemap(
     changed. A naive *since* is interpreted as UTC.
     """
 
-    if timeout <= 0:
-        raise ValueError("timeout must be greater than zero")
+    validate_timeout(timeout)
 
     threshold = _to_utc(since) if since is not None else None
     owned_session = session is None

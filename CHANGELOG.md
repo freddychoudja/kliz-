@@ -7,6 +7,36 @@ The project follows semantic versioning.
 
 ### Fixed
 
+- A `timeout` that is NaN, infinite or a boolean is now refused with a
+  `ValueError` by `IndexNowProvider`, `GoogleProvider`,
+  `GoogleSearchConsoleProvider` and `read_sitemap()`, like zero and negative
+  values already were. NaN used to be accepted because `nan <= 0` is false
+  (#18).
+
+- URLs with an invalid hostname are now refused before anything is sent, by
+  `normalize_url()` and by every provider. A host with a space, a control
+  character, a `%` escape, an empty label (`a..com`, `http://./`), a label
+  longer than 63 characters or any character other than letters, digits, `-`
+  and `_` is a validation error; so is an IPv6 zone identifier. Unicode
+  domains, a trailing dot, IPv4 and IPv6 literals keep working (#12).
+
+- The sitemap resubmitted to Search Console is now resolved consistently. A
+  local sitemap file whose name starts with `http` (`http-sitemap.xml`) is no
+  longer mistaken for a URL, and a `sitemap` URL set in the settings file is
+  now used when `--sitemap` is not given. If that setting is not a valid
+  sitemap for the property (another host, a parent path), the default
+  `<property>/sitemap.xml` is kept; an explicit `--sitemap` or `--gsc-sitemap`
+  outside the property is still a configuration error (#24).
+
+- Search Console URL-prefix properties are now canonicalized like every other
+  URL: an IPv6 host keeps its brackets (`https://[::1]:8443/` no longer fails
+  with a misleading sitemap error), an explicit default port is dropped
+  (`https://example.com:443/` is sent as `https://example.com/`) and a
+  non-default port is kept. As a side effect, an internationalized host is sent
+  in its punycode form, a trailing dot on the host is dropped and non-ASCII
+  characters or spaces in the path are percent-encoded. Port zero is now refused
+  as a `site_url` error instead of being silently removed (#13).
+
 - A zero, negative or non-finite `--timeout` (or `KLIZ_TIMEOUT`) is now a
   configuration error (exit code 2) on every command, instead of an
   "unexpected error" (exit code 1) when reading a sitemap. `--timeout inf`, which
