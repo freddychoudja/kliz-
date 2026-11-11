@@ -16,6 +16,7 @@ from typing import Any, TypedDict
 
 from kliz import Kliz, __version__
 from kliz._config import ConfigurationError, find_config, load_config
+from kliz._validation import utc_suffix_to_offset
 from kliz.exceptions import KlizError, MissingDependencyError
 from kliz.providers import (
     BaseProvider,
@@ -401,12 +402,11 @@ def _resolve_urls(args: argparse.Namespace) -> list[str]:
 
 
 def _parse_since(value: str) -> datetime:
-    has_utc_suffix = value.endswith("Z")
-    text = value[:-1] + "+00:00" if has_utc_suffix else value
+    text = utc_suffix_to_offset(value)
     try:
         parsed = datetime.fromisoformat(text)
         # A date followed by +00:00 can parse as a naive datetime.
-        if has_utc_suffix and parsed.tzinfo is None:
+        if text != value and parsed.tzinfo is None:
             raise ValueError("UTC suffix requires a datetime")
         return parsed
     except ValueError as exc:

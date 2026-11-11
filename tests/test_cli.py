@@ -510,7 +510,9 @@ def test_notify_dry_run_prints_urls_without_providers(
     assert "1 URL(s), nothing sent" in captured.err
 
 
+@pytest.mark.parametrize("since", ["2026-10-01T00:00:00Z", "2026-10-01T00:00:00z"])
 def test_notify_sitemap_since_accepts_utc_z_suffix(
+    since: str,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     sitemap = Path(__file__).parent / "fixtures" / "sitemap.xml"
@@ -520,7 +522,7 @@ def test_notify_sitemap_since_accepts_utc_z_suffix(
             "--sitemap",
             str(sitemap),
             "--since",
-            "2026-10-01T00:00:00Z",
+            since,
             "--dry-run",
         ]
     )
@@ -547,6 +549,7 @@ def test_notify_sitemap_with_nothing_new_succeeds(
         ["--sitemap", "s.xml"],
         ["--sitemap", "s.xml", "--since", "last week"],
         ["--sitemap", "s.xml", "--since", "2026-10-01Z"],
+        ["--sitemap", "s.xml", "--since", "2026-10-01z"],
         ["--since", "2026-10-01", "https://example.com/a"],
         ["--sitemap", "s.xml", "https://example.com/a"],
         ["--sitemap", "s.xml", "--batch", "urls.txt"],

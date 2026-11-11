@@ -7,6 +7,12 @@ The project follows semantic versioning.
 
 ### Fixed
 
+- `--since` (and the `since` setting) now accepts a UTC datetime ending in `Z`
+  or `z`, such as `2026-10-01T00:00:00Z`, on Python 3.10. It used to be refused
+  as a configuration error there, although the same format in a sitemap
+  `<lastmod>` was read correctly. A lowercase `z` is now accepted on every
+  Python version (#20).
+
 - A `timeout` that is NaN, infinite or a boolean is now refused with a
   `ValueError` by `IndexNowProvider`, `GoogleProvider`,
   `GoogleSearchConsoleProvider` and `read_sitemap()`, like zero and negative
