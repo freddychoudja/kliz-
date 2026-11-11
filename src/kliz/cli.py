@@ -35,8 +35,7 @@ def main(argv: list[str] | None = None) -> int:
     arguments = sys.argv[1:] if argv is None else list(argv)
     try:
         # Let argparse handle help, version and syntax errors before reading files.
-        parser = _build_parser()
-        args = parser.parse_args(arguments)
+        args = _build_parser().parse_args(arguments)
         config = _load_cli_config(arguments)
         if config:
             args = _build_parser(config).parse_args(arguments)

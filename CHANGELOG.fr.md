@@ -19,7 +19,7 @@ Le projet suit le versionnage sémantique.
   `--timeout inf`, accepté jusqu'ici, est désormais refusé lui aussi.
 
 - Afficher l'aide et la version avant de charger la configuration, même si
-  le fichier est mal formé ou introuvable.
+  le fichier est mal formé ou introuvable (#23).
 
 - Ignorer les valeurs `Retry-After` non ASCII mal formées sans perdre le statut
   HTTP du provider ni la possibilité de réessayer.

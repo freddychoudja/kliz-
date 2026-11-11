@@ -49,7 +49,7 @@ The project follows semantic versioning.
   was accepted before, is now refused as well.
 
 - Show CLI help and version information before loading configuration, even when
-  the settings file is malformed or missing.
+  the settings file is malformed or missing (#23).
 
 - Ignore malformed non-ASCII `Retry-After` values without losing the provider's
   HTTP status or retryability.
