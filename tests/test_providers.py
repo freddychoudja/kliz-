@@ -15,6 +15,7 @@ from kliz import Kliz
 from kliz._http import parse_retry_after
 from kliz.cli import main
 from kliz.exceptions import MissingDependencyError, ProviderError
+from kliz.providers.base import BaseProvider
 from kliz.providers.google import GoogleProvider, GoogleSearchConsoleProvider
 from kliz.providers.indexnow import IndexNowProvider
 
@@ -130,9 +131,34 @@ def test_indexnow_provider_rejects_invalid_keys(api_key: str) -> None:
         IndexNowProvider(api_key=api_key)
 
 
-def test_indexnow_provider_rejects_invalid_timeout() -> None:
-    with pytest.raises(ValueError, match="timeout"):
-        IndexNowProvider(api_key="abcdefgh", timeout=0)
+_TIMEOUT_FACTORIES: dict[str, Callable[[float], BaseProvider]] = {
+    "indexnow": lambda timeout: IndexNowProvider(api_key="abcdefgh", timeout=timeout),
+    "google": lambda timeout: GoogleProvider("sa.json", timeout=timeout),
+    "search-console": lambda timeout: GoogleSearchConsoleProvider(
+        "sa.json", "https://a.example/", timeout=timeout
+    ),
+}
+
+
+@pytest.mark.parametrize("provider", sorted(_TIMEOUT_FACTORIES))
+@pytest.mark.parametrize(
+    "timeout", [0, -1, float("nan"), float("inf"), -float("inf"), True, False]
+)
+def test_providers_reject_invalid_timeouts(provider: str, timeout: float) -> None:
+    with pytest.raises(ValueError, match="timeout must be a finite number"):
+        _TIMEOUT_FACTORIES[provider](timeout)
+
+
+@pytest.mark.parametrize("provider", sorted(_TIMEOUT_FACTORIES))
+@pytest.mark.parametrize("timeout", [0.1, 1, 10.0])
+def test_providers_accept_finite_positive_timeouts(
+    provider: str, timeout: float
+) -> None:
+    instance = _TIMEOUT_FACTORIES[provider](timeout)
+    try:
+        assert instance.timeout == timeout  # type: ignore[attr-defined]
+    finally:
+        instance.close()
 
 
 @pytest.mark.parametrize(
@@ -568,6 +594,20 @@ def test_search_console_resubmits_the_sitemap(
     sitemaps.submit.return_value.execute.assert_called_once_with(num_retries=4)
 
 
+def test_search_console_submits_the_normalized_ipv6_property(
+    google_client_mocks: dict[str, Mock],
+) -> None:
+    sitemaps = google_client_mocks["build"].return_value.sitemaps.return_value
+    provider = GoogleSearchConsoleProvider("sa.json", "https://[::1]:8443/blog")
+
+    assert provider.notify("https://[::1]:8443/blog/page")
+
+    sitemaps.submit.assert_called_once_with(
+        siteUrl="https://[::1]:8443/blog/",
+        feedpath="https://[::1]:8443/blog/sitemap.xml",
+    )
+
+
 @pytest.mark.parametrize(
     ("site_url", "sitemap_url", "expected_site", "expected_sitemap"),
     [
@@ -582,6 +622,48 @@ def test_search_console_resubmits_the_sitemap(
             None,
             "https://a.example/blog/",
             "https://a.example/blog/sitemap.xml",
+        ),
+        (
+            "https://[::1]:8443/",
+            None,
+            "https://[::1]:8443/",
+            "https://[::1]:8443/sitemap.xml",
+        ),
+        (
+            "https://[2001:DB8::1]:443/blog",
+            None,
+            "https://[2001:db8::1]/blog/",
+            "https://[2001:db8::1]/blog/sitemap.xml",
+        ),
+        (
+            "HTTPS://A.example:443/",
+            None,
+            "https://a.example/",
+            "https://a.example/sitemap.xml",
+        ),
+        (
+            "http://A.example:80/blog",
+            None,
+            "http://a.example/blog/",
+            "http://a.example/blog/sitemap.xml",
+        ),
+        (
+            "https://a.example:8443/blog",
+            None,
+            "https://a.example:8443/blog/",
+            "https://a.example:8443/blog/sitemap.xml",
+        ),
+        (
+            "https://Bücher.example./blog",
+            None,
+            "https://xn--bcher-kva.example/blog/",
+            "https://xn--bcher-kva.example/blog/sitemap.xml",
+        ),
+        (
+            "https://a.example/mon blog/é",
+            None,
+            "https://a.example/mon%20blog/%C3%A9/",
+            "https://a.example/mon%20blog/%C3%A9/sitemap.xml",
         ),
         (
             " SC-Domain:A.Example. ",
@@ -663,6 +745,9 @@ def test_search_console_does_not_submit_when_a_url_is_outside(
         ({"site_url": "sc-domain:a.example/path"}, "sc-domain:example.com"),
         ({"site_url": "ftp://a.example"}, "http"),
         ({"site_url": "https://a.example/?x=1"}, "query"),
+        ({"site_url": "https://a.example:0/x"}, "site_url port"),
+        ({"site_url": "http://a.example:0/"}, "site_url port"),
+        ({"site_url": "http://[::1]:0/"}, "site_url port"),
         (
             {
                 "site_url": "https://a.example/",
@@ -780,6 +865,10 @@ def test_cli_missing_extra_is_a_configuration_error(
         ("Thu, 08 Oct 2026 12:01:30 GMT", 90.0),
         ("Thu, 08 Oct 2026 11:00:00 GMT", 0.0),
         ("soon", None),
+        ("²", None),
+        ("①", None),
+        ("١٢", None),
+        ("1.5", None),
         ("-5", None),
         ("", None),
         (None, None),
@@ -801,6 +890,57 @@ def test_indexnow_reports_retry_after_header() -> None:
 
     assert captured.value.retryable is True
     assert captured.value.retry_after == 30.0
+
+
+@pytest.mark.parametrize("header", ["²", "①", "١٢", "1.5", "soon"])
+def test_indexnow_preserves_status_with_malformed_retry_after(header: str) -> None:
+    session = make_mock_session()
+    session.post.return_value = Mock(status_code=503, headers={"Retry-After": header})
+    provider = IndexNowProvider(api_key="indexnow-key", session=session)
+
+    with pytest.raises(ProviderError) as captured:
+        provider.notify("https://example.com/page")
+
+    assert captured.value.status_code == 503
+    assert captured.value.retryable is True
+    assert captured.value.retry_after is None
+
+
+def test_indexnow_retries_after_a_malformed_retry_after() -> None:
+    session = make_mock_session()
+    session.post.side_effect = [
+        Mock(status_code=503, headers={"Retry-After": "²"}),
+        Mock(status_code=200),
+    ]
+    sleep = Mock()
+    provider = IndexNowProvider(api_key="indexnow-key", session=session)
+
+    result = Kliz([provider], max_attempts=2, sleep=sleep).notify_all_detailed(
+        "https://example.com/page"
+    )["IndexNowProvider"]
+
+    assert result.success is True
+    assert result.attempts == 2
+    assert session.post.call_count == 2
+    sleep.assert_called_once()
+
+
+@pytest.mark.parametrize("header", ["²", "①", "١٢"])
+def test_google_preserves_status_with_malformed_retry_after(
+    header: str, google_client_mocks: dict[str, Mock]
+) -> None:
+    response = httplib2.Response({"status": "503", "retry-after": header})
+    service = google_client_mocks["build"].return_value
+    service.urlNotifications.return_value.publish.return_value.execute.side_effect = (
+        HttpError(response, b"{}")
+    )
+
+    with pytest.raises(ProviderError) as captured:
+        GoogleProvider("sa.json").notify("https://example.com/job")
+
+    assert captured.value.status_code == 503
+    assert captured.value.retryable is True
+    assert captured.value.retry_after is None
 
 
 def test_google_reports_retry_after_header(

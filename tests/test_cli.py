@@ -529,6 +529,27 @@ def test_notify_dry_run_prints_urls_without_providers(
     assert "1 URL(s), nothing sent" in captured.err
 
 
+@pytest.mark.parametrize("since", ["2026-10-01T00:00:00Z", "2026-10-01T00:00:00z"])
+def test_notify_sitemap_since_accepts_utc_z_suffix(
+    since: str,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    sitemap = Path(__file__).parent / "fixtures" / "sitemap.xml"
+    exit_code = main(
+        [
+            "notify",
+            "--sitemap",
+            str(sitemap),
+            "--since",
+            since,
+            "--dry-run",
+        ]
+    )
+
+    assert exit_code == 0
+    assert capsys.readouterr().out == "https://example.com/\n"
+
+
 def test_notify_sitemap_with_nothing_new_succeeds(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -546,6 +567,8 @@ def test_notify_sitemap_with_nothing_new_succeeds(
     [
         ["--sitemap", "s.xml"],
         ["--sitemap", "s.xml", "--since", "last week"],
+        ["--sitemap", "s.xml", "--since", "2026-10-01Z"],
+        ["--sitemap", "s.xml", "--since", "2026-10-01z"],
         ["--since", "2026-10-01", "https://example.com/a"],
         ["--sitemap", "s.xml", "https://example.com/a"],
         ["--sitemap", "s.xml", "--batch", "urls.txt"],
@@ -585,7 +608,38 @@ def _gsc_args(**overrides: object) -> argparse.Namespace:
         ({}, "https://example.com/sitemap.xml"),
         ({"sitemap": "https://example.com/s.xml"}, "https://example.com/s.xml"),
         ({"sitemap": "local-sitemap.xml"}, "https://example.com/sitemap.xml"),
+        ({"sitemap": "http-sitemap.xml"}, "https://example.com/sitemap.xml"),
         ({"gsc_sitemap": ""}, "https://example.com/sitemap.xml"),
+        (
+            {"config_sitemap": "https://example.com/config.xml"},
+            "https://example.com/config.xml",
+        ),
+        ({"config_sitemap": "http-sitemap.xml"}, "https://example.com/sitemap.xml"),
+        (
+            {"config_sitemap": "https://cdn.example.net/sitemap.xml"},
+            "https://example.com/sitemap.xml",
+        ),
+        (
+            {
+                "sitemap": "https://example.com/flag.xml",
+                "config_sitemap": "https://example.com/config.xml",
+            },
+            "https://example.com/flag.xml",
+        ),
+        (
+            {
+                "sitemap": "http-sitemap.xml",
+                "config_sitemap": "https://example.com/config.xml",
+            },
+            "https://example.com/sitemap.xml",
+        ),
+        (
+            {
+                "config_sitemap": "https://example.com/config.xml",
+                "gsc_sitemap": "https://example.com/explicit.xml",
+            },
+            "https://example.com/explicit.xml",
+        ),
         (
             {
                 "sitemap": "https://example.com/s.xml",
@@ -615,6 +669,14 @@ def test_build_indexer_creates_search_console(
         ({"gsc_service_account_file": "/nonexistent/sa.json"}, "not found"),
         ({"gsc_site": "ftp://example.com"}, "Search Console: "),
         ({"gsc_sitemap": "https://other.example/s.xml"}, "sitemap_url is invalid"),
+        ({"sitemap": "https://other.example/s.xml"}, "sitemap_url is invalid"),
+        (
+            {
+                "gsc_site": "ftp://example.com",
+                "config_sitemap": "https://example.com/config.xml",
+            },
+            "Search Console: ",
+        ),
     ],
 )
 def test_build_indexer_search_console_config_errors(
@@ -624,6 +686,24 @@ def test_build_indexer_search_console_config_errors(
 
     with pytest.raises(ConfigurationError, match=message):
         _build_indexer(_gsc_args(**overrides))
+
+
+def test_search_console_uses_the_sitemap_setting(tmp_path: Path) -> None:
+    from kliz.cli import _build_indexer, _build_parser
+
+    account = tmp_path / "account.json"
+    account.write_text("{}", encoding="utf-8")
+    config = {
+        "gsc_site": "https://example.com/",
+        "gsc_service_account_file": str(account),
+        "sitemap": "https://example.com/config.xml",
+    }
+
+    args = _build_parser(config).parse_args(["notify", "https://example.com/page"])
+    (provider,) = _build_indexer(args).providers
+
+    assert isinstance(provider, GoogleSearchConsoleProvider)
+    assert provider.sitemap_url == "https://example.com/config.xml"
 
 
 def test_gsc_options_read_environment(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -669,6 +749,34 @@ def test_non_numeric_max_attempts_env_is_a_usage_error(
     assert main([*INDEXNOW_ARGS, "providers"]) == 2
 
 
+@pytest.mark.parametrize("value", ["0", "-1", "nan", "inf"])
+@pytest.mark.parametrize("command", [["providers"], ["indexnow", "verify-key"]])
+def test_invalid_timeout_is_a_configuration_error(
+    value: str, command: list[str], capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert main([*INDEXNOW_ARGS, f"--timeout={value}", *command]) == 2
+    # A global option: the message must not carry a provider prefix.
+    assert capsys.readouterr().err.startswith(
+        "error: --timeout must be a positive number of seconds"
+    )
+
+
+def test_invalid_timeout_env_is_a_configuration_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("KLIZ_TIMEOUT", "0")
+
+    assert main([*INDEXNOW_ARGS, "providers"]) == 2
+
+
+def test_valid_timeout_still_reaches_providers() -> None:
+    from kliz.cli import _build_indexer, _build_parser
+
+    args = _build_parser().parse_args([*INDEXNOW_ARGS, "--timeout", "2.5", "providers"])
+
+    assert _build_indexer(args).providers
+
+
 def test_allow_query_flag_reaches_providers(monkeypatch: pytest.MonkeyPatch) -> None:
     from kliz.cli import _build_indexer, _build_parser
 
@@ -680,3 +788,52 @@ def test_allow_query_flag_reaches_providers(monkeypatch: pytest.MonkeyPatch) -> 
     assert _build_parser().parse_args(["providers"]).allow_query is True
     monkeypatch.setenv("KLIZ_ALLOW_QUERY", "false")
     assert _build_parser().parse_args(["providers"]).allow_query is False
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["--help"],
+        ["-h"],
+        ["--version"],
+        ["notify", "--help"],
+        ["indexnow", "keygen", "--help"],
+    ],
+)
+@pytest.mark.parametrize(
+    ("filename", "contents"),
+    [("pyproject.toml", "[broken"), ("kliz.toml", "unknown_setting = true")],
+)
+def test_help_and_version_ignore_broken_configuration(
+    arguments: list[str],
+    filename: str,
+    contents: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / filename).write_text(contents, encoding="utf-8")
+
+    assert main(arguments) == 0
+    captured = capsys.readouterr()
+    assert captured.out
+    assert captured.err == ""
+
+
+@pytest.mark.parametrize("argument", ["--help", "--version"])
+def test_help_and_version_ignore_missing_explicit_config(
+    argument: str, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert main(["--config", str(tmp_path / "missing.toml"), argument]) == 0
+    assert capsys.readouterr().err == ""
+
+
+def test_help_token_as_url_still_loads_configuration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[broken", encoding="utf-8")
+
+    assert main(["notify", "--", "--help"]) == 2
+    assert "cannot read" in capsys.readouterr().err
