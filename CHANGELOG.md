@@ -11,6 +11,10 @@ The project follows semantic versioning.
 
 ### Fixed
 
+- `max-attempts = 0` in the settings file is now refused as a configuration
+  error (exit code 2), like `--max-attempts 0`. It used to be silently replaced
+  by one attempt (#21).
+
 - `--since` (and the `since` setting) now accepts a UTC datetime ending in `Z`
   or `z`, such as `2026-10-01T00:00:00Z`, on Python 3.10. It used to be refused
   as a configuration error there, although the same format in a sitemap

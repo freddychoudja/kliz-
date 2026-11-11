@@ -11,6 +11,10 @@ Le projet suit le versionnage sémantique.
 
 ### Corrigé
 
+- `max-attempts = 0` dans le fichier de réglages est désormais refusé comme
+  erreur de configuration (code de sortie 2), comme `--max-attempts 0`. Il était
+  jusqu'ici remplacé silencieusement par une seule tentative (#21).
+
 - `--since` (et le réglage `since`) accepte désormais une date-heure UTC
   terminée par `Z` ou `z`, comme `2026-10-01T00:00:00Z`, sous Python 3.10. Elle
   y était refusée comme erreur de configuration, alors que le même format dans
