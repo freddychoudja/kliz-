@@ -214,6 +214,18 @@ def test_urls_can_come_from_stdin_with_a_bom(
     assert capsys.readouterr().out == "https://a/1\nhttps://a/2\n"
 
 
+def test_urls_from_stdin_that_is_not_utf8_give_config_error(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    stream = io.TextIOWrapper(
+        io.BytesIO("https://a/café\n".encode("latin-1")), encoding="cp1252"
+    )
+    monkeypatch.setattr("sys.stdin", stream)
+
+    assert main(["notify", "-", "--dry-run"]) == 2
+    assert "cannot read stdin: it is not valid UTF-8" in capsys.readouterr().err
+
+
 def test_json_report_for_a_real_run(capsys: pytest.CaptureFixture[str]) -> None:
     indexer = MagicMock()
     indexer.notify_many_detailed.return_value = {

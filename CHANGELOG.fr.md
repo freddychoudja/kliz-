@@ -11,6 +11,13 @@ Le projet suit le versionnage sémantique.
 
 ### Corrigé
 
+- Les fichiers `--batch` et l'entrée standard sont lus en UTF-8 en supprimant
+  l'indicateur d'ordre des octets (BOM) : un fichier enregistré par un éditeur
+  Windows ne produit plus `\ufeffhttps://…` comme première URL, et la lecture ne
+  dépend plus de l'encodage de la locale. Une entrée qui n'est pas de l'UTF-8
+  valide est désormais une erreur de configuration (code de sortie 2) au lieu
+  d'une « erreur inattendue » (#25).
+
 - `--since` (et le réglage `since`) accepte désormais une date-heure UTC
   terminée par `Z` ou `z`, comme `2026-10-01T00:00:00Z`, sous Python 3.10. Elle
   y était refusée comme erreur de configuration, alors que le même format dans
@@ -43,13 +50,6 @@ Le projet suit le versionnage sémantique.
   la CLI, la GitHub Action et Python, référence des commandes, options, entrées de
   l'Action et codes de sortie, FAQ et générateur de configuration. Il remplace la
   page française v0.2.0.
-
-### Corrigé
-
-- Les fichiers `--batch` et l'entrée standard sont lus en UTF-8 en supprimant
-  l'indicateur d'ordre des octets (BOM) : un fichier enregistré par un éditeur
-  Windows ne produit plus `\ufeffhttps://…` comme première URL, et la lecture ne
-  dépend plus de l'encodage de la locale.
 
 ## [0.3.1] - 2026-10-08
 

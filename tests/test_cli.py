@@ -212,6 +212,18 @@ def test_notify_batch_file_with_a_bom(capsys: pytest.CaptureFixture[str]) -> Non
     assert capsys.readouterr().out == "https://example.com/a\nhttps://example.com/b\n"
 
 
+def test_notify_batch_file_that_is_not_utf8_gives_config_error(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    batch = tmp_path / "urls.txt"
+    batch.write_bytes("https://example.com/café\n".encode("latin-1"))
+
+    assert main(["notify", "--batch", str(batch), "--dry-run"]) == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert f"cannot read {batch}: it is not valid UTF-8" in captured.err
+
+
 def test_providers_list(capsys: pytest.CaptureFixture[str]) -> None:
     from kliz.providers import IndexNowProvider
 

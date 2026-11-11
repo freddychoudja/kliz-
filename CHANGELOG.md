@@ -11,6 +11,12 @@ The project follows semantic versioning.
 
 ### Fixed
 
+- `--batch` files and stdin are read as UTF-8 with a leading byte order mark
+  stripped: a file saved by a Windows editor no longer yields
+  `\ufeffhttps://…` as its first URL, and reading no longer depends on the
+  locale encoding. Input that is not valid UTF-8 is now a configuration error
+  (exit code 2) instead of an "unexpected error" (#25).
+
 - `--since` (and the `since` setting) now accepts a UTC datetime ending in `Z`
   or `z`, such as `2026-10-01T00:00:00Z`, on Python 3.10. It used to be refused
   as a configuration error there, although the same format in a sitemap
@@ -72,13 +78,6 @@ The project follows semantic versioning.
   `kliz.normalize_url()` and shows the IndexNow request body, setup for the command
   line, GitHub Action and Python, a reference of commands, options, Action inputs
   and exit codes, an FAQ and a setup generator. It replaces the French v0.2.0 page.
-
-### Fixed
-
-- `--batch` files and stdin are read as UTF-8 with a leading byte order mark
-  stripped: a file saved by a Windows editor no longer yields
-  `\ufeffhttps://…` as its first URL, and reading no longer depends on the
-  locale encoding.
 
 ## [0.3.1] - 2026-10-08
 

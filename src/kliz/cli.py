@@ -452,6 +452,10 @@ def _read_urls_from_file(path: str) -> list[str]:
             # decoded differently from machine to machine.
             with open(path, encoding="utf-8-sig") as handle:
                 lines = [line.strip() for line in handle]
+    except UnicodeDecodeError as exc:
+        raise ConfigurationError(
+            f"cannot read {source}: it is not valid UTF-8"
+        ) from exc
     except OSError as exc:
         raise ConfigurationError(f"cannot read {source}: {exc}") from exc
     urls = [line for line in lines if line and not line.startswith("#")]
