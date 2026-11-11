@@ -7,7 +7,14 @@ The project follows semantic versioning.
 
 ### Fixed
 
-- Canonicalize Search Console URL-prefix properties with IPv6 brackets and default-port removal, preserve non-default ports, and reject port zero (#13).
+- Search Console URL-prefix properties are now canonicalized like every other
+  URL: an IPv6 host keeps its brackets (`https://[::1]:8443/` no longer fails
+  with a misleading sitemap error), an explicit default port is dropped
+  (`https://example.com:443/` is sent as `https://example.com/`) and a
+  non-default port is kept. As a side effect, an internationalized host is sent
+  in its punycode form, a trailing dot on the host is dropped and non-ASCII
+  characters or spaces in the path are percent-encoded. Port zero is now refused
+  as a `site_url` error instead of being silently removed (#13).
 
 - A zero, negative or non-finite `--timeout` (or `KLIZ_TIMEOUT`) is now a
   configuration error (exit code 2) on every command, instead of an
