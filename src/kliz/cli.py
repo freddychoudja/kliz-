@@ -101,6 +101,7 @@ def _setting(config: Mapping[str, Any], key: str, env: str) -> Any:
 
 def _build_parser(config: Mapping[str, Any] | None = None) -> argparse.ArgumentParser:
     config = config or {}
+    max_attempts = _setting(config, "max_attempts", "KLIZ_MAX_ATTEMPTS")
     env_allow_query = os.environ.get("KLIZ_ALLOW_QUERY")
     parser = argparse.ArgumentParser(
         prog="kliz",
@@ -168,7 +169,8 @@ def _build_parser(config: Mapping[str, Any] | None = None) -> argparse.ArgumentP
     parser.add_argument(
         "--max-attempts",
         type=int,
-        default=_setting(config, "max_attempts", "KLIZ_MAX_ATTEMPTS") or "1",
+        # Only an absent setting means 1: a configured 0 must reach validation.
+        default=1 if max_attempts is None else max_attempts,
         help="Attempts per notification for temporary failures (429, 5xx,"
         " network), honoring Retry-After; default 1 (KLIZ_MAX_ATTEMPTS env var)",
     )
