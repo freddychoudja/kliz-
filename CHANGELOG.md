@@ -7,6 +7,13 @@ The project follows semantic versioning.
 
 ### Fixed
 
+- URLs with an invalid hostname are now refused before anything is sent, by
+  `normalize_url()` and by every provider. A host with a space, a control
+  character, a `%` escape, an empty label (`a..com`, `http://./`), a label
+  longer than 63 characters or any character other than letters, digits, `-`
+  and `_` is a validation error; so is an IPv6 zone identifier. Unicode
+  domains, a trailing dot, IPv4 and IPv6 literals keep working (#12).
+
 - The sitemap resubmitted to Search Console is now resolved consistently. A
   local sitemap file whose name starts with `http` (`http-sitemap.xml`) is no
   longer mistaken for a URL, and a `sitemap` URL set in the settings file is
