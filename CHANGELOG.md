@@ -7,7 +7,22 @@ The project follows semantic versioning.
 
 ### Fixed
 
-- Derive the Search Console sitemap from configured or explicit HTTP(S) sitemap URLs, without treating local http-prefixed filenames as URLs (#24).
+- The sitemap resubmitted to Search Console is now resolved consistently. A
+  local sitemap file whose name starts with `http` (`http-sitemap.xml`) is no
+  longer mistaken for a URL, and a `sitemap` URL set in the settings file is
+  now used when `--sitemap` is not given. If that setting is not a valid
+  sitemap for the property (another host, a parent path), the default
+  `<property>/sitemap.xml` is kept; an explicit `--sitemap` or `--gsc-sitemap`
+  outside the property is still a configuration error (#24).
+
+- Search Console URL-prefix properties are now canonicalized like every other
+  URL: an IPv6 host keeps its brackets (`https://[::1]:8443/` no longer fails
+  with a misleading sitemap error), an explicit default port is dropped
+  (`https://example.com:443/` is sent as `https://example.com/`) and a
+  non-default port is kept. As a side effect, an internationalized host is sent
+  in its punycode form, a trailing dot on the host is dropped and non-ASCII
+  characters or spaces in the path are percent-encoded. Port zero is now refused
+  as a `site_url` error instead of being silently removed (#13).
 
 - A zero, negative or non-finite `--timeout` (or `KLIZ_TIMEOUT`) is now a
   configuration error (exit code 2) on every command, instead of an
