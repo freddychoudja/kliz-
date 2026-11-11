@@ -1,8 +1,11 @@
 """Shared input validation helpers."""
 
+import ipaddress
+import re
 from urllib.parse import SplitResult, quote, urlsplit, urlunsplit
 
 _DEFAULT_PORTS = {"http": 80, "https": 443}
+_HOST_LABEL_RE = re.compile(r"[a-z0-9_-]{1,63}")
 # RFC 3986 reserved and unreserved characters, plus "%" to keep escapes intact.
 _URL_SAFE = "/:@!$&'()*+,;=-._~%?"
 
@@ -23,11 +26,15 @@ def parse_http_url(url: str, *, require_clean: bool = False) -> SplitResult:
         raise ValueError("url must be a non-empty string")
 
     normalized_url = url.strip()
+    authority = re.match(r"https?://([^/?#]*)", normalized_url, re.IGNORECASE)
+    if authority and any(ord(char) < 32 or ord(char) == 127 for char in authority[1]):
+        raise ValueError("url has an invalid hostname")
     parsed_url = urlsplit(normalized_url)
     if parsed_url.scheme.lower() not in {"http", "https"}:
         raise ValueError("url must use the http or https scheme")
     if not parsed_url.hostname:
         raise ValueError("url must include a hostname")
+    _normalize_hostname(parsed_url.hostname)
     if parsed_url.username is not None or parsed_url.password is not None:
         raise ValueError("url must not contain credentials")
     if parsed_url.fragment:
@@ -36,6 +43,30 @@ def parse_http_url(url: str, *, require_clean: bool = False) -> SplitResult:
         raise ValueError("url must not contain a query string")
 
     return parsed_url
+
+
+def _normalize_hostname(host: str) -> str:
+    if any(char.isspace() or ord(char) < 32 or ord(char) == 127 for char in host):
+        raise ValueError("url has an invalid hostname")
+    if "%" in host:
+        raise ValueError("url has an invalid hostname")
+    if ":" in host:
+        try:
+            ipaddress.IPv6Address(host)
+        except ValueError as exc:
+            raise ValueError("url has an invalid hostname") from exc
+        return host
+    try:
+        host = host.encode("idna").decode("ascii").lower().removesuffix(".")
+    except UnicodeError as exc:
+        raise ValueError("url has an invalid internationalized hostname") from exc
+    if (
+        not host
+        or len(host) > 253
+        or not all(_HOST_LABEL_RE.fullmatch(label) for label in host.split("."))
+    ):
+        raise ValueError("url has an invalid hostname")
+    return host
 
 
 def normalize_url(url: str) -> str:
@@ -52,12 +83,7 @@ def normalize_url(url: str) -> str:
 
     parsed = parse_http_url(url)
     scheme = parsed.scheme.lower()
-    host = (parsed.hostname or "").rstrip(".")
-    if not host.isascii():
-        try:
-            host = host.encode("idna").decode("ascii")
-        except UnicodeError as exc:
-            raise ValueError("url has an invalid internationalized hostname") from exc
+    host = _normalize_hostname(parsed.hostname or "")
     if ":" in host:
         host = f"[{host}]"
     port = parsed.port
