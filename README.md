@@ -172,7 +172,7 @@ kliz indexnow verify-key --site https://example.com              # check its fil
 | `--indexnow-key-location` | `KLIZ_INDEXNOW_KEY_LOCATION` | URL of the key file |
 | `--gsc-site` | `KLIZ_GSC_SITE` | Search Console property |
 | `--gsc-service-account-file` | `KLIZ_GSC_SERVICE_ACCOUNT_FILE` | Service account JSON file |
-| `--gsc-sitemap` | `KLIZ_GSC_SITEMAP` | Sitemap to resubmit (default: `--sitemap` URL, else `<property>/sitemap.xml`) |
+| `--gsc-sitemap` | `KLIZ_GSC_SITEMAP` | Sitemap to resubmit (default: `--sitemap` URL, else the `sitemap` setting when it is a URL inside the property, else `<property>/sitemap.xml`) |
 | `--google-service-account-file` | `KLIZ_GOOGLE_SERVICE_ACCOUNT_FILE` | Indexing API (job postings and livestreams only) |
 | `--max-attempts` | `KLIZ_MAX_ATTEMPTS` | Attempts for temporary failures (default `1`) |
 | `--timeout` | `KLIZ_TIMEOUT` | Network timeout in seconds |
