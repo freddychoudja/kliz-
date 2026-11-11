@@ -723,7 +723,9 @@ def test_invalid_max_attempts_is_a_configuration_error() -> None:
 
 
 def test_max_attempts_zero_in_config_is_rejected(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """A settings file value of 0 must be rejected, not silently treated as 1."""
 
@@ -740,23 +742,35 @@ def test_max_attempts_zero_in_config_is_rejected(
     (tmp_path / "kliz.toml").write_text("max-attempts = 0\n")
 
     assert main([*INDEXNOW_ARGS, "providers"]) == 2
-
+    assert "max_attempts" in capsys.readouterr().err
 
 
 def test_empty_env_var_falls_back_to_config(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """An empty environment variable must not override a config file value."""
 
+    from kliz.cli import _build_parser
+
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("KLIZ_INDEXNOW_API_KEY", "")
+    monkeypatch.setenv("KLIZ_INDEXNOW_KEY_LOCATION", "")
+    monkeypatch.setenv("KLIZ_MAX_ATTEMPTS", "")
     (tmp_path / "kliz.toml").write_text(
-        'indexnow-api-key = "from-config"
-'
+        'indexnow-api-key = "abcdefgh"\n'
+        'indexnow-key-location = "https://example.com/key.txt"\n'
+        "max-attempts = 3\n"
     )
 
-    # providers should succeed because the key comes from config
+    # The key, its location and the attempts all come from the settings file.
     assert main(["providers"]) == 0
+    assert "IndexNowProvider" in capsys.readouterr().out
+    assert (
+        _build_parser({"max_attempts": 3}).parse_args(["providers"]).max_attempts == 3
+    )
+
 
 def test_non_numeric_max_attempts_env_is_a_usage_error(
     monkeypatch: pytest.MonkeyPatch,
