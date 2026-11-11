@@ -1022,6 +1022,30 @@ def test_google_providers_wrap_authentication_errors(
     request.execute.assert_called_once_with(num_retries=2)
 
 
+@pytest.mark.parametrize("search_console", [False, True])
+def test_google_providers_keep_transient_authentication_errors_retryable(
+    google_client_mocks: dict[str, Mock],
+    search_console: bool,
+) -> None:
+    service = google_client_mocks["build"].return_value
+    if search_console:
+        provider = GoogleSearchConsoleProvider("sa.json", "https://example.com/")
+        request = service.sitemaps.return_value.submit.return_value
+    else:
+        provider = GoogleProvider("sa.json")
+        request = service.urlNotifications.return_value.publish.return_value
+    exception = RefreshError("temporarily_unavailable", retryable=True)
+    request.execute.side_effect = exception
+
+    with pytest.raises(ProviderError, match="temporarily unavailable") as captured:
+        provider.notify("https://example.com/job")
+
+    assert captured.value.provider == provider.name
+    assert captured.value.retryable is True
+    assert captured.value.__cause__ is exception
+    assert str(exception) not in str(captured.value)
+
+
 def test_search_console_keeps_transport_errors_retryable(
     google_client_mocks: dict[str, Mock],
 ) -> None:

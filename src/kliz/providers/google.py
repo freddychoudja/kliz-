@@ -81,6 +81,14 @@ class _GoogleApiProvider(BaseProvider):
                 retryable=True,
             ) from exc
         except GoogleAuthError as exc:
+            # google-auth flags a token endpoint outage (HTTP 5xx or 429) as
+            # retryable; anything else means the service account is refused.
+            if getattr(exc, "retryable", False):
+                raise ProviderError(
+                    "Google authentication is temporarily unavailable",
+                    provider=self.name,
+                    retryable=True,
+                ) from exc
             raise ProviderError(
                 "Google authentication failed; check the service account",
                 provider=self.name,

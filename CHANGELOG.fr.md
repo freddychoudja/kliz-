@@ -25,7 +25,9 @@ Le projet suit le versionnage sémantique.
   HTTP du provider ni la possibilité de réessayer.
 
 - Encapsule les erreurs d'authentification Google pendant les requêtes API dans
-  une `ProviderError` non réessayable, y compris les erreurs de renouvellement.
+  une `ProviderError`, y compris les erreurs de renouvellement. Elle est non
+  réessayable, sauf si le point de terminaison des jetons de Google était
+  seulement indisponible temporairement (#15).
 
 ### Ajouté
 

@@ -54,8 +54,9 @@ The project follows semantic versioning.
 - Ignore malformed non-ASCII `Retry-After` values without losing the provider's
   HTTP status or retryability.
 
-- Wrap Google authentication failures during API requests in a non-retryable
-  `ProviderError`, including service-account refresh errors.
+- Wrap Google authentication failures during API requests in a `ProviderError`,
+  including service-account refresh errors. It is non-retryable, unless Google's
+  token endpoint was only temporarily unavailable (#15).
 
 ### Added
 
