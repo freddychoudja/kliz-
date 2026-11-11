@@ -11,6 +11,13 @@ Le projet suit le versionnage sémantique.
 
 ### Corrigé
 
+- Les fichiers `--batch` et l'entrée standard sont lus en UTF-8 en supprimant
+  l'indicateur d'ordre des octets (BOM) : un fichier enregistré par un éditeur
+  Windows ne produit plus `\ufeffhttps://…` comme première URL, et la lecture ne
+  dépend plus de l'encodage de la locale. Une entrée qui n'est pas de l'UTF-8
+  valide est désormais une erreur de configuration (code de sortie 2) au lieu
+  d'une « erreur inattendue » (#25).
+
 - `max-attempts = 0` dans le fichier de réglages est désormais refusé comme
   erreur de configuration (code de sortie 2), comme `--max-attempts 0`. Il était
   jusqu'ici remplacé silencieusement par une seule tentative (#21).

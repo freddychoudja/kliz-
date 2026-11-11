@@ -11,6 +11,12 @@ The project follows semantic versioning.
 
 ### Fixed
 
+- `--batch` files and stdin are read as UTF-8 with a leading byte order mark
+  stripped: a file saved by a Windows editor no longer yields
+  `\ufeffhttps://…` as its first URL, and reading no longer depends on the
+  locale encoding. Input that is not valid UTF-8 is now a configuration error
+  (exit code 2) instead of an "unexpected error" (#25).
+
 - `max-attempts = 0` in the settings file is now refused as a configuration
   error (exit code 2), like `--max-attempts 0`. It used to be silently replaced
   by one attempt (#21).
