@@ -7,6 +7,12 @@ The project follows semantic versioning.
 
 ### Fixed
 
+- A `timeout` that is NaN, infinite or a boolean is now refused with a
+  `ValueError` by `IndexNowProvider`, `GoogleProvider`,
+  `GoogleSearchConsoleProvider` and `read_sitemap()`, like zero and negative
+  values already were. NaN used to be accepted because `nan <= 0` is false
+  (#18).
+
 - URLs with an invalid hostname are now refused before anything is sent, by
   `normalize_url()` and by every provider. A host with a space, a control
   character, a `%` escape, an empty label (`a..com`, `http://./`), a label

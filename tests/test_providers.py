@@ -15,6 +15,7 @@ from kliz import Kliz
 from kliz._http import parse_retry_after
 from kliz.cli import main
 from kliz.exceptions import MissingDependencyError, ProviderError
+from kliz.providers.base import BaseProvider
 from kliz.providers.google import GoogleProvider, GoogleSearchConsoleProvider
 from kliz.providers.indexnow import IndexNowProvider
 
@@ -130,9 +131,34 @@ def test_indexnow_provider_rejects_invalid_keys(api_key: str) -> None:
         IndexNowProvider(api_key=api_key)
 
 
-def test_indexnow_provider_rejects_invalid_timeout() -> None:
-    with pytest.raises(ValueError, match="timeout"):
-        IndexNowProvider(api_key="abcdefgh", timeout=0)
+_TIMEOUT_FACTORIES: dict[str, Callable[[float], BaseProvider]] = {
+    "indexnow": lambda timeout: IndexNowProvider(api_key="abcdefgh", timeout=timeout),
+    "google": lambda timeout: GoogleProvider("sa.json", timeout=timeout),
+    "search-console": lambda timeout: GoogleSearchConsoleProvider(
+        "sa.json", "https://a.example/", timeout=timeout
+    ),
+}
+
+
+@pytest.mark.parametrize("provider", sorted(_TIMEOUT_FACTORIES))
+@pytest.mark.parametrize(
+    "timeout", [0, -1, float("nan"), float("inf"), -float("inf"), True, False]
+)
+def test_providers_reject_invalid_timeouts(provider: str, timeout: float) -> None:
+    with pytest.raises(ValueError, match="timeout must be a finite number"):
+        _TIMEOUT_FACTORIES[provider](timeout)
+
+
+@pytest.mark.parametrize("provider", sorted(_TIMEOUT_FACTORIES))
+@pytest.mark.parametrize("timeout", [0.1, 1, 10.0])
+def test_providers_accept_finite_positive_timeouts(
+    provider: str, timeout: float
+) -> None:
+    instance = _TIMEOUT_FACTORIES[provider](timeout)
+    try:
+        assert instance.timeout == timeout  # type: ignore[attr-defined]
+    finally:
+        instance.close()
 
 
 @pytest.mark.parametrize(

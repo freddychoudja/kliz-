@@ -1,6 +1,7 @@
 """Shared input validation helpers."""
 
 import ipaddress
+import math
 import re
 from urllib.parse import SplitResult, quote, urlsplit, urlunsplit
 
@@ -8,6 +9,17 @@ _DEFAULT_PORTS = {"http": 80, "https": 443}
 _HOST_LABEL_RE = re.compile(r"[a-z0-9_-]{1,63}")
 # RFC 3986 reserved and unreserved characters, plus "%" to keep escapes intact.
 _URL_SAFE = "/:@!$&'()*+,;=-._~%?"
+
+
+def validate_timeout(timeout: float) -> None:
+    """Raise ``ValueError`` unless *timeout* is a finite number above zero.
+
+    ``nan <= 0`` is false, so a plain comparison lets NaN through. Booleans
+    are refused too: ``True`` would otherwise be a one-second timeout.
+    """
+
+    if isinstance(timeout, bool) or not math.isfinite(timeout) or timeout <= 0:
+        raise ValueError("timeout must be a finite number greater than zero")
 
 
 def parse_http_url(url: str, *, require_clean: bool = False) -> SplitResult:
