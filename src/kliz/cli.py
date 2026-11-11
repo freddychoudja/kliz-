@@ -16,6 +16,7 @@ from typing import Any, TypedDict
 
 from kliz import Kliz, __version__
 from kliz._config import ConfigurationError, find_config, load_config
+from kliz._validation import utc_suffix_to_offset
 from kliz.exceptions import KlizError, MissingDependencyError
 from kliz.providers import (
     BaseProvider,
@@ -155,7 +156,8 @@ def _build_parser(config: Mapping[str, Any] | None = None) -> argparse.ArgumentP
         "--gsc-sitemap",
         default=_setting(config, "gsc_sitemap", "KLIZ_GSC_SITEMAP"),
         help="Sitemap URL to resubmit to Search Console (default: the --sitemap"
-        " URL, else <property>/sitemap.xml)",
+        " URL, else the sitemap setting when it is a URL inside the property,"
+        " else <property>/sitemap.xml)",
     )
     parser.add_argument(
         "--gsc-service-account-file",
@@ -402,8 +404,13 @@ def _resolve_urls(args: argparse.Namespace) -> list[str]:
 
 
 def _parse_since(value: str) -> datetime:
+    text = utc_suffix_to_offset(value)
     try:
-        return datetime.fromisoformat(value)
+        parsed = datetime.fromisoformat(text)
+        # A date followed by +00:00 can parse as a naive datetime.
+        if text != value and parsed.tzinfo is None:
+            raise ValueError("UTC suffix requires a datetime")
+        return parsed
     except ValueError as exc:
         raise ConfigurationError(
             f"--since must be an ISO date or datetime, got {value!r}"
@@ -503,12 +510,31 @@ def _build_search_console(
     if not os.path.exists(account_file):
         raise ConfigurationError(f"service account file not found: {account_file}")
     sitemap_url = args.gsc_sitemap or None
-    sitemap = getattr(args, "sitemap", None)
-    if not sitemap_url and sitemap and sitemap.lower().startswith("http"):
-        sitemap_url = sitemap
+    from_settings = False
+    if not sitemap_url:
+        sitemap = getattr(args, "sitemap", None)
+        configured = getattr(args, "config_sitemap", None)
+        if sitemap:
+            sitemap_url = sitemap if _is_http_url(sitemap) else None
+        elif _is_http_url(configured):
+            sitemap_url, from_settings = configured, True
     try:
-        return GoogleSearchConsoleProvider(
-            account_file, args.gsc_site, sitemap_url, **timeout
-        )
+        try:
+            return GoogleSearchConsoleProvider(
+                account_file, args.gsc_site, sitemap_url, **timeout
+            )
+        except ValueError:
+            if not from_settings:
+                raise
+            # The `sitemap` setting primarily names the URL source. When it is
+            # not a valid sitemap for this property (another host, a parent
+            # path), keep the property's own default instead of failing.
+            return GoogleSearchConsoleProvider(
+                account_file, args.gsc_site, None, **timeout
+            )
     except ValueError as exc:
         raise ConfigurationError(f"Search Console: {exc}") from exc
+
+
+def _is_http_url(value: str | None) -> bool:
+    return value is not None and value.lower().startswith(("http://", "https://"))

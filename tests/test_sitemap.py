@@ -289,6 +289,9 @@ def test_owned_session_is_closed() -> None:
     session.close.assert_called_once()
 
 
-def test_rejects_invalid_timeout() -> None:
-    with pytest.raises(ValueError, match="timeout"):
-        read_sitemap("https://a.example/s.xml", timeout=0)
+@pytest.mark.parametrize(
+    "timeout", [0, -1, float("nan"), float("inf"), -float("inf"), True, False]
+)
+def test_rejects_invalid_timeout(timeout: float) -> None:
+    with pytest.raises(ValueError, match="timeout must be a finite number"):
+        read_sitemap("https://a.example/s.xml", timeout=timeout)

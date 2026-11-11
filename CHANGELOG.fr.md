@@ -7,6 +7,12 @@ Le projet suit le versionnage sémantique.
 
 ### Corrigé
 
+- `--since` (et le réglage `since`) accepte désormais une date-heure UTC
+  terminée par `Z` ou `z`, comme `2026-10-01T00:00:00Z`, sous Python 3.10. Elle
+  y était refusée comme erreur de configuration, alors que le même format dans
+  un `<lastmod>` de sitemap était lu correctement. Un `z` minuscule est
+  désormais accepté sur toutes les versions de Python (#20).
+
 - Un `--timeout` (ou `KLIZ_TIMEOUT`) nul, négatif ou non fini est désormais une
   erreur de configuration (code de sortie 2) sur toutes les commandes, au lieu
   d'une « erreur inattendue » (code de sortie 1) lors de la lecture d'un sitemap.
