@@ -7,6 +7,14 @@ The project follows semantic versioning.
 
 ### Fixed
 
+- The sitemap resubmitted to Search Console is now resolved consistently. A
+  local sitemap file whose name starts with `http` (`http-sitemap.xml`) is no
+  longer mistaken for a URL, and a `sitemap` URL set in the settings file is
+  now used when `--sitemap` is not given. If that setting is not a valid
+  sitemap for the property (another host, a parent path), the default
+  `<property>/sitemap.xml` is kept; an explicit `--sitemap` or `--gsc-sitemap`
+  outside the property is still a configuration error (#24).
+
 - Search Console URL-prefix properties are now canonicalized like every other
   URL: an IPv6 host keeps its brackets (`https://[::1]:8443/` no longer fails
   with a misleading sitemap error), an explicit default port is dropped
