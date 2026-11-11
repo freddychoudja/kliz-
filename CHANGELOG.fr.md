@@ -39,6 +39,11 @@ Le projet suit le versionnage sémantique.
 - Ignorer les valeurs `Retry-After` non ASCII mal formées sans perdre le statut
   HTTP du provider ni la possibilité de réessayer.
 
+- Encapsule les erreurs d'authentification Google pendant les requêtes API dans
+  une `ProviderError`, y compris les erreurs de renouvellement. Elle est non
+  réessayable, sauf si le point de terminaison des jetons de Google était
+  seulement indisponible temporairement (#15).
+
 ### Ajouté
 
 - Fichiers communautaires : `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1),
