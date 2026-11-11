@@ -7,7 +7,7 @@ from typing import Any
 from urllib.parse import SplitResult, urlsplit
 
 from kliz._http import parse_retry_after
-from kliz._validation import normalize_url, parse_http_url
+from kliz._validation import normalize_url, parse_http_url, validate_timeout
 from kliz.exceptions import MissingDependencyError, ProviderError
 from kliz.providers.base import BaseProvider
 
@@ -49,8 +49,7 @@ class _GoogleApiProvider(BaseProvider):
             ) from _GOOGLE_IMPORT_ERROR
         if not str(service_account_file):
             raise ValueError("service_account_file must not be empty")
-        if timeout <= 0:
-            raise ValueError("timeout must be greater than zero")
+        validate_timeout(timeout)
         if num_retries < 0:
             raise ValueError("num_retries must not be negative")
 
@@ -286,6 +285,8 @@ def _normalize_property(site_url: str) -> str:
         return f"{_DOMAIN_PROPERTY_PREFIX}{domain}"
 
     parsed = parse_http_url(site_url, require_clean=True)
-    netloc = (parsed.hostname or "") + (f":{parsed.port}" if parsed.port else "")
-    path = parsed.path if parsed.path.endswith("/") else f"{parsed.path}/"
-    return f"{parsed.scheme.lower()}://{netloc}{path}"
+    if parsed.port == 0:
+        raise ValueError("site_url port must be greater than zero")
+    normalized = urlsplit(normalize_url(site_url))
+    path = normalized.path if normalized.path.endswith("/") else f"{normalized.path}/"
+    return f"{normalized.scheme}://{normalized.netloc}{path}"

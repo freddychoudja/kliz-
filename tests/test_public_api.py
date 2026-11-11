@@ -69,6 +69,10 @@ def test_shared_url_validation_rejects_query_strings_in_clean_mode() -> None:
             "https://a.example/a%20b?q=caf%C3%A9&x=%2F",
         ),
         ("http://[::1]:80/", "http://[::1]/"),
+        ("http://[2001:DB8::1]:80/", "http://[2001:db8::1]/"),
+        ("http://127.0.0.1:80/", "http://127.0.0.1/"),
+        ("HTTPS://Example.COM./p", "https://example.com/p"),
+        ("https://service_name.example/", "https://service_name.example/"),
         ("https://a.example?x=1", "https://a.example/?x=1"),
     ],
 )
@@ -83,9 +87,57 @@ def test_normalize_url(url: str, expected: str) -> None:
         "https://a.example/#top",
         "ftp://a.example/",
         "https://a.example:99999/",
+        "http://[1::2::3]/",
         "https://" + "é" * 70 + ".example/",
     ],
 )
 def test_normalize_url_rejects_invalid_urls(url: str) -> None:
     with pytest.raises(ValueError):
         kliz.normalize_url(url)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://exa mple.com/",
+        "http://exa\nmple.com/",
+        "http://exa\tmple.com/",
+        "http://exa mple.com/",
+        "http://./",
+        "http://a..com/",
+        "http://example.com../",
+        "http://%41.com/",
+        "http://a.com%2f.evil.com/",
+        "http://a,b.com/",
+        "http://*.example.com/",
+        "http://" + "a" * 64 + ".example/",
+        "http://" + ".".join(["a" * 63] * 4) + ".example/",
+        "http://[fe80::1%25eth0]/",
+    ],
+)
+def test_invalid_hostnames_are_rejected_everywhere(url: str) -> None:
+    provider = kliz.IndexNowProvider(api_key="abcdefgh")
+    try:
+        for validate in (parse_http_url, kliz.normalize_url, provider.validate_url):
+            with pytest.raises(ValueError, match="hostname"):
+                validate(url)
+    finally:
+        provider.close()
+
+
+@pytest.mark.parametrize(
+    ("url", "message"),
+    [
+        ("http://a..com/", "url has an invalid hostname"),
+        ("http://" + "a" * 64 + ".example/", "url has an invalid hostname"),
+        (
+            "https://" + "é" * 70 + ".example/",
+            "url has an invalid internationalized hostname",
+        ),
+    ],
+)
+def test_hostname_errors_only_mention_idn_for_non_ascii_hosts(
+    url: str, message: str
+) -> None:
+    with pytest.raises(ValueError, match=f"^{message}$"):
+        parse_http_url(url)
