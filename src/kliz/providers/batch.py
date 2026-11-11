@@ -1,6 +1,5 @@
 """Reusable batch provider base for host-scoped indexing APIs."""
 
-import math
 from abc import abstractmethod
 from collections.abc import Sequence
 from urllib.parse import SplitResult, urlsplit
@@ -8,7 +7,7 @@ from urllib.parse import SplitResult, urlsplit
 import requests
 
 from kliz._http import create_session
-from kliz._validation import normalize_url, parse_http_url
+from kliz._validation import normalize_url, parse_http_url, validate_timeout
 from kliz.providers.base import BaseProvider
 
 
@@ -30,8 +29,7 @@ class BatchProvider(BaseProvider):
         session: requests.Session | None = None,
         allow_query: bool = False,
     ) -> None:
-        if isinstance(timeout, bool) or not math.isfinite(timeout) or timeout <= 0:
-            raise ValueError("timeout must be a finite number greater than zero")
+        validate_timeout(timeout)
 
         self.timeout = timeout
         self.allow_query = allow_query
