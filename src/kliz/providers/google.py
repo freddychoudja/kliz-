@@ -281,6 +281,8 @@ def _normalize_property(site_url: str) -> str:
         return f"{_DOMAIN_PROPERTY_PREFIX}{domain}"
 
     parsed = parse_http_url(site_url, require_clean=True)
-    netloc = (parsed.hostname or "") + (f":{parsed.port}" if parsed.port else "")
-    path = parsed.path if parsed.path.endswith("/") else f"{parsed.path}/"
-    return f"{parsed.scheme.lower()}://{netloc}{path}"
+    if parsed.port == 0:
+        raise ValueError("site_url port must be greater than zero")
+    normalized = urlsplit(normalize_url(site_url))
+    path = normalized.path if normalized.path.endswith("/") else f"{normalized.path}/"
+    return f"{normalized.scheme}://{normalized.netloc}{path}"
