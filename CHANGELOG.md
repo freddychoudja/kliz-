@@ -7,6 +7,8 @@ The project follows semantic versioning.
 
 ### Fixed
 
+- Derive the Search Console sitemap from configured or explicit HTTP(S) sitemap URLs, without treating local http-prefixed filenames as URLs (#24).
+
 - A zero, negative or non-finite `--timeout` (or `KLIZ_TIMEOUT`) is now a
   configuration error (exit code 2) on every command, instead of an
   "unexpected error" (exit code 1) when reading a sitemap. `--timeout inf`, which

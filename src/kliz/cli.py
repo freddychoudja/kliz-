@@ -501,8 +501,12 @@ def _build_search_console(
     if not os.path.exists(account_file):
         raise ConfigurationError(f"service account file not found: {account_file}")
     sitemap_url = args.gsc_sitemap or None
-    sitemap = getattr(args, "sitemap", None)
-    if not sitemap_url and sitemap and sitemap.lower().startswith("http"):
+    sitemap = getattr(args, "sitemap", None) or getattr(args, "config_sitemap", None)
+    if (
+        not sitemap_url
+        and sitemap
+        and sitemap.lower().startswith(("http://", "https://"))
+    ):
         sitemap_url = sitemap
     try:
         return GoogleSearchConsoleProvider(
