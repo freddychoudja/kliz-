@@ -131,7 +131,7 @@ def parse_retry_after(value: object, *, now: datetime | None = None) -> float | 
     if not isinstance(value, str) or not value.strip():
         return None
     text = value.strip()
-    if text.isdigit():
+    if text.isascii() and text.isdigit():
         return float(text)
     try:
         moment = parsedate_to_datetime(text)

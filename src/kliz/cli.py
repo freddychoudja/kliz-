@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import math
 import os
 import sys
 from collections.abc import Callable, Mapping
@@ -15,6 +16,7 @@ from typing import Any, TypedDict
 
 from kliz import Kliz, __version__
 from kliz._config import ConfigurationError, find_config, load_config
+from kliz._validation import utc_suffix_to_offset
 from kliz.exceptions import KlizError, MissingDependencyError
 from kliz.providers import (
     BaseProvider,
@@ -32,16 +34,17 @@ _TRUE_VALUES = {"1", "true", "yes", "on"}
 def main(argv: list[str] | None = None) -> int:
     arguments = sys.argv[1:] if argv is None else list(argv)
     try:
+        # Let argparse handle help, version and syntax errors before reading files.
+        args = _build_parser().parse_args(arguments)
         config = _load_cli_config(arguments)
-    except ConfigurationError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 2
-    parser = _build_parser(config)
-    try:
-        args = parser.parse_args(arguments)
+        if config:
+            args = _build_parser(config).parse_args(arguments)
     except SystemExit as exc:
         code: int = exc.code if isinstance(exc.code, int) else 0
         return code
+    except ConfigurationError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     _configure_logging(args.verbose)
     try:
         command: Callable[[argparse.Namespace], int] = args.command
@@ -152,7 +155,8 @@ def _build_parser(config: Mapping[str, Any] | None = None) -> argparse.ArgumentP
         "--gsc-sitemap",
         default=_setting(config, "gsc_sitemap", "KLIZ_GSC_SITEMAP"),
         help="Sitemap URL to resubmit to Search Console (default: the --sitemap"
-        " URL, else <property>/sitemap.xml)",
+        " URL, else the sitemap setting when it is a URL inside the property,"
+        " else <property>/sitemap.xml)",
     )
     parser.add_argument(
         "--gsc-service-account-file",
@@ -354,11 +358,12 @@ def _cmd_indexnow_verify_key(args: argparse.Namespace) -> int:
         )
     if not args.indexnow_key_location and not args.site:
         raise ConfigurationError("provide --site or --indexnow-key-location")
+    timeout = _timeout(args)
     try:
         provider = IndexNowProvider(
             api_key=args.indexnow_api_key,
             key_location=args.indexnow_key_location,
-            **_timeout(args),
+            **timeout,
         )
     except ValueError as exc:
         raise ConfigurationError(str(exc)) from exc
@@ -403,8 +408,13 @@ def _resolve_urls(args: argparse.Namespace) -> list[str]:
 
 
 def _parse_since(value: str) -> datetime:
+    text = utc_suffix_to_offset(value)
     try:
-        return datetime.fromisoformat(value)
+        parsed = datetime.fromisoformat(text)
+        # A date followed by +00:00 can parse as a naive datetime.
+        if text != value and parsed.tzinfo is None:
+            raise ValueError("UTC suffix requires a datetime")
+        return parsed
     except ValueError as exc:
         raise ConfigurationError(
             f"--since must be an ISO date or datetime, got {value!r}"
@@ -434,10 +444,19 @@ class _TimeoutKwargs(TypedDict, total=False):
 def _timeout(args: argparse.Namespace) -> _TimeoutKwargs:
     """Return ``{"timeout": ...}`` when --timeout is set, for provider kwargs."""
 
-    return {} if args.timeout is None else {"timeout": args.timeout}
+    if args.timeout is None:
+        return {}
+    if not math.isfinite(args.timeout) or args.timeout <= 0:
+        raise ConfigurationError(
+            f"--timeout must be a positive number of seconds, got {args.timeout!r}",
+        )
+    return {"timeout": args.timeout}
 
 
 def _build_indexer(args: argparse.Namespace) -> Kliz:
+    # Validate --timeout before the provider blocks below: their ``except
+    # ValueError`` would otherwise prefix a provider name to a global option.
+    timeout = _timeout(args)
     providers: list[BaseProvider] = []
     if args.indexnow_api_key:
         if not args.indexnow_key_location:
@@ -450,7 +469,7 @@ def _build_indexer(args: argparse.Namespace) -> Kliz:
                     api_key=args.indexnow_api_key,
                     key_location=args.indexnow_key_location,
                     allow_query=args.allow_query,
-                    **_timeout(args),
+                    **timeout,
                 ),
             )
         except ValueError as exc:
@@ -465,13 +484,13 @@ def _build_indexer(args: argparse.Namespace) -> Kliz:
                 GoogleProvider(
                     args.google_service_account_file,
                     allow_query=args.allow_query,
-                    **_timeout(args),
+                    **timeout,
                 ),
             )
         except ValueError as exc:
             raise ConfigurationError(f"Google: {exc}") from exc
     if args.gsc_site:
-        providers.append(_build_search_console(args))
+        providers.append(_build_search_console(args, timeout))
     if not providers:
         raise ConfigurationError(
             "no providers configured: set --indexnow-api-key + "
@@ -484,7 +503,9 @@ def _build_indexer(args: argparse.Namespace) -> Kliz:
         raise ConfigurationError(f"--max-attempts: {exc}") from exc
 
 
-def _build_search_console(args: argparse.Namespace) -> GoogleSearchConsoleProvider:
+def _build_search_console(
+    args: argparse.Namespace, timeout: _TimeoutKwargs
+) -> GoogleSearchConsoleProvider:
     account_file = args.gsc_service_account_file
     if not account_file:
         raise ConfigurationError(
@@ -493,12 +514,31 @@ def _build_search_console(args: argparse.Namespace) -> GoogleSearchConsoleProvid
     if not os.path.exists(account_file):
         raise ConfigurationError(f"service account file not found: {account_file}")
     sitemap_url = args.gsc_sitemap or None
-    sitemap = getattr(args, "sitemap", None)
-    if not sitemap_url and sitemap and sitemap.lower().startswith("http"):
-        sitemap_url = sitemap
+    from_settings = False
+    if not sitemap_url:
+        sitemap = getattr(args, "sitemap", None)
+        configured = getattr(args, "config_sitemap", None)
+        if sitemap:
+            sitemap_url = sitemap if _is_http_url(sitemap) else None
+        elif _is_http_url(configured):
+            sitemap_url, from_settings = configured, True
     try:
-        return GoogleSearchConsoleProvider(
-            account_file, args.gsc_site, sitemap_url, **_timeout(args)
-        )
+        try:
+            return GoogleSearchConsoleProvider(
+                account_file, args.gsc_site, sitemap_url, **timeout
+            )
+        except ValueError:
+            if not from_settings:
+                raise
+            # The `sitemap` setting primarily names the URL source. When it is
+            # not a valid sitemap for this property (another host, a parent
+            # path), keep the property's own default instead of failing.
+            return GoogleSearchConsoleProvider(
+                account_file, args.gsc_site, None, **timeout
+            )
     except ValueError as exc:
         raise ConfigurationError(f"Search Console: {exc}") from exc
+
+
+def _is_http_url(value: str | None) -> bool:
+    return value is not None and value.lower().startswith(("http://", "https://"))

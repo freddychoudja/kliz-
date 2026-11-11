@@ -5,6 +5,29 @@ Le projet suit le versionnage sémantique.
 
 ## [Unreleased]
 
+### Modifié
+
+- Les métadonnées de packaging requièrent désormais `setuptools>=77` pour PEP 639, déclarent `LICENSE` comme fichier de licence et indiquent la prise en charge du typage. La dépendance de build redondante `wheel` est supprimée.
+
+### Corrigé
+
+- `--since` (et le réglage `since`) accepte désormais une date-heure UTC
+  terminée par `Z` ou `z`, comme `2026-10-01T00:00:00Z`, sous Python 3.10. Elle
+  y était refusée comme erreur de configuration, alors que le même format dans
+  un `<lastmod>` de sitemap était lu correctement. Un `z` minuscule est
+  désormais accepté sur toutes les versions de Python (#20).
+
+- Un `--timeout` (ou `KLIZ_TIMEOUT`) nul, négatif ou non fini est désormais une
+  erreur de configuration (code de sortie 2) sur toutes les commandes, au lieu
+  d'une « erreur inattendue » (code de sortie 1) lors de la lecture d'un sitemap.
+  `--timeout inf`, accepté jusqu'ici, est désormais refusé lui aussi.
+
+- Afficher l'aide et la version avant de charger la configuration, même si
+  le fichier est mal formé ou introuvable (#23).
+
+- Ignorer les valeurs `Retry-After` non ASCII mal formées sans perdre le statut
+  HTTP du provider ni la possibilité de réessayer.
+
 ### Ajouté
 
 - Fichiers communautaires : `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1),

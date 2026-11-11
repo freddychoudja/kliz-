@@ -7,7 +7,7 @@ from urllib.parse import SplitResult, urlsplit
 import requests
 
 from kliz._http import create_session
-from kliz._validation import normalize_url, parse_http_url
+from kliz._validation import normalize_url, parse_http_url, validate_timeout
 from kliz.providers.base import BaseProvider
 
 
@@ -29,8 +29,7 @@ class BatchProvider(BaseProvider):
         session: requests.Session | None = None,
         allow_query: bool = False,
     ) -> None:
-        if timeout <= 0:
-            raise ValueError("timeout must be greater than zero")
+        validate_timeout(timeout)
 
         self.timeout = timeout
         self.allow_query = allow_query
