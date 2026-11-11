@@ -1,5 +1,6 @@
 """Reusable batch provider base for host-scoped indexing APIs."""
 
+import math
 from abc import abstractmethod
 from collections.abc import Sequence
 from urllib.parse import SplitResult, urlsplit
@@ -29,8 +30,8 @@ class BatchProvider(BaseProvider):
         session: requests.Session | None = None,
         allow_query: bool = False,
     ) -> None:
-        if timeout <= 0:
-            raise ValueError("timeout must be greater than zero")
+        if isinstance(timeout, bool) or not math.isfinite(timeout) or timeout <= 0:
+            raise ValueError("timeout must be a finite number greater than zero")
 
         self.timeout = timeout
         self.allow_query = allow_query

@@ -7,6 +7,8 @@ The project follows semantic versioning.
 
 ### Fixed
 
+- Reject non-finite and boolean provider timeouts consistently for IndexNow and Google APIs (#18).
+
 - A zero, negative or non-finite `--timeout` (or `KLIZ_TIMEOUT`) is now a
   configuration error (exit code 2) on every command, instead of an
   "unexpected error" (exit code 1) when reading a sitemap. `--timeout inf`, which

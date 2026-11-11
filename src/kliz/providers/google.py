@@ -1,6 +1,7 @@
 """Google Indexing API and Search Console providers."""
 
 import logging
+import math
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -49,8 +50,8 @@ class _GoogleApiProvider(BaseProvider):
             ) from _GOOGLE_IMPORT_ERROR
         if not str(service_account_file):
             raise ValueError("service_account_file must not be empty")
-        if timeout <= 0:
-            raise ValueError("timeout must be greater than zero")
+        if isinstance(timeout, bool) or not math.isfinite(timeout) or timeout <= 0:
+            raise ValueError("timeout must be a finite number greater than zero")
         if num_retries < 0:
             raise ValueError("num_retries must not be negative")
 
